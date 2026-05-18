@@ -1,5 +1,5 @@
 import initSqlJs from 'sql.js'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import bcrypt from 'bcryptjs'
@@ -8,6 +8,9 @@ import { v4 as uuid } from 'uuid'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const dbPath = process.env.DB_PATH || join(__dirname, '../../uniflow.db')
 const wasmPath = join(__dirname, '../node_modules/sql.js/dist/sql-wasm.wasm')
+
+// Garante que o diretório do banco existe (necessário no Render com volume /data)
+mkdirSync(dirname(dbPath), { recursive: true })
 
 const SQL = await initSqlJs({ locateFile: () => wasmPath })
 
