@@ -3,6 +3,7 @@ import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
+import { existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -72,14 +73,16 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {})
 })
 
-// Em produção, o Express serve o build do React (SPA)
+// Em produção, serve o build do React apenas se existir localmente
+// (quando frontend e backend estão no mesmo servidor)
 if (process.env.NODE_ENV === 'production') {
   const buildPath = join(__dirname, '../../client/dist')
-  app.use(express.static(buildPath))
-  // Todas as rotas não-API devolvem o index.html (React Router)
-  app.get(/^(?!\/api|\/uploads|\/socket\.io).*/, (_req, res) => {
-    res.sendFile(join(buildPath, 'index.html'))
-  })
+  if (existsSync(buildPath)) {
+    app.use(express.static(buildPath))
+    app.get(/^(?!\/api|\/uploads|\/socket\.io).*/, (_req, res) => {
+      res.sendFile(join(buildPath, 'index.html'))
+    })
+  }
 }
 
 const PORT = process.env.PORT || 3001
