@@ -13,13 +13,16 @@ console.log('🔧 DB path:', dbPath)
 console.log('🔧 WASM path:', wasmPath)
 console.log('🔧 WASM exists:', existsSync(wasmPath))
 
-// Garante que o diretório do banco existe (necessário no Render com volume /data)
+// Garante que o diretório do banco existe, com fallback automático
+let actualDbPath = dbPath
 try {
   mkdirSync(dirname(dbPath), { recursive: true })
   console.log('✅ DB directory ready:', dirname(dbPath))
 } catch (e) {
-  console.error('❌ Failed to create DB directory:', e.message)
-  process.exit(1)
+  console.warn(`⚠️  Cannot access ${dbPath} — falling back to local path`)
+  actualDbPath = join(__dirname, '../../uniflow.db')
+  mkdirSync(dirname(actualDbPath), { recursive: true })
+  console.log('✅ DB directory ready (fallback):', dirname(actualDbPath))
 }
 
 let SQL
@@ -32,10 +35,12 @@ try {
 }
 
 let sqlDb
-if (existsSync(dbPath)) {
-  sqlDb = new SQL.Database(readFileSync(dbPath))
+if (existsSync(actualDbPath)) {
+  sqlDb = new SQL.Database(readFileSync(actualDbPath))
+  console.log('✅ Loaded existing database from', actualDbPath)
 } else {
   sqlDb = new SQL.Database()
+  console.log('✅ Created new database at', actualDbPath)
 }
 
 // ─── Persistence (debounced) ───────────────────────────────────────────────
@@ -46,13 +51,13 @@ function scheduleSave() {
   if (inTransaction) return
   clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
-    writeFileSync(dbPath, Buffer.from(sqlDb.export()))
+    writeFileSync(actualDbPath, Buffer.from(sqlDb.export()))
   }, 80)
 }
 
 function flushSave() {
   clearTimeout(saveTimer)
-  writeFileSync(dbPath, Buffer.from(sqlDb.export()))
+  writeFileSync(actualDbPath, Buffer.from(sqlDb.export()))
 }
 
 // ─── better-sqlite3 compatible API ────────────────────────────────────────
