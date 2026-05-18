@@ -128,12 +128,27 @@
 
 /* ── Google button ────────────────────────────────────────────── */
 .googleSection { margin-bottom: 24px; }
-.googleBtn {
-  width: 100%; display: flex; justify-content: center; align-items: center;
-  min-height: 44px; border-radius: var(--radius-sm); overflow: hidden;
+
+.googleButton {
+  width: 100%; height: 44px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--navy3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--white); font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: background .15s, border-color .15s;
+  font-family: inherit;
 }
-.googleBtn > div, .googleBtn iframe { width: 100% !important; }
-.googleLoading { font-size: 13px; color: var(--muted); padding: 10px; text-align: center; width: 100%; }
+.googleButton:hover { background: var(--card2); border-color: rgba(255,255,255,.14); }
+[data-theme="light"] .googleButton:hover { border-color: rgba(0,0,0,.18); }
+.googleButton:disabled { opacity: .6; cursor: not-allowed; }
+
+.googleSpinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--border2); border-top-color: var(--blue);
+  animation: spin .8s linear infinite; display: inline-block; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .divider {
   display: flex; align-items: center; gap: 12px;

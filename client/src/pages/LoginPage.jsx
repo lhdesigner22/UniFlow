@@ -37,7 +37,6 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const { login, loginWithGoogle } = useAuthStore()
   const navigate = useNavigate()
-  const googleBtnRef = useRef(null)
   const googleCallbackRef = useRef(null)
 
   googleCallbackRef.current = useCallback(async ({ credential }) => {
@@ -60,13 +59,6 @@ export default function LoginPage() {
         callback: (response) => googleCallbackRef.current(response),
         context: 'signin',
       })
-      if (googleBtnRef.current) {
-        window.google.accounts.id.renderButton(googleBtnRef.current, {
-          theme: 'filled_blue', size: 'large',
-          width: googleBtnRef.current.offsetWidth || 380,
-          text: 'signin_with', locale: 'pt_BR', shape: 'rectangular',
-        })
-      }
     }
     if (window.google?.accounts?.id) { init() }
     else {
@@ -74,6 +66,11 @@ export default function LoginPage() {
       return () => clearInterval(t)
     }
   }, [])
+
+  const handleGoogleClick = () => {
+    if (!window.google?.accounts?.id) return
+    window.google.accounts.id.prompt()
+  }
 
   const submit = async e => {
     e.preventDefault()
@@ -121,10 +118,25 @@ export default function LoginPage() {
 
           {googleEnabled && (
             <div className={s.googleSection}>
-              <div ref={googleBtnRef} className={s.googleBtn}>
-                {googleLoading && <div className={s.googleLoading}>Autenticando...</div>}
-              </div>
-              <div className={s.divider}><span>ou continue com e-mail</span></div>
+              <button
+                type="button"
+                className={s.googleButton}
+                onClick={handleGoogleClick}
+                disabled={googleLoading}
+              >
+                {googleLoading ? (
+                  <span className={s.googleSpinner} />
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
+                    <path fill="#4285F4" d="M46.145 24.503c0-1.636-.146-3.21-.418-4.724H24v8.937h12.434c-.536 2.886-2.165 5.33-4.613 6.973v5.797h7.474c4.374-4.027 6.85-9.959 6.85-16.983z"/>
+                    <path fill="#34A853" d="M24 47c6.24 0 11.47-2.069 15.294-5.614l-7.474-5.797c-2.07 1.386-4.716 2.203-7.82 2.203-6.015 0-11.107-4.062-12.928-9.525H3.338v5.985C7.142 41.862 14.978 47 24 47z"/>
+                    <path fill="#FBBC05" d="M11.072 28.267A13.984 13.984 0 0 1 10.5 24c0-1.493.256-2.944.572-4.267V13.748H3.338A23.01 23.01 0 0 0 1 24c0 3.715.887 7.228 2.338 10.252l7.734-5.985z"/>
+                    <path fill="#EA4335" d="M24 10.208c3.39 0 6.43 1.165 8.822 3.455l6.614-6.614C35.465 3.41 30.235 1 24 1 14.978 1 7.142 6.138 3.338 13.748l7.734 5.985C12.893 14.27 17.985 10.208 24 10.208z"/>
+                  </svg>
+                )}
+                {googleLoading ? 'Autenticando...' : 'Continuar com Google'}
+              </button>
+              <div className={s.divider}><span>ou</span></div>
             </div>
           )}
 
