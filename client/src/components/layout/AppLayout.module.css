@@ -9,8 +9,20 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--navy);
+  min-width: 0;
 }
 .content {
   flex: 1;
   overflow: auto;
+}
+
+/* Mobile sidebar backdrop */
+.backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+  z-index: 99;
+}
+@media (min-width: 769px) {
+  .backdrop { display: none; }
 }

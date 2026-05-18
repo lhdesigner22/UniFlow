@@ -132,3 +132,30 @@
   from { background-position: -400% 0; }
   to   { background-position:  400% 0; }
 }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .page { padding: 20px 16px; gap: 20px; }
+
+  .pageHeader { flex-direction: column; gap: 8px; }
+
+  /* Stats: 2-column grid */
+  .statsRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .statDivider { display: none; }
+  .statItem {
+    padding: 14px 16px;
+    border-right: 1px solid var(--border2);
+    border-bottom: 1px solid var(--border2);
+  }
+  .statItem:nth-child(2n) { border-right: none; }
+  /* Remove bottom border for last row */
+  .statItem:nth-last-child(-n+2) { border-bottom: none; }
+  .statNumber { font-size: 1.3rem; }
+
+  .grid { grid-template-columns: 1fr; gap: 12px; }
+
+  .cardMenu { opacity: 1; }
+}

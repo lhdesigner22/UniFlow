@@ -180,3 +180,9 @@
   display: flex; align-items: center; justify-content: space-between;
 }
 
+/* ── Mobile form panel ────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .formSide { padding: 32px 20px; align-items: flex-start; padding-top: 48px; }
+  .formBox { max-width: 100%; }
+  .formTitle { font-size: 1.3rem; }
+}

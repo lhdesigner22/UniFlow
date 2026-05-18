@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 import CreatePipeModal from '../pipe/CreatePipeModal'
@@ -39,12 +39,16 @@ function IconChevron({ collapsed }) {
   )
 }
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen, onClose }) {
   const [pipes, setPipes] = useState([])
   const [showCreate, setShowCreate] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Close mobile sidebar on route change
+  useEffect(() => { onClose?.() }, [location.pathname])
 
   useEffect(() => {
     api.get('/pipes').then(r => setPipes(r.data)).catch(() => {})
@@ -57,9 +61,12 @@ export default function Sidebar() {
 
   const initials = user?.name?.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || '?'
 
+  // On mobile we always show labels regardless of desktop collapse state
+  const showLabels = !collapsed || mobileOpen
+
   return (
     <>
-      <aside className={`${s.sidebar} ${collapsed ? s.collapsed : ''}`}>
+      <aside className={`${s.sidebar} ${collapsed ? s.collapsed : ''} ${mobileOpen ? s.mobileOpen : ''}`}>
 
         {/* Logo */}
         <div className={s.logo} onClick={() => navigate('/')}>
@@ -69,26 +76,26 @@ export default function Sidebar() {
               <path d="M10 6V10L13 12" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </div>
-          {!collapsed && <span className={s.logoText}>Uni<em>FLOW</em></span>}
+          {showLabels && <span className={s.logoText}>Uni<em>FLOW</em></span>}
         </div>
 
         {/* Nav */}
         <nav className={s.nav}>
           <NavLink to="/" end className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
             <span className={s.navIcon}><IconHome /></span>
-            {!collapsed && <span>Dashboard</span>}
+            {showLabels && <span>Dashboard</span>}
           </NavLink>
           {user?.system_role === 'super_admin' && (
             <NavLink to="/admin" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
               <span className={s.navIcon}><IconShield /></span>
-              {!collapsed && <span>Administração</span>}
+              {showLabels && <span>Administração</span>}
             </NavLink>
           )}
         </nav>
 
         {/* Pipes */}
         <div className={s.section}>
-          {!collapsed && (
+          {showLabels && (
             <div className={s.sectionHeader}>
               <span>Pipes</span>
               <button className={s.addBtn} onClick={() => setShowCreate(true)} title="Novo Pipe">
@@ -101,10 +108,10 @@ export default function Sidebar() {
               <NavLink key={pipe.id} to={`/pipe/${pipe.id}`}
                 className={({ isActive }) => `${s.pipeItem} ${isActive ? s.pipeActive : ''}`}>
                 <span className={s.pipeColor} style={{ background: pipe.color }} />
-                {!collapsed && <span className={s.pipeName}>{pipe.name}</span>}
+                {showLabels && <span className={s.pipeName}>{pipe.name}</span>}
               </NavLink>
             ))}
-            {pipes.length === 0 && !collapsed && (
+            {pipes.length === 0 && showLabels && (
               <button className={s.createFirst} onClick={() => setShowCreate(true)}>
                 + Criar pipe
               </button>
@@ -114,7 +121,7 @@ export default function Sidebar() {
 
         {/* Footer */}
         <div className={s.footer}>
-          {!collapsed && (
+          {showLabels && (
             <div className={s.userInfo}>
               <div className={s.userAvatar}>{initials}</div>
               <div className={s.userMeta}>
@@ -124,7 +131,7 @@ export default function Sidebar() {
             </div>
           )}
           <div className={s.footerActions}>
-            {!collapsed && (
+            {showLabels && (
               <button className={`btn btn-ghost ${s.logoutBtn}`} onClick={logout}>Sair</button>
             )}
             <button className={`btn btn-icon ${s.collapseBtn}`} onClick={() => setCollapsed(!collapsed)}>

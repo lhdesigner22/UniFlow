@@ -17,3 +17,7 @@
 }
 .addPhaseBtn:hover { border-color: var(--blue); color: var(--blue); background: var(--glow); }
 .addPhaseForm { display: flex; flex-direction: column; gap: 8px; }
+
+@media (max-width: 768px) {
+  .board { padding: 12px; gap: 10px; }
+}

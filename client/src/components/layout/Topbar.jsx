@@ -5,6 +5,16 @@ import { useAuthStore } from '../../store/authStore'
 import { useTheme } from '../../hooks/useTheme'
 import s from './Topbar.module.css'
 
+function IconMenu() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  )
+}
+
 function IconSun() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -47,7 +57,7 @@ function IconSearch() {
   )
 }
 
-export default function Topbar() {
+export default function Topbar({ onMenuClick }) {
   const [showNotifs, setShowNotifs] = useState(false)
   const [search, setSearch] = useState('')
   const { notifications, unread, fetch, markRead, markAllRead } = useNotificationStore()
@@ -76,6 +86,12 @@ export default function Topbar() {
 
   return (
     <header className={s.topbar}>
+      {/* Hamburger – mobile only */}
+      <button className={`btn btn-icon ${s.menuBtn}`} onClick={onMenuClick} aria-label="Abrir menu">
+        <IconMenu />
+      </button>
+
+      {/* Search – hidden on mobile */}
       <div className={s.searchWrap}>
         <span className={s.searchIcon}><IconSearch /></span>
         <input

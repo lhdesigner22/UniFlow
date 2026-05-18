@@ -198,3 +198,17 @@ textarea { resize: vertical; }
 
 .scroll-x { overflow-x: auto; }
 .scroll-y { overflow-y: auto; }
+
+/* ── Mobile globals ──────────────────────────────────────────── */
+/* Remove double-tap zoom delay on touch devices */
+button, a, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 768px) {
+  /* Prevent iOS auto-zoom on input focus (needs font-size >= 16px) */
+  input, textarea, select { font-size: 16px; }
+  /* Slightly larger touch targets */
+  .btn-sm { padding: 7px 12px; }
+}

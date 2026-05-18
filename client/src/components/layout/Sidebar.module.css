@@ -5,6 +5,7 @@
   display: flex; flex-direction: column;
   overflow: hidden;
   transition: width .25s cubic-bezier(.4,0,.2,1), min-width .25s cubic-bezier(.4,0,.2,1);
+  flex-shrink: 0;
 }
 .collapsed { width: 56px; min-width: 56px; }
 
@@ -96,3 +97,27 @@
 .footerActions { display: flex; align-items: center; gap: 6px; }
 .logoutBtn { flex: 1; justify-content: center; font-size: 12px; padding: 6px; }
 .collapseBtn { flex-shrink: 0; color: var(--muted); }
+
+/* ── Mobile drawer ── */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 240px !important;
+    min-width: 240px !important;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    box-shadow: 8px 0 32px rgba(0,0,0,.35);
+  }
+  .mobileOpen {
+    transform: translateX(0) !important;
+  }
+  /* Reset collapse on mobile – always full width */
+  .collapsed {
+    width: 240px !important;
+    min-width: 240px !important;
+  }
+  /* Hide desktop collapse button on mobile */
+  .collapseBtn { display: none; }
+}

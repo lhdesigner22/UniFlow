@@ -3,9 +3,12 @@
   background: var(--navy2);
   border-bottom: 1px solid var(--border2);
   display: flex; align-items: center;
-  padding: 0 24px; gap: 12px;
+  padding: 0 16px; gap: 12px;
   position: relative; z-index: 10;
 }
+
+/* ── Hamburger (mobile only) ── */
+.menuBtn { display: none; }
 
 /* ── Search ── */
 .searchWrap {
@@ -118,3 +121,20 @@
   border: 2px solid rgba(255,255,255,.12);
 }
 .avatarImg { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .topbar { padding: 0 12px; gap: 8px; }
+  .menuBtn { display: flex; }
+  .searchWrap { display: none; }
+}
+
+/* Notification panel full-width on very small screens */
+@media (max-width: 480px) {
+  .notifPanel {
+    position: fixed;
+    left: 12px; right: 12px;
+    width: auto;
+    top: 64px;
+  }
+}
