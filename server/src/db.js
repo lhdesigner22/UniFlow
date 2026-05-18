@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs'
 import { v4 as uuid } from 'uuid'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const dbPath = join(__dirname, '../../uniflow.db')
+const dbPath = process.env.DB_PATH || join(__dirname, '../../uniflow.db')
 const wasmPath = join(__dirname, '../node_modules/sql.js/dist/sql-wasm.wasm')
 
 const SQL = await initSqlJs({ locateFile: () => wasmPath })

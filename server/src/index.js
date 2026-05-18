@@ -27,13 +27,16 @@ const app = express()
 const httpServer = createServer(app)
 
 const io = new Server(httpServer, {
-  cors: { origin: process.env.CLIENT_URL, credentials: true }
+  cors: { origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }
 })
 
 // Middleware
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
+const corsOrigin = process.env.CLIENT_URL || 'http://localhost:5173'
+app.use(cors({ origin: corsOrigin, credentials: true }))
 app.use(express.json())
-app.use('/uploads', express.static(join(__dirname, '../../uploads')))
+
+const uploadsPath = process.env.UPLOADS_PATH || join(__dirname, '../../uploads')
+app.use('/uploads', express.static(uploadsPath))
 
 // Routes
 app.use('/api/auth', authRoutes)
@@ -68,6 +71,16 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {})
 })
+
+// Em produção, o Express serve o build do React (SPA)
+if (process.env.NODE_ENV === 'production') {
+  const buildPath = join(__dirname, '../../client/dist')
+  app.use(express.static(buildPath))
+  // Todas as rotas não-API devolvem o index.html (React Router)
+  app.get(/^(?!\/api|\/uploads|\/socket\.io).*/, (_req, res) => {
+    res.sendFile(join(buildPath, 'index.html'))
+  })
+}
 
 const PORT = process.env.PORT || 3001
 httpServer.on('error', (err) => {

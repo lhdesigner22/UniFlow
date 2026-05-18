@@ -8,6 +8,8 @@ import { auth } from '../middleware/auth.js'
 
 const router = Router()
 
+router.get('/health', (_req, res) => res.json({ ok: true }))
+
 router.post('/register', (req, res) => {
   const { name, email, password } = req.body
   if (!name || !email || !password) return res.status(400).json({ error: 'Campos obrigatórios' })

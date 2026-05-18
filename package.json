@@ -2,9 +2,11 @@
   "name": "uniflow",
   "version": "1.0.0",
   "scripts": {
-    "install:all": "cd server && npm install && cd ../client && npm install",
+    "build": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
+    "start": "node server/src/index.js",
     "dev": "start cmd /k \"cd server && npm run dev\" && start cmd /k \"cd client && npm run dev\"",
     "dev:server": "cd server && npm run dev",
-    "dev:client": "cd client && npm run dev"
+    "dev:client": "cd client && npm run dev",
+    "install:all": "cd server && npm install && cd ../client && npm install"
   }
 }
