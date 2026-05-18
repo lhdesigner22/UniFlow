@@ -10,10 +10,10 @@ const PRIORITY = {
 }
 
 const TABS = [
-  { key: 'details',   label: 'Campos',       icon: '⊞' },
-  { key: 'checklist', label: 'Checklist',    icon: '✓' },
-  { key: 'comments',  label: 'Comentários',  icon: '💬' },
-  { key: 'activity',  label: 'Atividade',    icon: '⏱' },
+  { key: 'details',   label: 'Campos' },
+  { key: 'checklist', label: 'Checklist' },
+  { key: 'comments',  label: 'Comentários' },
+  { key: 'activity',  label: 'Histórico' },
 ]
 
 export default function CardModal({ cardId, pipeId, phases, fields, members, labels, allowedAssignees, onClose, onUpdate, onArchive, onDelete }) {
@@ -146,7 +146,6 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
                   className={`${s.tab} ${tab === t.key ? s.activeTab : ''}`}
                   onClick={() => setTab(t.key)}
                 >
-                  <span className={s.tabIcon}>{t.icon}</span>
                   {t.label}
                   {t.key === 'checklist' && checklist.length > 0 && (
                     <span className={s.tabBadge}>{doneCount}/{checklist.length}</span>
@@ -365,11 +364,11 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
 
             <div className={s.sideActions}>
               <button className="btn btn-ghost btn-sm" style={{ width:'100%', justifyContent:'center' }} onClick={archiveCard}>
-                📦 Arquivar Card
+                Arquivar card
               </button>
               <button className="btn btn-danger btn-sm" style={{ width:'100%', justifyContent:'center' }}
                 onClick={() => { if (confirm('Excluir este card permanentemente?')) onDelete(cardId) }}>
-                🗑️ Excluir Card
+                Excluir card
               </button>
             </div>
 

@@ -1,143 +1,129 @@
-.page { padding: 36px 32px; max-width: 1320px; display: flex; flex-direction: column; gap: 32px; }
+.page { padding: 36px 32px; max-width: 1300px; display: flex; flex-direction: column; gap: 28px; }
 
-/* ── Hero ──────────────────────────────────────────────────────── */
-.hero {
-  display: flex; align-items: flex-end; justify-content: space-between;
-  gap: 16px;
+/* ── Page header ─────────────────────────────────────────────── */
+.pageHeader {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
 }
-.heroText {}
-.heroTitle {
-  font-size: 1.75rem; font-weight: 800;
-  letter-spacing: -.03em; color: var(--white);
-  line-height: 1.2;
-}
-.heroSub { color: var(--muted); margin-top: 6px; font-size: 14px; }
+.pageTitle { font-size: 1.4rem; font-weight: 700; letter-spacing: -.02em; }
+.pageSub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.pageSub strong { color: var(--light); font-weight: 600; }
 
-/* ── Stats row ─────────────────────────────────────────────────── */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-}
-.statCard {
+/* ── Stats row ───────────────────────────────────────────────── */
+.statsRow {
+  display: flex; align-items: center; gap: 0;
   background: var(--card); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 18px 20px;
-  display: flex; align-items: center; gap: 14px;
-  box-shadow: var(--shadow-sm);
-  transition: border-color .15s, transform .15s;
+  border-radius: var(--radius); padding: 0;
+  overflow: hidden; box-shadow: var(--shadow-sm);
 }
-.statCard:hover { border-color: var(--border); transform: translateY(-1px); }
-.statIcon {
-  width: 44px; height: 44px; border-radius: 12px;
+.statItem {
+  flex: 1; padding: 18px 24px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.statNumber {
+  font-size: 1.6rem; font-weight: 700;
+  letter-spacing: -.03em; color: var(--white); line-height: 1;
+}
+.statLabel { font-size: 12px; color: var(--muted); }
+.statDivider { width: 1px; height: 40px; background: var(--border2); flex-shrink: 0; }
+
+/* ── Section ─────────────────────────────────────────────────── */
+.section { display: flex; flex-direction: column; gap: 14px; }
+.sectionHeader { display: flex; align-items: center; gap: 10px; }
+.sectionTitle { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.sectionCount {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  background: var(--border2); border-radius: 50px; padding: 1px 8px;
+}
+
+/* ── Grid ────────────────────────────────────────────────────── */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+
+/* ── Pipe card ───────────────────────────────────────────────── */
+.card {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: var(--radius); cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow-sm); overflow: hidden;
+}
+.card:hover { border-color: var(--border); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+.cardAccent { height: 2px; flex-shrink: 0; }
+.cardMain { padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.cardTop { display: flex; align-items: flex-start; justify-content: space-between; }
+
+.pipeIconWrap {
+  width: 40px; height: 40px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px; flex-shrink: 0;
 }
-.statValue { font-size: 1.5rem; font-weight: 800; letter-spacing: -.02em; color: var(--white); }
-.statLabel { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
-/* ── Section header ────────────────────────────────────────────── */
-.section { display: flex; flex-direction: column; gap: 16px; }
-.sectionHeader { display: flex; align-items: center; gap: 10px; }
-.sectionTitle { font-size: 1rem; font-weight: 700; color: var(--white); }
-.sectionCount {
-  font-size: 11px; font-weight: 700; color: var(--muted);
-  background: var(--border2); border-radius: 50px; padding: 2px 9px;
+.cardMenu {
+  display: flex; gap: 4px; opacity: 0; transition: opacity .12s;
 }
-
-/* ── Grid ──────────────────────────────────────────────────────── */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-/* ── Pipe card ─────────────────────────────────────────────────── */
-.card {
-  background: var(--card); border: 1px solid var(--border2);
-  border-radius: 16px; cursor: pointer;
-  transition: border-color .18s, transform .18s, box-shadow .18s;
-  display: flex; flex-direction: column;
-  box-shadow: var(--shadow-sm);
-  overflow: hidden; position: relative;
-}
-.card:hover {
-  border-color: var(--border);
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
-}
-
-.cardBar { height: 3px; width: 100%; flex-shrink: 0; }
-
-.cardHeader {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  padding: 18px 18px 10px;
-}
-.pipeIconWrap {
-  width: 52px; height: 52px; border-radius: 14px;
+.card:hover .cardMenu { opacity: 1; }
+.cardMenu button {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: none; background: var(--border2); color: var(--muted);
   display: flex; align-items: center; justify-content: center;
-  border: 1.5px solid transparent; flex-shrink: 0;
+  cursor: pointer; transition: background .12s, color .12s;
 }
-.cardActions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
-.card:hover .cardActions { opacity: 1; }
+.cardMenu button:hover { background: var(--border); color: var(--white); }
 
-.cardBody { padding: 0 18px 14px; flex: 1; }
-.pipeName { font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--white); }
-.pipeDesc { font-size: 12px; color: var(--muted); line-height: 1.55; margin-top: 5px; }
+.pipeName { font-size: 14px; font-weight: 600; color: var(--white); letter-spacing: -.01em; }
+.pipeDesc { font-size: 12px; color: var(--muted); line-height: 1.55; }
 
 .cardFooter {
-  padding: 12px 18px; border-top: 1px solid var(--border2);
-  display: flex; flex-direction: column; gap: 10px;
+  padding: 11px 18px; border-top: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
-.cardStats { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.stat { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
-.statDot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.cardLinks { display: flex; gap: 6px; }
-.cardLink {
-  font-size: 12px; font-weight: 500; color: var(--muted);
-  background: var(--border2); border: none; border-radius: 7px;
-  padding: 5px 10px; cursor: pointer;
-  transition: background .12s, color .12s;
+.cardMeta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.metaDot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); }
+.adminBadge {
+  font-size: 10px; font-weight: 700; color: var(--blue);
+  background: rgba(59,126,255,.1); border: 1px solid rgba(59,126,255,.2);
+  border-radius: 4px; padding: 1px 6px;
 }
-.cardLink:hover { background: var(--border); color: var(--white); }
+.cardActions { display: flex; gap: 4px; }
+.cardActions button {
+  font-size: 11px; font-weight: 500; color: var(--muted);
+  background: var(--border2); border: none; border-radius: 5px;
+  padding: 4px 9px; cursor: pointer; transition: background .12s, color .12s;
+}
+.cardActions button:hover { background: var(--border); color: var(--white); }
 
-/* ── Add card ──────────────────────────────────────────────────── */
+/* ── Add card ────────────────────────────────────────────────── */
 .addCard {
-  background: transparent;
-  border: 2px dashed var(--border2);
-  border-radius: 16px; padding: 28px 20px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 10px; cursor: pointer; transition: all .18s;
-  text-align: center; min-height: 200px;
+  background: transparent; border: 1px dashed var(--border2);
+  border-radius: var(--radius); padding: 20px;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 10px; cursor: pointer;
+  transition: all .15s; color: var(--muted); font-size: 13px; font-weight: 500;
+  min-height: 160px;
 }
-.addCard:hover { border-color: var(--blue); background: var(--glow); }
-.addIconCircle {
-  width: 48px; height: 48px; border-radius: 50%;
-  border: 2px dashed var(--muted);
+.addCard:hover { border-color: var(--blue); color: var(--blue); background: var(--glow); }
+.addIcon {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px dashed currentColor;
   display: flex; align-items: center; justify-content: center;
-  font-size: 24px; color: var(--muted); font-weight: 300;
-  transition: all .2s;
+  transition: transform .2s;
 }
-.addCard:hover .addIconCircle { border-color: var(--blue); color: var(--blue); transform: scale(1.1) rotate(90deg); }
-.addLabel { font-size: 14px; font-weight: 600; color: var(--muted); transition: color .15s; }
-.addCard:hover .addLabel { color: var(--blue); }
-.addSub { font-size: 12px; color: var(--muted); opacity: .7; }
+.addCard:hover .addIcon { transform: rotate(90deg); }
 
-/* ── Empty state ────────────────────────────────────────────────── */
-.empty { text-align: center; padding: 80px 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.emptyIllustration { margin-bottom: 6px; }
-.emptyIconBg {
-  width: 80px; height: 80px; border-radius: 24px;
+/* ── Empty state ─────────────────────────────────────────────── */
+.empty { text-align: center; padding: 80px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.emptyIcon {
+  width: 64px; height: 64px; border-radius: 16px;
   background: var(--card); border: 1px solid var(--border2);
   display: flex; align-items: center; justify-content: center;
-  font-size: 36px; margin: 0 auto;
+  color: var(--muted); margin-bottom: 4px;
 }
-.empty h3 { font-size: 1.2rem; font-weight: 700; color: var(--white); }
-.empty p { color: var(--muted); max-width: 380px; line-height: 1.65; font-size: 14px; }
+.empty h3 { font-size: 1.1rem; font-weight: 600; }
+.empty p { color: var(--muted); max-width: 360px; line-height: 1.6; font-size: 13px; }
 
-/* ── Skeleton ───────────────────────────────────────────────────── */
+/* ── Skeleton ────────────────────────────────────────────────── */
 .skeleton {
-  height: 210px; border-radius: 16px;
+  height: 180px; border-radius: var(--radius);
   background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
   background-size: 400% 100%;
   animation: shimmer 1.8s infinite;
