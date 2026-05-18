@@ -165,6 +165,3 @@
   display: flex; align-items: center; justify-content: space-between;
 }
 
-/* Compat aliases */
-.card { display: contents; }
-.logo, .logoIcon, .title, .sub, .googleBtn, .googleLoading { display: none; }
