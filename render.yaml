@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: uniflow-backend
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_PATH
+        value: /data/uniflow.db
+      - key: UPLOADS_PATH
+        value: /data/uploads
+      - key: CLIENT_URL
+        sync: false   # preencher com a URL do Vercel após o deploy
+    disk:
+      name: uniflow-data
+      mountPath: /data
+      sizeGB: 1

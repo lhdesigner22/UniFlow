@@ -4,7 +4,11 @@ import { io } from 'socket.io-client'
 let socket = null
 
 export function getSocket() {
-  if (!socket) socket = io({ path: '/socket.io' })
+  if (!socket) {
+    // Em produção aponta para o backend Render; em dev usa origem local (proxy Vite)
+    const url = import.meta.env.VITE_API_URL || ''
+    socket = io(url, { path: '/socket.io' })
+  }
   return socket
 }
 
