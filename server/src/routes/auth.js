@@ -8,6 +8,15 @@ import { auth } from '../middleware/auth.js'
 
 const router = Router()
 
+// Auto-promove e-mails listados em SUPER_ADMIN_EMAILS para super_admin
+function autoPromote(userId, email) {
+  const list = (process.env.SUPER_ADMIN_EMAILS || '')
+    .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+  if (list.length && list.includes(email.toLowerCase())) {
+    db.prepare("UPDATE users SET system_role = 'super_admin' WHERE id = ?").run(userId)
+  }
+}
+
 router.get('/health', (_req, res) => res.json({ ok: true }))
 
 router.post('/register', (req, res) => {
@@ -27,8 +36,10 @@ router.post('/login', (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
   if (!user || !bcrypt.compareSync(password, user.password))
     return res.status(401).json({ error: 'Credenciais inválidas' })
+  autoPromote(user.id, user.email)
+  user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
   const token = jwt.sign({ id: user.id, name: user.name, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' })
-  res.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar } })
+  res.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, system_role: user.system_role } })
 })
 
 router.post('/google', async (req, res) => {
@@ -74,13 +85,17 @@ router.post('/google', async (req, res) => {
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
     }
 
-    // 4. Emitir JWT igual ao login normal
+    // 4. Auto-promover se email estiver em SUPER_ADMIN_EMAILS
+    autoPromote(user.id, user.email)
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
+
+    // 5. Emitir JWT igual ao login normal
     const token = jwt.sign(
       { id: user.id, name: user.name, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar } })
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, system_role: user.system_role } })
 
   } catch (e) {
     console.error('Google OAuth error:', e.message)
