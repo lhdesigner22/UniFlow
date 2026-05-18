@@ -9,10 +9,27 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const dbPath = process.env.DB_PATH || join(__dirname, '../../uniflow.db')
 const wasmPath = join(__dirname, '../node_modules/sql.js/dist/sql-wasm.wasm')
 
-// Garante que o diretório do banco existe (necessário no Render com volume /data)
-mkdirSync(dirname(dbPath), { recursive: true })
+console.log('🔧 DB path:', dbPath)
+console.log('🔧 WASM path:', wasmPath)
+console.log('🔧 WASM exists:', existsSync(wasmPath))
 
-const SQL = await initSqlJs({ locateFile: () => wasmPath })
+// Garante que o diretório do banco existe (necessário no Render com volume /data)
+try {
+  mkdirSync(dirname(dbPath), { recursive: true })
+  console.log('✅ DB directory ready:', dirname(dbPath))
+} catch (e) {
+  console.error('❌ Failed to create DB directory:', e.message)
+  process.exit(1)
+}
+
+let SQL
+try {
+  SQL = await initSqlJs({ locateFile: () => wasmPath })
+  console.log('✅ sql.js loaded')
+} catch (e) {
+  console.error('❌ Failed to load sql.js:', e.message)
+  process.exit(1)
+}
 
 let sqlDb
 if (existsSync(dbPath)) {
