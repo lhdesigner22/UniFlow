@@ -8,11 +8,15 @@ import { auth } from '../middleware/auth.js'
 
 const router = Router()
 
-// Auto-promove e-mails listados em SUPER_ADMIN_EMAILS para super_admin
+// E-mails que sempre recebem super_admin automaticamente
+const OWNER_EMAILS = ['luiz.sanchez@colegioser.com']
+
+// Auto-promove donos e e-mails listados em SUPER_ADMIN_EMAILS para super_admin
 function autoPromote(userId, email) {
-  const list = (process.env.SUPER_ADMIN_EMAILS || '')
+  const envList = (process.env.SUPER_ADMIN_EMAILS || '')
     .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-  if (list.length && list.includes(email.toLowerCase())) {
+  const fullList = [...new Set([...OWNER_EMAILS.map(e => e.toLowerCase()), ...envList])]
+  if (fullList.includes(email.toLowerCase())) {
     db.prepare("UPDATE users SET system_role = 'super_admin' WHERE id = ?").run(userId)
   }
 }

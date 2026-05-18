@@ -366,16 +366,18 @@ try {
       AND (system_role IS NULL OR system_role = 'user')`)
 } catch {}
 
-// Promove e-mails listados em SUPER_ADMIN_EMAILS para super_admin na inicialização
+// Promove donos e SUPER_ADMIN_EMAILS para super_admin na inicialização
 try {
-  const superEmails = (process.env.SUPER_ADMIN_EMAILS || '')
+  const ownerEmails = ['luiz.sanchez@colegioser.com']
+  const envEmails = (process.env.SUPER_ADMIN_EMAILS || '')
     .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-  for (const email of superEmails) {
+  const allSuper = [...new Set([...ownerEmails.map(e => e.toLowerCase()), ...envEmails])]
+  for (const email of allSuper) {
     sqlDb.run("UPDATE users SET system_role = 'super_admin' WHERE LOWER(email) = ?", [email])
   }
-  if (superEmails.length) console.log('✅ SUPER_ADMIN_EMAILS aplicado:', superEmails.join(', '))
+  console.log('✅ Super admins garantidos:', allSuper.join(', '))
 } catch (e) {
-  console.warn('⚠️ Erro ao aplicar SUPER_ADMIN_EMAILS:', e.message)
+  console.warn('⚠️ Erro ao aplicar super admins:', e.message)
 }
 
 // ─── Seed demo data ────────────────────────────────────────────────────────
