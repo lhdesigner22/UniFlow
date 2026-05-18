@@ -1,0 +1,24 @@
+.page { height:100%; display:flex; flex-direction:column; overflow:hidden; }
+.loading { display:flex; align-items:center; justify-content:center; height:100%; color:var(--muted); }
+.header { display:flex; align-items:center; gap:16px; padding:16px 24px; border-bottom:1px solid var(--border2); background:var(--navy2); flex-shrink:0; }
+.header h2 { font-size:16px; font-weight:700; }
+.body { flex:1; padding:24px; overflow-y:auto; }
+
+.kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+.kpi { background:var(--card); border:1px solid var(--border2); border-radius:12px; padding:20px; text-align:center; }
+.kpiVal { font-size:2.4rem; font-weight:900; line-height:1; }
+.kpiLabel { font-size:12px; color:var(--muted); margin-top:6px; }
+
+.charts { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media(max-width:800px){ .charts { grid-template-columns:1fr; } .kpis { grid-template-columns:1fr 1fr; } }
+.chartCard { background:var(--card); border:1px solid var(--border2); border-radius:12px; padding:20px; }
+.chartCard h4 { font-size:13px; font-weight:700; margin-bottom:14px; color:var(--light); }
+
+.tooltip { background:var(--navy2); border:1px solid var(--border2); border-radius:8px; padding:8px 12px; font-size:12px; }
+
+.memberList { display:flex; flex-direction:column; gap:10px; }
+.memberItem { display:flex; align-items:center; gap:10px; }
+.memberName { width:100px; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.memberBar { flex:1; height:8px; background:var(--border2); border-radius:4px; overflow:hidden; }
+.memberFill { height:100%; border-radius:4px; transition:width .4s; }
+.memberCount { font-size:12px; font-weight:700; color:var(--muted); }

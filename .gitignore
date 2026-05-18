@@ -1,0 +1,36 @@
+# Dependências
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Banco de dados SQLite (gerado automaticamente)
+*.db
+*.db-shm
+*.db-wal
+
+# Uploads (arquivos enviados pelos usuários)
+uploads/
+server/uploads/
+
+# Variáveis de ambiente
+.env
+.env.local
+.env.production
+
+# Build do Vite
+client/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Claude Code
+.claude/

@@ -1,0 +1,15 @@
+.board {
+  display: flex; gap: 12px;
+  padding: 16px 24px;
+  overflow-x: auto; overflow-y: hidden;
+  flex: 1; align-items: flex-start;
+  height: 100%;
+}
+.addColumn { flex-shrink: 0; width: 240px; padding-top: 2px; }
+.addPhaseBtn {
+  width: 100%; padding: 10px; border-radius: 10px;
+  background: transparent; border: 2px dashed var(--border2);
+  color: var(--muted); font-size: 13px; cursor: pointer; transition: all .15s;
+}
+.addPhaseBtn:hover { border-color: var(--blue); color: var(--blue); }
+.addPhaseForm { display: flex; flex-direction: column; gap: 8px; }

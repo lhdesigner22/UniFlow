@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniFlow — Approvals Simplified</title>
+  <style>
+    /* ─── Design tokens ─── */
+    :root {
+      --navy:   #081525;
+      --navy2:  #0d1e33;
+      --navy3:  #112240;
+      --blue:   #4a7cf7;
+      --blue2:  #3568e8;
+      --green:  #22c55e;
+      --green2: #16a34a;
+      --white:  #ffffff;
+      --muted:  #7a8faa;
+      --light:  #c8d6e8;
+      --card:   #0f1d30;
+      --border: rgba(74,124,247,.18);
+      --radius: 14px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    /* ─── Reset ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--navy);
+      color: var(--white);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    /* ─── Utilities ─── */
+    .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 28px; border-radius: 50px; font-weight: 600;
+      font-size: .95rem; cursor: pointer; transition: all .2s;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--blue); color: var(--white);
+    }
+    .btn-primary:hover { background: var(--blue2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(74,124,247,.4); }
+    .btn-green {
+      background: var(--green); color: var(--white);
+    }
+    .btn-green:hover { background: var(--green2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(34,197,94,.35); }
+    .btn-outline {
+      background: transparent; color: var(--white);
+      border: 1.5px solid rgba(255,255,255,.25);
+    }
+    .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+    .tag {
+      display: inline-block; background: rgba(74,124,247,.15);
+      color: var(--blue); border: 1px solid rgba(74,124,247,.3);
+      border-radius: 50px; padding: 4px 14px; font-size: .8rem;
+      font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800; line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      color: var(--muted); font-size: 1.05rem; max-width: 540px;
+    }
+    .section-header { text-align: center; margin-bottom: 64px; }
+    .section-header .section-sub { margin: 0 auto; }
+    section { padding: 100px 0; }
+
+    /* ─── Navbar ─── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 18px 0;
+      transition: background .3s, backdrop-filter .3s, box-shadow .3s;
+    }
+    nav.scrolled {
+      background: rgba(8,21,37,.9);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 1px 0 rgba(74,124,247,.15);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.35rem; font-weight: 800;
+    }
+    .nav-logo .logo-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: var(--blue);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-logo span em { font-style: normal; color: var(--blue); }
+    .nav-links {
+      display: flex; align-items: center; gap: 32px;
+      list-style: none; font-size: .92rem; color: var(--light);
+    }
+    .nav-links a { transition: color .2s; }
+    .nav-links a:hover { color: var(--white); }
+    .nav-cta { display: flex; align-items: center; gap: 12px; }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
+    .hamburger span {
+      width: 24px; height: 2px; background: var(--white);
+      border-radius: 2px; transition: all .3s;
+    }
+    @media(max-width:860px){
+      .nav-links, .nav-cta { display: none; }
+      .hamburger { display: flex; }
+    }
+
+    /* ─── Hero ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center;
+      padding: 120px 0 80px;
+      position: relative; overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(74,124,247,.25) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 80% 60%, rgba(34,197,94,.12) 0%, transparent 60%),
+        var(--navy);
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; align-items: center; position: relative; z-index: 1;
+    }
+    @media(max-width:800px){ .hero-grid { grid-template-columns: 1fr; text-align: center; } }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3);
+      border-radius: 50px; padding: 6px 14px 6px 8px;
+      font-size: .82rem; font-weight: 600; color: var(--green);
+      margin-bottom: 24px;
+    }
+    .hero-badge .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green); animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100%{ opacity:1; transform:scale(1); }
+      50%{ opacity:.5; transform:scale(1.4); }
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 5.5vw, 3.8rem);
+      font-weight: 900; line-height: 1.1; margin-bottom: 24px;
+    }
+    .hero h1 .accent { color: var(--blue); }
+    .hero h1 .accent-g { color: var(--green); }
+    .hero-sub {
+      font-size: 1.1rem; color: var(--muted); margin-bottom: 36px;
+      max-width: 500px;
+    }
+    @media(max-width:800px){ .hero-sub { margin: 0 auto 36px; } }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+    @media(max-width:800px){ .hero-actions { justify-content: center; } }
+    .hero-trust {
+      margin-top: 36px; display: flex; align-items: center; gap: 12px;
+      color: var(--muted); font-size: .85rem;
+    }
+    @media(max-width:800px){ .hero-trust { justify-content: center; } }
+    .hero-trust .avatars { display: flex; }
+    .hero-trust .avatars span {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 2px solid var(--navy);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .65rem; font-weight: 700; margin-left: -8px;
+    }
+    .hero-trust .avatars span:first-child { margin-left: 0; }
+
+    /* ─── Hero visual ─── */
+    .hero-visual { position: relative; }
+    .hero-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px; padding: 28px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+    }
+    .hero-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .hero-card-header h3 { font-size: 1rem; font-weight: 700; }
+    .status-badge {
+      padding: 4px 12px; border-radius: 50px; font-size: .75rem; font-weight: 700;
+    }
+    .status-pending { background: rgba(74,124,247,.2); color: var(--blue); }
+    .status-approved { background: rgba(34,197,94,.2); color: var(--green); }
+    .status-review { background: rgba(251,191,36,.2); color: #fbbf24; }
+    .approval-list { display: flex; flex-direction: column; gap: 10px; }
+    .approval-item {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(255,255,255,.04); border-radius: 10px;
+      padding: 12px 14px; border: 1px solid rgba(255,255,255,.06);
+      transition: border-color .2s;
+    }
+    .approval-item:hover { border-color: var(--border); }
+    .approval-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .approval-info { flex: 1; }
+    .approval-info strong { font-size: .88rem; display: block; }
+    .approval-info span { font-size: .76rem; color: var(--muted); }
+    .approval-action {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem; cursor: pointer; transition: all .2s;
+    }
+    .aa-approve { background: rgba(34,197,94,.2); color: var(--green); }
+    .aa-approve:hover { background: var(--green); color: white; }
+    .aa-reject { background: rgba(239,68,68,.15); color: #ef4444; }
+    .aa-reject:hover { background: #ef4444; color: white; }
+
+    .flow-mini {
+      position: absolute; top: -20px; right: -20px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 18px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.4);
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%,100%{ transform:translateY(0); }
+      50%{ transform:translateY(-8px); }
+    }
+    .flow-mini .fi {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(34,197,94,.2); display: flex;
+      align-items: center; justify-content: center; font-size: 1.1rem;
+    }
+    .flow-mini p { font-size: .8rem; line-height: 1.3; }
+    .flow-mini p strong { font-size: .88rem; }
+
+    .metric-mini {
+      position: absolute; bottom: -16px; left: -16px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 18px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.4);
+      animation: float 3.5s ease-in-out infinite .5s;
+    }
+    .metric-mini .m-val {
+      font-size: 1.6rem; font-weight: 800; color: var(--blue);
+    }
+    .metric-mini .m-label { font-size: .75rem; color: var(--muted); }
+
+    /* ─── Logos strip ─── */
+    .logos-strip {
+      padding: 48px 0;
+      border-top: 1px solid rgba(255,255,255,.06);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .logos-strip p { text-align: center; color: var(--muted); font-size: .85rem; margin-bottom: 28px; }
+    .logos-grid {
+      display: flex; align-items: center; justify-content: center;
+      gap: 48px; flex-wrap: wrap;
+    }
+    .logo-pill {
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 50px; padding: 8px 22px;
+      font-size: .85rem; font-weight: 600; color: var(--muted);
+      letter-spacing: .02em; transition: all .2s;
+    }
+    .logo-pill:hover { color: var(--white); border-color: var(--border); }
+
+    /* ─── Features ─── */
+    .features { background: var(--navy2); }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    @media(max-width:900px){ .features-grid { grid-template-columns: 1fr 1fr; } }
+    @media(max-width:580px){ .features-grid { grid-template-columns: 1fr; } }
+    .feat-card {
+      background: var(--card); border: 1px solid rgba(255,255,255,.07);
+      border-radius: var(--radius); padding: 28px;
+      transition: border-color .2s, transform .2s;
+    }
+    .feat-card:hover { border-color: var(--border); transform: translateY(-4px); }
+    .feat-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; margin-bottom: 20px;
+    }
+    .fi-blue { background: rgba(74,124,247,.2); }
+    .fi-green { background: rgba(34,197,94,.2); }
+    .fi-purple { background: rgba(168,85,247,.2); }
+    .fi-amber { background: rgba(251,191,36,.2); }
+    .fi-pink { background: rgba(236,72,153,.2); }
+    .fi-teal { background: rgba(20,184,166,.2); }
+    .feat-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+    .feat-card p { color: var(--muted); font-size: .9rem; line-height: 1.6; }
+
+    /* ─── How it works ─── */
+    .hiw-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 80px; align-items: center;
+    }
+    @media(max-width:800px){ .hiw-grid { grid-template-columns: 1fr; } }
+    .hiw-steps { display: flex; flex-direction: column; gap: 0; }
+    .hiw-step {
+      display: flex; gap: 20px; padding: 24px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      cursor: pointer; transition: all .2s;
+    }
+    .hiw-step:last-child { border-bottom: none; }
+    .hiw-step.active .step-num { background: var(--blue); color: var(--white); }
+    .hiw-step.active .step-text h4 { color: var(--white); }
+    .step-num {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.15);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .9rem; flex-shrink: 0;
+      color: var(--muted); transition: all .3s;
+    }
+    .step-text h4 { font-size: 1rem; font-weight: 700; margin-bottom: 6px; color: var(--muted); transition: color .3s; }
+    .step-text p { font-size: .88rem; color: var(--muted); line-height: 1.6; }
+    .hiw-visual { position: relative; }
+    .hiw-screen {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 24px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.4);
+    }
+    .screen-bar {
+      display: flex; gap: 6px; margin-bottom: 20px;
+    }
+    .screen-bar span {
+      width: 12px; height: 12px; border-radius: 50%;
+    }
+    .sb-r { background: #ef4444; }
+    .sb-y { background: #fbbf24; }
+    .sb-g { background: #22c55e; }
+    .pipeline {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .pipeline-col-labels {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 10px; margin-bottom: 4px;
+    }
+    .pipeline-col-labels span {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--muted); padding: 0 2px;
+    }
+    .pipeline-row {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+    }
+    .pipe-card {
+      background: rgba(255,255,255,.05); border-radius: 10px;
+      padding: 10px 12px; border: 1px solid rgba(255,255,255,.07);
+      font-size: .78rem; line-height: 1.4;
+    }
+    .pipe-card strong { display: block; font-size: .8rem; margin-bottom: 4px; }
+    .pipe-card .pc-tag {
+      display: inline-block; padding: 2px 8px; border-radius: 50px;
+      font-size: .68rem; font-weight: 700; margin-top: 6px;
+    }
+
+    /* ─── Stats ─── */
+    .stats { background: var(--navy3); }
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 24px;
+    }
+    @media(max-width:860px){ .stats-grid { grid-template-columns: repeat(2,1fr); } }
+    @media(max-width:440px){ .stats-grid { grid-template-columns: 1fr; } }
+    .stat-card {
+      text-align: center; padding: 36px 24px;
+      background: var(--card); border: 1px solid rgba(255,255,255,.07);
+      border-radius: var(--radius);
+    }
+    .stat-val { font-size: 2.8rem; font-weight: 900; }
+    .stat-val.blue { color: var(--blue); }
+    .stat-val.green { color: var(--green); }
+    .stat-label { color: var(--muted); font-size: .9rem; margin-top: 6px; }
+
+    /* ─── Testimonials ─── */
+    .testimonials { background: var(--navy2); }
+    .testi-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 24px;
+    }
+    @media(max-width:900px){ .testi-grid { grid-template-columns: 1fr 1fr; } }
+    @media(max-width:580px){ .testi-grid { grid-template-columns: 1fr; } }
+    .testi-card {
+      background: var(--card); border: 1px solid rgba(255,255,255,.07);
+      border-radius: var(--radius); padding: 28px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .stars { color: #fbbf24; font-size: .9rem; letter-spacing: 2px; }
+    .testi-text { font-size: .92rem; color: var(--light); line-height: 1.7; flex: 1; }
+    .testi-author { display: flex; align-items: center; gap: 12px; }
+    .testi-avatar {
+      width: 42px; height: 42px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem; font-weight: 700;
+    }
+    .testi-author div strong { font-size: .88rem; }
+    .testi-author div span { font-size: .78rem; color: var(--muted); display: block; }
+
+    /* ─── Pricing ─── */
+    .pricing-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 24px;
+      align-items: start;
+    }
+    @media(max-width:860px){ .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; } }
+    .price-card {
+      background: var(--card); border: 1px solid rgba(255,255,255,.07);
+      border-radius: 20px; padding: 32px; position: relative; overflow: hidden;
+    }
+    .price-card.featured {
+      border-color: var(--blue);
+      background: linear-gradient(135deg, rgba(74,124,247,.12) 0%, var(--card) 60%);
+    }
+    .price-badge {
+      position: absolute; top: 16px; right: 16px;
+      background: var(--blue); color: var(--white);
+      font-size: .72rem; font-weight: 700; padding: 4px 10px;
+      border-radius: 50px; text-transform: uppercase; letter-spacing: .05em;
+    }
+    .price-tier { font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px; }
+    .price-val { font-size: 3rem; font-weight: 900; line-height: 1; }
+    .price-val sup { font-size: 1.2rem; vertical-align: top; margin-top: 10px; }
+    .price-val sub { font-size: .85rem; font-weight: 400; color: var(--muted); vertical-align: baseline; }
+    .price-desc { color: var(--muted); font-size: .88rem; margin: 14px 0 24px; }
+    .price-features { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 28px; }
+    .price-features li {
+      display: flex; align-items: center; gap: 10px;
+      font-size: .88rem; color: var(--light);
+    }
+    .price-features li::before {
+      content: '✓'; width: 20px; height: 20px; border-radius: 50%;
+      background: rgba(34,197,94,.2); color: var(--green);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .7rem; font-weight: 700; flex-shrink: 0;
+    }
+    .price-features li.dim { color: var(--muted); }
+    .price-features li.dim::before { background: rgba(255,255,255,.06); color: var(--muted); }
+
+    /* ─── CTA ─── */
+    .cta-section {
+      background: linear-gradient(135deg, rgba(74,124,247,.2) 0%, rgba(34,197,94,.1) 100%);
+      border-top: 1px solid rgba(74,124,247,.2);
+      border-bottom: 1px solid rgba(74,124,247,.2);
+      text-align: center; padding: 100px 0;
+    }
+    .cta-section h2 { font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 900; margin-bottom: 16px; }
+    .cta-section p { color: var(--muted); font-size: 1.05rem; margin-bottom: 36px; }
+    .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .cta-note { margin-top: 20px; font-size: .82rem; color: var(--muted); }
+
+    /* ─── Footer ─── */
+    footer {
+      background: var(--navy); padding: 64px 0 32px;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+    .footer-grid {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 48px; margin-bottom: 48px;
+    }
+    @media(max-width:860px){ .footer-grid { grid-template-columns: 1fr 1fr; } }
+    @media(max-width:500px){ .footer-grid { grid-template-columns: 1fr; } }
+    .footer-brand p { color: var(--muted); font-size: .88rem; margin: 12px 0 20px; max-width: 280px; line-height: 1.7; }
+    .footer-social { display: flex; gap: 10px; }
+    .soc-btn {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem; transition: all .2s;
+    }
+    .soc-btn:hover { background: var(--blue); border-color: var(--blue); }
+    .footer-col h4 { font-size: .88rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 18px; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-col ul li a { color: var(--muted); font-size: .88rem; transition: color .2s; }
+    .footer-col ul li a:hover { color: var(--white); }
+    .footer-bottom {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 24px; border-top: 1px solid rgba(255,255,255,.06);
+      font-size: .82rem; color: var(--muted);
+    }
+    @media(max-width:500px){ .footer-bottom { flex-direction: column; gap: 10px; text-align: center; } }
+
+    /* ─── Scroll reveal ─── */
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity .6s, transform .6s; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ─── Mobile menu overlay ─── */
+    .mobile-menu {
+      display: none; position: fixed; inset: 0; z-index: 99;
+      background: rgba(8,21,37,.97); backdrop-filter: blur(20px);
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 32px;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { font-size: 1.3rem; font-weight: 600; color: var(--light); }
+    .mobile-menu a:hover { color: var(--white); }
+    .mobile-close {
+      position: absolute; top: 24px; right: 24px;
+      font-size: 1.5rem; cursor: pointer; color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Mobile Menu ─── -->
+<div class="mobile-menu" id="mobileMenu">
+  <span class="mobile-close" onclick="closeMobile()">✕</span>
+  <a href="#features" onclick="closeMobile()">Recursos</a>
+  <a href="#how" onclick="closeMobile()">Como Funciona</a>
+  <a href="#pricing" onclick="closeMobile()">Preços</a>
+  <a href="#" class="btn btn-primary" onclick="closeMobile()">Começar grátis</a>
+</div>
+
+<!-- ─── Navbar ─── -->
+<nav id="navbar">
+  <div class="container nav-inner">
+    <div class="nav-logo">
+      <div class="logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="5" width="5" height="5" rx="1" fill="white"/>
+          <rect x="2" y="14" width="5" height="5" rx="1" fill="white"/>
+          <rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="white" opacity=".7"/>
+          <rect x="17" y="5" width="5" height="5" rx="1" fill="white"/>
+          <rect x="17" y="14" width="5" height="5" rx="1" fill="white"/>
+          <line x1="7" y1="7.5" x2="9.5" y2="12" stroke="white" stroke-width="1.2" opacity=".5"/>
+          <line x1="14.5" y1="12" x2="17" y2="7.5" stroke="white" stroke-width="1.2" opacity=".5"/>
+          <line x1="7" y1="16.5" x2="9.5" y2="12" stroke="white" stroke-width="1.2" opacity=".5"/>
+          <line x1="14.5" y1="12" x2="17" y2="16.5" stroke="white" stroke-width="1.2" opacity=".5"/>
+        </svg>
+      </div>
+      <span>Uni<em>FLOW</em></span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#features">Recursos</a></li>
+      <li><a href="#how">Como Funciona</a></li>
+      <li><a href="#stats">Resultados</a></li>
+      <li><a href="#pricing">Preços</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a href="#" class="btn btn-outline" style="padding:10px 20px;font-size:.88rem;">Entrar</a>
+      <a href="#" class="btn btn-primary" style="padding:10px 20px;font-size:.88rem;">Começar grátis</a>
+    </div>
+    <div class="hamburger" onclick="openMobile()">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── Hero ─── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-badge">
+          <span class="dot"></span>
+          Novo: Aprovações com IA integrada
+        </div>
+        <h1>
+          Aprovações <span class="accent">mais rápidas,</span><br/>
+          fluxos <span class="accent-g">sem bloqueio</span>
+        </h1>
+        <p class="hero-sub">
+          Automatize processos de aprovação, elimine gargalos e mantenha toda a sua equipe alinhada — sem planilhas, sem e-mail perdido.
+        </p>
+        <div class="hero-actions">
+          <a href="#" class="btn btn-green">Começar grátis →</a>
+          <a href="#how" class="btn btn-outline">Ver demonstração</a>
+        </div>
+        <div class="hero-trust">
+          <div class="avatars">
+            <span style="background:#3568e8;">JM</span>
+            <span style="background:#16a34a;">AS</span>
+            <span style="background:#7c3aed;">RB</span>
+            <span style="background:#db2777;">CF</span>
+          </div>
+          <span>+2.400 equipes já usam o UniFlow</span>
+        </div>
+      </div>
+
+      <div class="hero-visual reveal">
+        <div class="flow-mini">
+          <div class="fi">✅</div>
+          <p><strong>Aprovado!</strong><br/><span style="font-size:.74rem;color:var(--muted);">Contrato de Fornecedor · agora</span></p>
+        </div>
+        <div class="hero-card">
+          <div class="hero-card-header">
+            <h3>🗂 Solicitações Pendentes</h3>
+            <span class="status-badge status-pending">4 aguardando</span>
+          </div>
+          <div class="approval-list">
+            <div class="approval-item">
+              <div class="approval-icon fi-blue">📄</div>
+              <div class="approval-info">
+                <strong>Proposta Comercial — R$ 48k</strong>
+                <span>Aguardando Diretoria · 2h atrás</span>
+              </div>
+              <div class="approval-action aa-approve">✓</div>
+              <div class="approval-action aa-reject">✕</div>
+            </div>
+            <div class="approval-item">
+              <div class="approval-icon fi-green">💰</div>
+              <div class="approval-info">
+                <strong>Reembolso de Viagem — R$ 3.200</strong>
+                <span>Aguardando RH · 5h atrás</span>
+              </div>
+              <div class="approval-action aa-approve">✓</div>
+              <div class="approval-action aa-reject">✕</div>
+            </div>
+            <div class="approval-item">
+              <div class="approval-icon fi-purple">🔖</div>
+              <div class="approval-info">
+                <strong>Novo Contrato de Serviço</strong>
+                <span>Aguardando Jurídico · 1d atrás</span>
+              </div>
+              <div class="approval-action aa-approve">✓</div>
+              <div class="approval-action aa-reject">✕</div>
+            </div>
+            <div class="approval-item">
+              <div class="approval-icon fi-amber">🧾</div>
+              <div class="approval-info">
+                <strong>Pedido de Compra — R$ 12k</strong>
+                <span>Aguardando Financeiro · 1d atrás</span>
+              </div>
+              <div class="approval-action aa-approve">✓</div>
+              <div class="approval-action aa-reject">✕</div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-mini">
+          <div class="m-val">78%</div>
+          <div class="m-label">Redução no tempo<br/>de aprovação</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Logos ─── -->
+<div class="logos-strip">
+  <div class="container">
+    <p>Confiado por equipes que valorizam agilidade</p>
+    <div class="logos-grid">
+      <div class="logo-pill">Accenture</div>
+      <div class="logo-pill">Bradesco</div>
+      <div class="logo-pill">Magazine Luiza</div>
+      <div class="logo-pill">Embraer</div>
+      <div class="logo-pill">Totvs</div>
+      <div class="logo-pill">Ambev</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Features ─── -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Recursos</span>
+      <h2 class="section-title">Tudo o que você precisa para<br/>aprovar com confiança</h2>
+      <p class="section-sub">Do formulário à assinatura, cada etapa controlada e auditada em tempo real.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-blue">⚡</div>
+        <h3>Workflows Visuais</h3>
+        <p>Monte fluxos de aprovação em minutos com nosso editor drag-and-drop. Sem código, sem TI.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-green">🔔</div>
+        <h3>Notificações Inteligentes</h3>
+        <p>Alertas automáticos por e-mail, Slack ou WhatsApp quando uma aprovação precisa de atenção.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-purple">🤖</div>
+        <h3>IA para Triagem</h3>
+        <p>O assistente analisa a solicitação e sugere aprovação ou recusa com base em políticas da empresa.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-amber">📊</div>
+        <h3>Dashboards em Tempo Real</h3>
+        <p>Visibilidade total: SLA, gargalos, quem está atrasado e qual etapa congestionou o fluxo.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-pink">🔐</div>
+        <h3>Controle de Acesso</h3>
+        <p>Permissões granulares por equipe, departamento ou nível hierárquico — seguro e auditável.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon fi-teal">🔗</div>
+        <h3>Integrações Nativas</h3>
+        <p>Conecte ERP, CRM, Google Drive, SAP e +80 ferramentas com um clique. API REST disponível.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── How it works ─── -->
+<section id="how">
+  <div class="container">
+    <div class="hiw-grid">
+      <div>
+        <span class="tag reveal">Como Funciona</span>
+        <h2 class="section-title reveal">Do pedido à decisão<br/>em minutos</h2>
+        <p class="section-sub reveal" style="margin-bottom:36px;">Qualquer colaborador cria a solicitação; o UniFlow cuida do resto.</p>
+        <div class="hiw-steps">
+          <div class="hiw-step active" data-step="1">
+            <div class="step-num">1</div>
+            <div class="step-text">
+              <h4>Crie o formulário de solicitação</h4>
+              <p>Arraste campos, defina anexos obrigatórios e configure regras de elegibilidade sem escrever código.</p>
+            </div>
+          </div>
+          <div class="hiw-step" data-step="2">
+            <div class="step-num">2</div>
+            <div class="step-text">
+              <h4>Defina as etapas de aprovação</h4>
+              <p>Aprovação sequencial, paralela ou condicional. Escale automaticamente se o prazo vencer.</p>
+            </div>
+          </div>
+          <div class="hiw-step" data-step="3">
+            <div class="step-num">3</div>
+            <div class="step-text">
+              <h4>Aprovadores recebem e decidem</h4>
+              <p>Direto no e-mail, Slack ou app mobile. Um clique e a próxima etapa já começa.</p>
+            </div>
+          </div>
+          <div class="hiw-step" data-step="4">
+            <div class="step-num">4</div>
+            <div class="step-text">
+              <h4>Registro completo e auditoria</h4>
+              <p>Cada ação fica gravada com timestamp, justificativa e identidade do aprovador.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hiw-visual reveal">
+        <div class="hiw-screen">
+          <div class="screen-bar">
+            <span class="sb-r"></span>
+            <span class="sb-y"></span>
+            <span class="sb-g"></span>
+          </div>
+          <div class="pipeline-col-labels">
+            <span>📥 Triagem</span>
+            <span>🔍 Em Análise</span>
+            <span>✅ Concluído</span>
+          </div>
+          <div class="pipeline">
+            <div class="pipeline-row">
+              <div class="pipe-card">
+                <strong>NF #4821</strong>
+                Fornecedor: Alpha Tech<br/>R$ 28.000
+                <div><span class="pc-tag" style="background:rgba(74,124,247,.2);color:var(--blue)">Novo</span></div>
+              </div>
+              <div class="pipe-card">
+                <strong>Contrato SaaS</strong>
+                Adobe Creative<br/>R$ 4.200/mês
+                <div><span class="pc-tag" style="background:rgba(251,191,36,.2);color:#fbbf24">Jurídico</span></div>
+              </div>
+              <div class="pipe-card">
+                <strong>Reembolso #39</strong>
+                João Mendes<br/>R$ 890
+                <div><span class="pc-tag" style="background:rgba(34,197,94,.2);color:var(--green)">Aprovado</span></div>
+              </div>
+            </div>
+            <div class="pipeline-row">
+              <div class="pipe-card">
+                <strong>Compra EPI</strong>
+                Segurança · Produção<br/>R$ 6.500
+                <div><span class="pc-tag" style="background:rgba(74,124,247,.2);color:var(--blue)">Novo</span></div>
+              </div>
+              <div class="pipe-card">
+                <strong>Proposta #77</strong>
+                Cliente Bertolucci<br/>R$ 120k
+                <div><span class="pc-tag" style="background:rgba(251,191,36,.2);color:#fbbf24">Diretoria</span></div>
+              </div>
+              <div class="pipe-card">
+                <strong>Férias — TI</strong>
+                Ana Souza<br/>15 dias
+                <div><span class="pc-tag" style="background:rgba(34,197,94,.2);color:var(--green)">Aprovado</span></div>
+              </div>
+            </div>
+            <div class="pipeline-row">
+              <div class="pipe-card">
+                <strong>NF #4830</strong>
+                Gráfica Rápida<br/>R$ 1.200
+                <div><span class="pc-tag" style="background:rgba(74,124,247,.2);color:var(--blue)">Novo</span></div>
+              </div>
+              <div class="pipe-card">
+                <strong>Kit Onboarding</strong>
+                RH · 3 colaboradores<br/>R$ 750
+                <div><span class="pc-tag" style="background:rgba(251,191,36,.2);color:#fbbf24">RH</span></div>
+              </div>
+              <div class="pipe-card">
+                <strong>Licença Pró</strong>
+                Figma Team · anual<br/>R$ 3.600
+                <div><span class="pc-tag" style="background:rgba(34,197,94,.2);color:var(--green)">Aprovado</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Stats ─── -->
+<section class="stats" id="stats">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Resultados Reais</span>
+      <h2 class="section-title">Números que falam<br/>por si só</h2>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card reveal">
+        <div class="stat-val blue">78%</div>
+        <div class="stat-label">Redução no ciclo de aprovação</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-val green">+2.400</div>
+        <div class="stat-label">Empresas ativas</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-val blue">4,8★</div>
+        <div class="stat-label">Avaliação média dos usuários</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-val green">12M+</div>
+        <div class="stat-label">Aprovações processadas</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Testimonials ─── -->
+<section class="testimonials">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Depoimentos</span>
+      <h2 class="section-title">O que nossos clientes dizem</h2>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card reveal">
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">"Reduziu o tempo de aprovação de compras de 5 dias para menos de 4 horas. A visibilidade em tempo real mudou completamente a forma como gerenciamos fornecedores."</p>
+        <div class="testi-author">
+          <div class="testi-avatar" style="background:rgba(74,124,247,.3);color:var(--blue)">MC</div>
+          <div>
+            <strong>Mariana Costa</strong>
+            <span>CFO · Grupo Beltrão</span>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card reveal">
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">"Implantamos o UniFlow em 3 departamentos em menos de uma semana. A equipe jurídica finalmente para de perguntar 'onde está o contrato?' por e-mail."</p>
+        <div class="testi-author">
+          <div class="testi-avatar" style="background:rgba(34,197,94,.3);color:var(--green)">RL</div>
+          <div>
+            <strong>Rafael Lemos</strong>
+            <span>Head de Operações · TechNova</span>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card reveal">
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">"O dashboard de SLA salvou nosso time de RH. Agora todo mundo sabe exatamente em que etapa está cada solicitação e ninguém precisa mandar mensagem no WhatsApp."</p>
+        <div class="testi-author">
+          <div class="testi-avatar" style="background:rgba(168,85,247,.3);color:#a855f7">FP</div>
+          <div>
+            <strong>Fernanda Pires</strong>
+            <span>Diretora de RH · Construtora Arca</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Pricing ─── -->
+<section id="pricing" style="background:var(--navy2);">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="tag">Preços</span>
+      <h2 class="section-title">Simples, transparente,<br/>sem surpresa</h2>
+      <p class="section-sub">Comece grátis. Escale conforme o seu time crescer.</p>
+    </div>
+    <div class="pricing-grid">
+      <!-- Starter -->
+      <div class="price-card reveal">
+        <div class="price-tier">Starter</div>
+        <div class="price-val"><sup>R$</sup>0<sub>/mês</sub></div>
+        <p class="price-desc">Para pequenas equipes que querem começar a organizar aprovações.</p>
+        <ul class="price-features">
+          <li>Até 3 usuários</li>
+          <li>5 workflows ativos</li>
+          <li>100 aprovações/mês</li>
+          <li>Notificações por e-mail</li>
+          <li class="dim">IA para triagem</li>
+          <li class="dim">Integrações avançadas</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%;justify-content:center;">Começar grátis</a>
+      </div>
+      <!-- Pro -->
+      <div class="price-card featured reveal">
+        <div class="price-badge">Mais Popular</div>
+        <div class="price-tier">Pro</div>
+        <div class="price-val"><sup>R$</sup>297<sub>/mês</sub></div>
+        <p class="price-desc">Para equipes que precisam de automação real e visibilidade total.</p>
+        <ul class="price-features">
+          <li>Até 25 usuários</li>
+          <li>Workflows ilimitados</li>
+          <li>Aprovações ilimitadas</li>
+          <li>Slack + WhatsApp + E-mail</li>
+          <li>IA para triagem</li>
+          <li>Dashboard SLA avançado</li>
+        </ul>
+        <a href="#" class="btn btn-primary" style="width:100%;justify-content:center;">Teste 14 dias grátis</a>
+      </div>
+      <!-- Enterprise -->
+      <div class="price-card reveal">
+        <div class="price-tier">Enterprise</div>
+        <div class="price-val" style="font-size:2rem;padding-top:8px;">Sob consulta</div>
+        <p class="price-desc">Para grandes organizações com necessidades de compliance e escala.</p>
+        <ul class="price-features">
+          <li>Usuários ilimitados</li>
+          <li>SSO & LDAP / AD</li>
+          <li>SLA garantido 99,9%</li>
+          <li>Integração ERP / SAP</li>
+          <li>Suporte dedicado 24/7</li>
+          <li>Auditoria avançada</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%;justify-content:center;">Falar com vendas</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA ─── -->
+<section class="cta-section">
+  <div class="container">
+    <span class="tag">Comece hoje</span>
+    <h2>Pronto para eliminar<br/>os gargalos de aprovação?</h2>
+    <p>Sem cartão de crédito. Configure em menos de 10 minutos.</p>
+    <div class="cta-row">
+      <a href="#" class="btn btn-green" style="font-size:1rem;padding:15px 32px;">Criar conta grátis →</a>
+      <a href="#" class="btn btn-outline" style="font-size:1rem;padding:15px 32px;">Agendar uma demo</a>
+    </div>
+    <p class="cta-note">✓ Grátis para sempre no plano Starter &nbsp;·&nbsp; ✓ Setup em minutos &nbsp;·&nbsp; ✓ Suporte em português</p>
+  </div>
+</section>
+
+<!-- ─── Footer ─── -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="nav-logo" style="margin-bottom:0">
+          <div class="logo-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="5" height="5" rx="1" fill="white"/><rect x="2" y="14" width="5" height="5" rx="1" fill="white"/><rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="white" opacity=".7"/><rect x="17" y="5" width="5" height="5" rx="1" fill="white"/><rect x="17" y="14" width="5" height="5" rx="1" fill="white"/></svg></div>
+          <span>Uni<em>FLOW</em></span>
+        </div>
+        <p>Aprovações simplificadas para equipes modernas. Elimine burocracia e mantenha o foco no que importa.</p>
+        <div class="footer-social">
+          <div class="soc-btn">𝕏</div>
+          <div class="soc-btn">in</div>
+          <div class="soc-btn">▶</div>
+          <div class="soc-btn">📸</div>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Produto</h4>
+        <ul>
+          <li><a href="#">Recursos</a></li>
+          <li><a href="#">Integrações</a></li>
+          <li><a href="#">Preços</a></li>
+          <li><a href="#">Changelog</a></li>
+          <li><a href="#">Roadmap</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="#">Sobre nós</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Carreiras</a></li>
+          <li><a href="#">Imprensa</a></li>
+          <li><a href="#">Parceiros</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Suporte</h4>
+        <ul>
+          <li><a href="#">Central de Ajuda</a></li>
+          <li><a href="#">Documentação</a></li>
+          <li><a href="#">Status</a></li>
+          <li><a href="#">Contato</a></li>
+          <li><a href="#">Comunidade</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 UniFlow. Todos os direitos reservados.</span>
+      <span>Política de Privacidade · Termos de Uso</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Navbar scroll
+  const nav = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  // Mobile menu
+  function openMobile() { document.getElementById('mobileMenu').classList.add('open'); }
+  function closeMobile() { document.getElementById('mobileMenu').classList.remove('open'); }
+
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // How it works step toggle
+  document.querySelectorAll('.hiw-step').forEach(step => {
+    step.addEventListener('click', () => {
+      document.querySelectorAll('.hiw-step').forEach(s => s.classList.remove('active'));
+      step.classList.add('active');
+    });
+  });
+
+  // Approval button interaction
+  document.querySelectorAll('.aa-approve').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const item = this.closest('.approval-item');
+      item.style.opacity = '0';
+      item.style.transform = 'translateX(20px)';
+      item.style.transition = 'all .3s';
+      setTimeout(() => item.remove(), 300);
+    });
+  });
+
+  // Counter animation for stats
+  function animateCounter(el, target, prefix = '', suffix = '') {
+    let start = 0;
+    const duration = 1500;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) { start = target; clearInterval(timer); }
+      el.textContent = prefix + (Number.isInteger(target) ? Math.floor(start).toLocaleString('pt-BR') : start.toFixed(1)) + suffix;
+    }, 16);
+  }
+
+  const statsObserver = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        statsObserver.unobserve(e.target);
+        const val = e.target.querySelector('.stat-val');
+        if (!val) return;
+        const text = val.textContent.trim();
+        if (text === '78%') animateCounter(val, 78, '', '%');
+        else if (text === '+2.400') { val.textContent = '+0'; animateCounter(val, 2400, '+', ''); }
+        else if (text === '4,8★') animateCounter(val, 4.8, '', '★');
+        else if (text === '12M+') animateCounter(val, 12, '', 'M+');
+      }
+    });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('.stat-card').forEach(c => statsObserver.observe(c));
+</script>
+</body>
+</html>

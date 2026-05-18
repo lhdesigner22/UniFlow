@@ -1,0 +1,55 @@
+.page {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(74,124,247,.2) 0%, var(--navy) 70%);
+  padding: 24px;
+}
+.card {
+  width: 100%; max-width: 400px;
+  background: var(--navy2); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 36px;
+  animation: fadeIn .25s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.2rem; font-weight: 800; margin-bottom: 28px;
+}
+.logo em { font-style: normal; color: var(--blue); }
+.logoIcon {
+  width: 36px; height: 36px; background: var(--blue);
+  border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.title { font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; }
+.sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+.form { display: flex; flex-direction: column; gap: 4px; }
+.error {
+  background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+  color: var(--red); border-radius: 8px; padding: 10px 12px;
+  font-size: 13px; margin-bottom: 8px;
+}
+.googleBtn {
+  width: 100%; display: flex; justify-content: center; align-items: center;
+  margin-bottom: 4px; min-height: 44px;
+  border-radius: 8px; overflow: hidden;
+}
+.googleBtn > div, .googleBtn iframe { width: 100% !important; }
+.googleLoading {
+  font-size: 13px; color: var(--muted); padding: 10px;
+  text-align: center; width: 100%;
+}
+
+.divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 16px 0 12px; color: var(--muted); font-size: 12px;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border2);
+}
+
+.foot { text-align: center; margin-top: 20px; font-size: 13px; color: var(--muted); }
+.demo {
+  margin-top: 16px; padding: 10px 12px;
+  background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.2);
+  border-radius: 8px; text-align: center; font-size: 11px; color: var(--green);
+}
