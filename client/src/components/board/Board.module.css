@@ -1,15 +1,19 @@
 .board {
-  display: flex; gap: 12px;
-  padding: 16px 24px;
+  display: flex; gap: 14px;
+  padding: 20px 24px;
   overflow-x: auto; overflow-y: hidden;
   flex: 1; align-items: flex-start;
   height: 100%;
 }
-.addColumn { flex-shrink: 0; width: 240px; padding-top: 2px; }
+.board::-webkit-scrollbar { height: 6px; }
+
+.addColumn { flex-shrink: 0; width: 260px; padding-top: 2px; }
 .addPhaseBtn {
-  width: 100%; padding: 10px; border-radius: 10px;
+  width: 100%; padding: 12px; border-radius: 12px;
   background: transparent; border: 2px dashed var(--border2);
-  color: var(--muted); font-size: 13px; cursor: pointer; transition: all .15s;
+  color: var(--muted); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
 }
-.addPhaseBtn:hover { border-color: var(--blue); color: var(--blue); }
+.addPhaseBtn:hover { border-color: var(--blue); color: var(--blue); background: var(--glow); }
 .addPhaseForm { display: flex; flex-direction: column; gap: 8px; }
