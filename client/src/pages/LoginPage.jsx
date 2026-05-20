@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import s from './Auth.module.css'
@@ -37,39 +37,43 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const { login, loginWithGoogle } = useAuthStore()
   const navigate = useNavigate()
-  const googleCallbackRef = useRef(null)
-
-  googleCallbackRef.current = useCallback(async ({ credential }) => {
-    setGoogleLoading(true)
-    setError('')
-    try {
-      await loginWithGoogle(credential)
-      navigate('/')
-    } catch (err) {
-      setError(err?.response?.data?.error || 'Erro ao entrar com Google')
-    } finally { setGoogleLoading(false) }
-  }, [loginWithGoogle, navigate])
+  const actionRef = useRef(null)
+  actionRef.current = { loginWithGoogle, navigate }
 
   useEffect(() => {
     if (!googleEnabled) return
-    const init = () => {
-      if (!window.google?.accounts?.id) return
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => googleCallbackRef.current(response),
-        context: 'signin',
-      })
+    const handleMessage = (event) => {
+      if (event.origin !== window.location.origin) return
+      if (event.data?.type !== 'google-oauth') return
+      const { idToken, error: oauthError } = event.data
+      if (oauthError || !idToken) { setError('Autenticação cancelada.'); return }
+      setGoogleLoading(true)
+      setError('')
+      actionRef.current.loginWithGoogle(idToken)
+        .then(() => actionRef.current.navigate('/'))
+        .catch(err => setError(err?.response?.data?.error || 'Erro ao entrar com Google'))
+        .finally(() => setGoogleLoading(false))
     }
-    if (window.google?.accounts?.id) { init() }
-    else {
-      const t = setInterval(() => { if (window.google?.accounts?.id) { init(); clearInterval(t) } }, 150)
-      return () => clearInterval(t)
-    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
   }, [])
 
   const handleGoogleClick = () => {
-    if (!window.google?.accounts?.id) return
-    window.google.accounts.id.prompt()
+    const nonce = (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2))
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: `${window.location.origin}/auth/google/callback`,
+      response_type: 'id_token',
+      scope: 'openid email profile',
+      prompt: 'select_account',
+      nonce,
+    })
+    const popup = window.open(
+      `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
+      'google-signin',
+      'width=500,height=620,left=200,top=100',
+    )
+    if (!popup) setError('Popup bloqueado pelo navegador. Permita popups para este site e tente novamente.')
   }
 
   const submit = async e => {

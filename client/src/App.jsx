@@ -11,6 +11,7 @@ import AutomationsPage from './pages/AutomationsPage'
 import ReportsPage from './pages/ReportsPage'
 import PublicFormPage from './pages/PublicFormPage'
 import AdminPage from './pages/AdminPage'
+import GoogleCallback from './pages/GoogleCallback'
 
 function PrivateRoute({ children }) {
   const { user, token, loading } = useAuthStore()
@@ -28,6 +29,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/auth/google/callback" element={<GoogleCallback />} />
         <Route path="/forms/:token" element={<PublicFormPage />} />
         <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
           <Route index element={<DashboardPage />} />

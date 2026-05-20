@@ -27,6 +27,7 @@ export const useAuthStore = create((set) => ({
   logout: () => {
     localStorage.removeItem('token')
     set({ user: null, token: null })
+    window.google?.accounts?.id?.disableAutoSelect()
   },
 
   fetchMe: async () => {
