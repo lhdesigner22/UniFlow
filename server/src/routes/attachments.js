@@ -16,16 +16,16 @@ const upload = multer({ storage, limits: { fileSize: 20 * 1024 * 1024 } })
 const router = Router({ mergeParams: true })
 router.use(auth)
 
-router.post('/:cardId', upload.single('file'), (req, res) => {
+router.post('/:cardId', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Arquivo não enviado' })
   const id = uuid()
-  db.prepare('INSERT INTO card_attachments (id, card_id, user_id, filename, original_name, size, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?)')
+  await db.prepare('INSERT INTO card_attachments (id, card_id, user_id, filename, original_name, size, mime_type) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .run(id, req.params.cardId, req.user.id, req.file.filename, req.file.originalname, req.file.size, req.file.mimetype)
-  res.json(db.prepare('SELECT ca.*, u.name as user_name FROM card_attachments ca JOIN users u ON u.id = ca.user_id WHERE ca.id = ?').get(id))
+  res.json(await db.prepare('SELECT ca.*, u.name as user_name FROM card_attachments ca JOIN users u ON u.id = ca.user_id WHERE ca.id = ?').get(id))
 })
 
-router.delete('/:cardId/:id', (req, res) => {
-  db.prepare('DELETE FROM card_attachments WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id)
+router.delete('/:cardId/:id', async (req, res) => {
+  await db.prepare('DELETE FROM card_attachments WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id)
   res.json({ ok: true })
 })
 

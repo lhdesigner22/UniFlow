@@ -12,36 +12,36 @@ const router = Router()
 const OWNER_EMAILS = ['luiz.sanchez@colegioser.com']
 
 // Auto-promove donos e e-mails listados em SUPER_ADMIN_EMAILS para super_admin
-function autoPromote(userId, email) {
+async function autoPromote(userId, email) {
   const envList = (process.env.SUPER_ADMIN_EMAILS || '')
     .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
   const fullList = [...new Set([...OWNER_EMAILS.map(e => e.toLowerCase()), ...envList])]
   if (fullList.includes(email.toLowerCase())) {
-    db.prepare("UPDATE users SET system_role = 'super_admin' WHERE id = ?").run(userId)
+    await db.prepare("UPDATE users SET system_role = 'super_admin' WHERE id = ?").run(userId)
   }
 }
 
 router.get('/health', (_req, res) => res.json({ ok: true }))
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { name, email, password } = req.body
   if (!name || !email || !password) return res.status(400).json({ error: 'Campos obrigatórios' })
-  const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
+  const exists = await db.prepare('SELECT id FROM users WHERE email = ?').get(email)
   if (exists) return res.status(409).json({ error: 'E-mail já cadastrado' })
   const hash = bcrypt.hashSync(password, 10)
   const id = uuid()
-  db.prepare('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)').run(id, name, email, hash)
+  await db.prepare('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)').run(id, name, email, hash)
   const token = jwt.sign({ id, name, email }, process.env.JWT_SECRET, { expiresIn: '7d' })
   res.json({ token, user: { id, name, email } })
 })
 
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { email, password } = req.body
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
+  let user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email)
   if (!user || !bcrypt.compareSync(password, user.password))
     return res.status(401).json({ error: 'Credenciais inválidas' })
-  autoPromote(user.id, user.email)
-  user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
+  await autoPromote(user.id, user.email)
+  user = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
   const token = jwt.sign({ id: user.id, name: user.name, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' })
   res.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, system_role: user.system_role } })
 })
@@ -75,23 +75,23 @@ router.post('/google', async (req, res) => {
     }
 
     // 3. Encontrar ou criar usuário
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
+    let user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email)
     if (!user) {
       // Novo usuário via Google
       const id = uuid()
-      db.prepare('INSERT INTO users (id, name, email, password, avatar, google_id) VALUES (?, ?, ?, ?, ?, ?)')
+      await db.prepare('INSERT INTO users (id, name, email, password, avatar, google_id) VALUES (?, ?, ?, ?, ?, ?)')
         .run(id, name, email, '', picture || null, googleId)
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(id)
+      user = await db.prepare('SELECT * FROM users WHERE id = ?').get(id)
     } else {
       // Vincular Google a conta existente e atualizar avatar se não tiver
-      db.prepare('UPDATE users SET google_id = ?, avatar = CASE WHEN avatar IS NULL OR avatar = "" THEN ? ELSE avatar END WHERE id = ?')
+      await db.prepare('UPDATE users SET google_id = ?, avatar = CASE WHEN avatar IS NULL OR avatar = "" THEN ? ELSE avatar END WHERE id = ?')
         .run(googleId, picture || null, user.id)
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
+      user = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
     }
 
     // 4. Auto-promover se email estiver em SUPER_ADMIN_EMAILS
-    autoPromote(user.id, user.email)
-    user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
+    await autoPromote(user.id, user.email)
+    user = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
 
     // 5. Emitir JWT igual ao login normal
     const token = jwt.sign(
@@ -107,8 +107,8 @@ router.post('/google', async (req, res) => {
   }
 })
 
-router.get('/me', auth, (req, res) => {
-  const user = db.prepare(`
+router.get('/me', auth, async (req, res) => {
+  const user = await db.prepare(`
     SELECT u.id, u.name, u.email, u.avatar, u.system_role, u.department_id, u.created_at,
            d.name as department_name
     FROM users u LEFT JOIN departments d ON d.id = u.department_id
@@ -117,9 +117,9 @@ router.get('/me', auth, (req, res) => {
   res.json(user)
 })
 
-router.put('/me', auth, (req, res) => {
+router.put('/me', auth, async (req, res) => {
   const { name, avatar } = req.body
-  db.prepare('UPDATE users SET name = ?, avatar = ? WHERE id = ?').run(name, avatar, req.user.id)
+  await db.prepare('UPDATE users SET name = ?, avatar = ? WHERE id = ?').run(name, avatar, req.user.id)
   res.json({ ok: true })
 })
 

@@ -7,11 +7,11 @@ router.use(auth)
 
 // Busca usuários para adicionar em pipes
 // super_admin → vê todos  |  outros → vê apenas o seu departamento
-router.get('/search', (req, res) => {
+router.get('/search', async (req, res) => {
   const { q, exclude } = req.query  // exclude = IDs já membros (separados por vírgula)
   if (!q || q.trim().length < 2) return res.json([])
 
-  const requester = db.prepare(
+  const requester = await db.prepare(
     'SELECT system_role, department_id FROM users WHERE id = ?'
   ).get(req.user.id)
 
@@ -21,7 +21,7 @@ router.get('/search', (req, res) => {
 
   let users
   if (requester.system_role === 'super_admin') {
-    users = db.prepare(`
+    users = await db.prepare(`
       SELECT u.id, u.name, u.email, u.avatar, u.system_role,
              d.name as department_name, d.color as department_color
       FROM users u LEFT JOIN departments d ON d.id = u.department_id
@@ -31,7 +31,7 @@ router.get('/search', (req, res) => {
     `).all(pattern, pattern, ...excluded)
   } else if (requester.department_id) {
     // Filtrado ao departamento do solicitante
-    users = db.prepare(`
+    users = await db.prepare(`
       SELECT u.id, u.name, u.email, u.avatar, u.system_role,
              d.name as department_name, d.color as department_color
       FROM users u LEFT JOIN departments d ON d.id = u.department_id
@@ -42,7 +42,7 @@ router.get('/search', (req, res) => {
     `).all(pattern, pattern, requester.department_id, ...excluded)
   } else {
     // Sem departamento configurado: mostra todos (sistema ainda não estruturado)
-    users = db.prepare(`
+    users = await db.prepare(`
       SELECT u.id, u.name, u.email, u.avatar, u.system_role,
              d.name as department_name, d.color as department_color
       FROM users u LEFT JOIN departments d ON d.id = u.department_id

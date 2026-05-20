@@ -6,37 +6,39 @@ import { auth } from '../middleware/auth.js'
 const router = Router({ mergeParams: true })
 router.use(auth)
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { name, color = '#4a7cf7', done = 0 } = req.body
-  const maxOrder = db.scalar('SELECT MAX(order_index) FROM phases WHERE pipe_id = ?', req.params.pipeId) ?? -1
+  const maxOrder = await db.scalar('SELECT MAX(order_index) FROM phases WHERE pipe_id = ?', req.params.pipeId) ?? -1
   const id = uuid()
-  db.prepare('INSERT INTO phases (id, pipe_id, name, color, order_index, done) VALUES (?, ?, ?, ?, ?, ?)')
+  await db.prepare('INSERT INTO phases (id, pipe_id, name, color, order_index, done) VALUES (?, ?, ?, ?, ?, ?)')
     .run(id, req.params.pipeId, name, color, maxOrder + 1, done)
-  res.json(db.prepare('SELECT * FROM phases WHERE id = ?').get(id))
+  res.json(await db.prepare('SELECT * FROM phases WHERE id = ?').get(id))
 })
 
-router.put('/reorder', (req, res) => {
+router.put('/reorder', async (req, res) => {
   const { order } = req.body // array of { id, order_index }
-  const update = db.prepare('UPDATE phases SET order_index = ? WHERE id = ?')
-  db.transaction(() => order.forEach(o => update.run(o.order_index, o.id)))()
+  await db.batch(order.map(o => ({
+    sql: 'UPDATE phases SET order_index = ? WHERE id = ?',
+    args: [o.order_index, o.id]
+  })))
   res.json({ ok: true })
 })
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const { name, color, done } = req.body
-  const phase = db.prepare('SELECT * FROM phases WHERE id = ? AND pipe_id = ?').get(req.params.id, req.params.pipeId)
+  const phase = await db.prepare('SELECT * FROM phases WHERE id = ? AND pipe_id = ?').get(req.params.id, req.params.pipeId)
   if (!phase) return res.status(404).json({ error: 'Fase não encontrada' })
-  db.prepare('UPDATE phases SET name = ?, color = ?, done = ? WHERE id = ?')
+  await db.prepare('UPDATE phases SET name = ?, color = ?, done = ? WHERE id = ?')
     .run(name ?? phase.name, color ?? phase.color, done ?? phase.done, phase.id)
-  res.json(db.prepare('SELECT * FROM phases WHERE id = ?').get(phase.id))
+  res.json(await db.prepare('SELECT * FROM phases WHERE id = ?').get(phase.id))
 })
 
-router.delete('/:id', (req, res) => {
-  const phase = db.prepare('SELECT * FROM phases WHERE id = ? AND pipe_id = ?').get(req.params.id, req.params.pipeId)
+router.delete('/:id', async (req, res) => {
+  const phase = await db.prepare('SELECT * FROM phases WHERE id = ? AND pipe_id = ?').get(req.params.id, req.params.pipeId)
   if (!phase) return res.status(404).json({ error: 'Fase não encontrada' })
-  const hasCards = db.scalar('SELECT COUNT(*) FROM cards WHERE phase_id = ? AND archived = 0', phase.id) ?? 0
+  const hasCards = await db.scalar('SELECT COUNT(*) FROM cards WHERE phase_id = ? AND archived = 0', phase.id) ?? 0
   if (hasCards > 0) return res.status(400).json({ error: 'Mova ou arquive os cards antes de excluir' })
-  db.prepare('DELETE FROM phases WHERE id = ?').run(phase.id)
+  await db.prepare('DELETE FROM phases WHERE id = ?').run(phase.id)
   res.json({ ok: true })
 })
 
