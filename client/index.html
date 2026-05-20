@@ -5,12 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UniFlow — Approvals Simplified</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234a7cf7'/><text y='.9em' font-size='80'>⚡</text></svg>"/>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Aplica tema antes do React renderizar (evita flash) -->
     <script>(function(){var t=localStorage.getItem('uniflow-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+    <!-- OAuth callback: fecha o popup imediatamente sem esperar o bundle React -->
+    <script>
+      if (window.location.pathname === '/auth/google/callback') {
+        var p = new URLSearchParams(window.location.hash.slice(1));
+        if (window.opener) {
+          window.opener.postMessage(
+            { type: 'google-oauth', idToken: p.get('id_token'), error: p.get('error') },
+            window.location.origin
+          );
+        }
+        window.close();
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
