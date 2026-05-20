@@ -29,6 +29,7 @@ export default function AutomationsPage() {
   const [labels, setLabels] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [form, setForm] = useState({ name:'', trigger_type:'card_created', trigger_config:{}, action_type:'send_notification', action_config:{} })
 
   useEffect(() => {
@@ -65,9 +66,9 @@ export default function AutomationsPage() {
   }
 
   const remove = async (id) => {
-    if (!confirm('Excluir automação?')) return
     await api.delete(`/pipes/${pipeId}/automations/${id}`)
     setAutomations(prev => prev.filter(a => a.id !== id))
+    setConfirmDeleteId(null)
   }
 
   return (
@@ -103,7 +104,14 @@ export default function AutomationsPage() {
                   <div className={s.cardActions}>
                     <button className="btn btn-sm btn-ghost" onClick={() => toggle(a)}>{a.active ? '⏸ Pausar' : '▶ Ativar'}</button>
                     <button className="btn btn-sm btn-ghost" onClick={() => openEdit(a)}>✏️ Editar</button>
-                    <button className="btn btn-sm btn-danger" onClick={() => remove(a.id)}>🗑️</button>
+                    {confirmDeleteId === a.id ? (
+                      <>
+                        <button className="btn btn-sm btn-ghost" onClick={() => setConfirmDeleteId(null)}>Cancelar</button>
+                        <button className="btn btn-sm btn-danger" onClick={() => remove(a.id)}>Confirmar</button>
+                      </>
+                    ) : (
+                      <button className="btn btn-sm btn-danger" onClick={() => setConfirmDeleteId(a.id)}>🗑️</button>
+                    )}
                   </div>
                 </div>
                 <div className={s.cardBody}>

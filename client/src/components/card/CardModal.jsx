@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 import s from './CardModal.module.css'
@@ -22,10 +22,27 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
   const [saving, setSaving] = useState(false)
   const [comment, setComment] = useState('')
   const [newItem, setNewItem] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [closing, setClosing] = useState(false)
   const { user } = useAuthStore()
+
+  const handleClose = useCallback(() => {
+    setClosing(true)
+    setTimeout(onClose, 200)
+  }, [onClose])
 
   const load = () => api.get(`/pipes/${pipeId}/cards/${cardId}`).then(r => setCard(r.data))
   useEffect(() => { load() }, [cardId])
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    const handler = e => { if (e.key === 'Escape') handleClose() }
+    document.addEventListener('keydown', handler)
+    return () => {
+      document.body.style.overflow = ''
+      document.removeEventListener('keydown', handler)
+    }
+  }, [handleClose])
 
   if (!card) return (
     <div className={s.overlay}>
@@ -37,6 +54,7 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
       </div>
     </div>
   )
+
 
   const update = async (patch) => {
     setSaving(true)
@@ -83,7 +101,7 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
   const archiveCard = async () => {
     await api.post(`/pipes/${pipeId}/cards/${cardId}/archive`)
     onArchive(cardId)
-    onClose()
+    handleClose()
   }
 
   const cardLabels = (() => { try { return JSON.parse(card.labels || '[]') } catch { return [] } })()
@@ -105,8 +123,8 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
     : members
 
   return (
-    <div className={s.overlay} onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={s.modal}>
+    <div className={`${s.overlay} ${closing ? s.overlayOut : ''}`} onMouseDown={e => { if (e.target === e.currentTarget) handleClose() }}>
+      <div className={`${s.modal} ${closing ? s.modalOut : ''}`}>
 
         {/* ── Header ── */}
         <div className={s.header}>
@@ -120,7 +138,7 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
           </div>
           <div className={s.headerRight}>
             {saving && <span className={s.savingPill}>Salvando…</span>}
-            <button className="btn btn-icon" onClick={onClose} title="Fechar (Esc)">✕</button>
+            <button className="btn btn-icon" onClick={handleClose} title="Fechar (Esc)">✕</button>
           </div>
         </div>
 
@@ -366,10 +384,20 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
               <button className="btn btn-ghost btn-sm" style={{ width:'100%', justifyContent:'center' }} onClick={archiveCard}>
                 Arquivar card
               </button>
-              <button className="btn btn-danger btn-sm" style={{ width:'100%', justifyContent:'center' }}
-                onClick={() => { if (confirm('Excluir este card permanentemente?')) onDelete(cardId) }}>
-                Excluir card
-              </button>
+              {confirmDelete ? (
+                <div className={s.confirmBox}>
+                  <p className={s.confirmText}>Excluir permanentemente?</p>
+                  <div className={s.confirmBtns}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(false)}>Cancelar</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => onDelete(cardId)}>Excluir</button>
+                  </div>
+                </div>
+              ) : (
+                <button className="btn btn-danger btn-sm" style={{ width:'100%', justifyContent:'center' }}
+                  onClick={() => setConfirmDelete(true)}>
+                  Excluir card
+                </button>
+              )}
             </div>
 
             <div className={s.sideFooter}>

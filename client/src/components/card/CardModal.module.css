@@ -8,6 +8,8 @@
   animation: overlayIn .18s ease;
 }
 @keyframes overlayIn { from { opacity:0; } to { opacity:1; } }
+.overlayOut { animation: overlayOut .2s ease forwards; }
+@keyframes overlayOut { to { opacity:0; } }
 
 .modal {
   width: 900px; max-width: 100%;
@@ -24,6 +26,8 @@
   from { opacity:0; transform:translateY(20px) scale(.97); }
   to   { opacity:1; transform:none; }
 }
+.modalOut { animation: modalOut .2s ease forwards; }
+@keyframes modalOut { to { opacity:0; transform:translateY(14px) scale(.98); } }
 
 .loading {
   padding: 60px; text-align: center;
@@ -263,6 +267,16 @@
 .sideDivider { height: 1px; background: var(--border2); margin: 0 -16px; }
 
 .sideActions { display: flex; flex-direction: column; gap: 6px; }
+
+.confirmBox {
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.25);
+  border-radius: 10px; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.confirmText { font-size: 12px; color: var(--red); font-weight: 600; text-align: center; margin: 0; }
+.confirmBtns { display: flex; gap: 6px; }
+.confirmBtns .btn { flex: 1; justify-content: center; }
 
 .sideFooter {
   display: flex; flex-direction: column; gap: 3px;
