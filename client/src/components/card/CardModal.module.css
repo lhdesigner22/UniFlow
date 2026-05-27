@@ -221,6 +221,57 @@
   gap: 18px;
 }
 
+/* ── Approver actions ────────────────────────────────────────── */
+.approverSection {
+  background: rgba(74,124,247,.07);
+  border: 1px solid rgba(74,124,247,.22);
+  border-radius: 12px;
+  padding: 12px 13px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.approverHeader {
+  display: flex; align-items: center; gap: 7px;
+}
+.approverBadge {
+  font-size: 14px; line-height: 1;
+}
+.approverTitle {
+  font-size: 11px; font-weight: 700;
+  color: var(--blue); text-transform: uppercase; letter-spacing: .05em;
+}
+.phaseActions {
+  display: flex; flex-direction: column; gap: 5px;
+}
+.phaseActionBtn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 11px; border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--navy2); color: var(--light);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s; text-align: left; width: 100%;
+}
+.phaseActionBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--pc) 13%, transparent);
+  border-color: color-mix(in srgb, var(--pc) 40%, transparent);
+  color: var(--pc);
+}
+.phaseActionBtn:disabled { opacity: .5; cursor: not-allowed; }
+.phaseActionFinal {
+  border-color: color-mix(in srgb, var(--pc) 30%, transparent);
+  background: color-mix(in srgb, var(--pc) 8%, transparent);
+  color: var(--white); font-size: 13px; padding: 11px 12px;
+}
+.phaseActionFinal:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--pc) 20%, transparent) !important;
+  border-color: color-mix(in srgb, var(--pc) 55%, transparent) !important;
+}
+.phaseBtnDot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.phaseBtnArrow {
+  margin-left: auto; color: var(--pc); font-size: 14px; font-weight: 700;
+}
+
 .metaGroup { display: flex; flex-direction: column; gap: 7px; }
 .metaGroup select, .metaGroup input {
   font-size: 13px;

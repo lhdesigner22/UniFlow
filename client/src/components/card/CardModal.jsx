@@ -319,6 +319,35 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
           {/* ── Side panel ── */}
           <div className={s.sidePanel}>
 
+            {/* ── Ações do Aprovador ── */}
+            {user?.id === card.assignee_id && (
+              <div className={s.approverSection}>
+                <div className={s.approverHeader}>
+                  <span className={s.approverBadge}>⚡</span>
+                  <span className={s.approverTitle}>Aguardando sua decisão</span>
+                </div>
+                <div className={s.phaseActions}>
+                  {phases
+                    .filter(p => p.id !== card.phase_id)
+                    .sort((a, b) => a.order_index - b.order_index)
+                    .map(p => (
+                      <button
+                        key={p.id}
+                        className={`${s.phaseActionBtn} ${p.done ? s.phaseActionFinal : ''}`}
+                        style={{ '--pc': p.color }}
+                        onClick={() => update({ phase_id: p.id })}
+                        disabled={saving}
+                      >
+                        <span className={s.phaseBtnDot} style={{ background: p.color }} />
+                        <span>{p.name}</span>
+                        {p.done && <span className={s.phaseBtnArrow}>→</span>}
+                      </button>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
+
             <div className={s.metaGroup}>
               <span className="label">Fase</span>
               <select value={card.phase_id} onChange={e => update({ phase_id: e.target.value })}>
