@@ -7,6 +7,7 @@ import { existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
+import { initSocket } from './socket.js'
 import authRoutes from './routes/auth.js'
 import adminRoutes from './routes/admin.js'
 import usersRoutes from './routes/users.js'
@@ -30,6 +31,9 @@ const httpServer = createServer(app)
 const io = new Server(httpServer, {
   cors: { origin: process.env.CLIENT_URL || 'http://localhost:5173', credentials: true }
 })
+
+// Registra o io no singleton para que as rotas REST possam emitir eventos
+initSocket(io)
 
 // Middleware
 const corsOrigin = process.env.CLIENT_URL || 'http://localhost:5173'

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { v4 as uuid } from 'uuid'
 import db from '../db.js'
 import { auth } from '../middleware/auth.js'
+import { emitToPipe } from '../socket.js'
 
 const router = Router({ mergeParams: true })
 router.use(auth)
@@ -72,6 +73,7 @@ router.post('/', async (req, res) => {
     .run(id, req.params.pipeId, phase_id, title, assignee_id || null, due_date || null, priority, labels, maxOrder + 1, req.user.id)
   await logActivity(id, req.user.id, 'created', 'Card criado')
   const card = await db.prepare('SELECT c.*, u.name as assignee_name FROM cards c LEFT JOIN users u ON u.id = c.assignee_id WHERE c.id = ?').get(id)
+  emitToPipe(req.params.pipeId, 'card-created', { card })
   res.json(card)
 })
 
@@ -122,7 +124,9 @@ router.put('/:id', async (req, res, next) => {
            now,
            card.id)
     await logActivity(card.id, req.user.id, 'updated', 'Card atualizado')
-    res.json(await db.prepare('SELECT * FROM cards WHERE id = ?').get(card.id))
+    const updated = await db.prepare('SELECT * FROM cards WHERE id = ?').get(card.id)
+    emitToPipe(req.params.pipeId, 'card-updated', { card: updated })
+    res.json(updated)
   } catch (err) {
     next(err)
   }
@@ -140,6 +144,7 @@ router.post('/:id/move', async (req, res, next) => {
       .run(phase_id, order_index, now, card.id)
     if (card.phase_id !== phase_id)
       await logActivity(card.id, req.user.id, 'moved', `Movido de "${oldPhase?.name}" para "${newPhase?.name}"`)
+    emitToPipe(req.params.pipeId, 'card-moved', { cardId: card.id, phaseId: phase_id, orderIndex: order_index })
     res.json({ ok: true })
   } catch (err) {
     next(err)
@@ -152,23 +157,29 @@ router.post('/reorder', async (req, res) => {
     sql: 'UPDATE cards SET phase_id = ?, order_index = ? WHERE id = ?',
     args: [c.phase_id, c.order_index, c.id]
   })))
+  emitToPipe(req.params.pipeId, 'cards-reordered', { cards })
   res.json({ ok: true })
 })
 
 router.post('/:id/archive', async (req, res) => {
   await db.prepare('UPDATE cards SET archived = 1 WHERE id = ?').run(req.params.id)
   await logActivity(req.params.id, req.user.id, 'archived', 'Card arquivado')
+  // Remove o card do board de todos os outros usuários
+  emitToPipe(req.params.pipeId, 'card-deleted', { cardId: req.params.id })
   res.json({ ok: true })
 })
 
 router.post('/:id/restore', async (req, res) => {
   await db.prepare('UPDATE cards SET archived = 0 WHERE id = ?').run(req.params.id)
   await logActivity(req.params.id, req.user.id, 'restored', 'Card restaurado')
+  const card = await db.prepare('SELECT c.*, u.name as assignee_name FROM cards c LEFT JOIN users u ON u.id = c.assignee_id WHERE c.id = ?').get(req.params.id)
+  emitToPipe(req.params.pipeId, 'card-created', { card })
   res.json({ ok: true })
 })
 
 router.delete('/:id', async (req, res) => {
   await db.prepare('DELETE FROM cards WHERE id = ?').run(req.params.id)
+  emitToPipe(req.params.pipeId, 'card-deleted', { cardId: req.params.id })
   res.json({ ok: true })
 })
 

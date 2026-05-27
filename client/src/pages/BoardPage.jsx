@@ -56,9 +56,22 @@ export default function BoardPage() {
     'card-moved': ({ cardId, phaseId, orderIndex }) => {
       setCards(prev => prev.map(c => c.id === cardId ? { ...c, phase_id: phaseId, order_index: orderIndex } : c))
     },
-    'card-created': ({ card }) => setCards(prev => [...prev, card]),
-    'card-updated': ({ card }) => setCards(prev => prev.map(c => c.id === card.id ? { ...c, ...card } : c)),
-    'card-deleted': ({ cardId }) => setCards(prev => prev.filter(c => c.id !== cardId)),
+    'card-created': ({ card }) => {
+      setCards(prev => prev.some(c => c.id === card.id) ? prev : [...prev, card])
+    },
+    'card-updated': ({ card }) => {
+      setCards(prev => prev.map(c => c.id === card.id ? { ...c, ...card } : c))
+    },
+    'card-deleted': ({ cardId }) => {
+      setCards(prev => prev.filter(c => c.id !== cardId))
+      setSelectedCard(sel => sel === cardId ? null : sel)
+    },
+    'cards-reordered': ({ cards: updated }) => {
+      setCards(prev => prev.map(c => {
+        const u = updated.find(u => u.id === c.id)
+        return u ? { ...c, phase_id: u.phase_id, order_index: u.order_index } : c
+      }))
+    },
   })
 
   const handleDragStart = ({ active }) => {
