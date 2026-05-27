@@ -2,29 +2,45 @@ import { createClient } from '@libsql/client'
 import bcrypt from 'bcryptjs'
 import { v4 as uuid } from 'uuid'
 
-const isLocal = !process.env.TURSO_DATABASE_URL
+// Determina URL do banco:
+// 1. Turso cloud (produção sem disco persistente)
+// 2. DB_PATH env var (Render com disco persistente)
+// 3. Arquivo local (desenvolvimento)
+function buildDbUrl() {
+  if (process.env.TURSO_DATABASE_URL) return null // usa Turso
+  const path = process.env.DB_PATH
+  if (!path) return 'file:./uniflow.db'
+  // Caminho absoluto (ex: /data/uniflow.db no Render)
+  return path.startsWith('/') ? `file://${path}` : `file:./${path}`
+}
 
+const fileUrl = buildDbUrl()
 const client = createClient(
-  isLocal
-    ? { url: 'file:./uniflow.db' }
+  fileUrl
+    ? { url: fileUrl }
     : { url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN }
 )
 
-// Converts LibSQL Row to plain object
-function rowToObj(row) {
+console.log('🗄️  DB mode:', fileUrl ? `file (${fileUrl})` : 'Turso cloud')
+
+// Converte Row do libsql para objeto simples usando r.columns para nomes corretos
+// IMPORTANTE: Object.entries(row) retorna índices numéricos, não nomes de coluna
+function rowToObj(row, columns) {
   if (!row) return undefined
-  return Object.fromEntries(Object.entries(row))
+  const obj = {}
+  columns.forEach((col, i) => { obj[col] = row[i] })
+  return obj
 }
 
 function prepare(sql) {
   return {
     async get(...args) {
       const r = await client.execute({ sql, args: args.flat() })
-      return r.rows.length ? rowToObj(r.rows[0]) : undefined
+      return r.rows.length ? rowToObj(r.rows[0], r.columns) : undefined
     },
     async all(...args) {
       const r = await client.execute({ sql, args: args.flat() })
-      return r.rows.map(rowToObj)
+      return r.rows.map(row => rowToObj(row, r.columns))
     },
     async run(...args) {
       await client.execute({ sql, args: args.flat() })
@@ -42,7 +58,7 @@ async function exec(sql) {
 async function scalar(sql, ...args) {
   const r = await client.execute({ sql, args: args.flat() })
   if (!r.rows.length) return undefined
-  return Object.values(rowToObj(r.rows[0]))[0]
+  return r.rows[0][0] // primeiro valor por índice (seguro independente do cliente)
 }
 
 // batch helper for transactions
