@@ -9,7 +9,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
-        generateValue: true
+        sync: false   # Defina UMA VEZ manualmente no painel do Render (não deve mudar a cada deploy)
       - key: DB_PATH
         value: /data/uniflow.db
       - key: UPLOADS_PATH

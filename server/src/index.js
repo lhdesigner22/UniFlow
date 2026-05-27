@@ -1,4 +1,12 @@
 import 'dotenv/config'
+
+// Verificação obrigatória antes de qualquer coisa
+if (!process.env.JWT_SECRET) {
+  console.error('❌ FATAL: JWT_SECRET não está definido.')
+  console.error('   No Render: dashboard → seu serviço → Environment → adicione JWT_SECRET')
+  process.exit(1)
+}
+
 import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
