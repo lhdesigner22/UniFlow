@@ -85,6 +85,17 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
+// ── Global error handler (must be AFTER all routes) ──────────────────────────
+// In Express 4, async route handlers that throw don't call next(err) automatically.
+// Wrapping each handler with try/catch + next(err) makes this middleware fire,
+// returning a proper JSON 500 instead of leaving the request hanging forever.
+app.use((err, req, res, _next) => {
+  console.error('❌ Unhandled error:', err?.message || err)
+  if (!res.headersSent) {
+    res.status(500).json({ error: err?.message || 'Erro interno do servidor' })
+  }
+})
+
 const PORT = process.env.PORT || 3001
 httpServer.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {

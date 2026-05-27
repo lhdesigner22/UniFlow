@@ -93,43 +93,57 @@ router.get('/:id', async (req, res) => {
   res.json(card)
 })
 
-router.put('/:id', async (req, res) => {
-  const card = await db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id)
-  if (!card) return res.status(404).json({ error: 'Card não encontrado' })
-  const { title, assignee_id, due_date, priority, labels } = req.body
+router.put('/:id', async (req, res, next) => {
+  try {
+    const card = await db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id)
+    if (!card) return res.status(404).json({ error: 'Card não encontrado' })
+    const { title, assignee_id, due_date, priority, labels } = req.body
 
-  // Valida regra de encaminhamento quando o destinatário foi alterado
-  const newAssignee = assignee_id !== undefined ? assignee_id : card.assignee_id
-  if (assignee_id !== undefined && assignee_id !== card.assignee_id) {
-    const routingError = await checkRoutingAllowed(req.user.id, newAssignee)
-    if (routingError) return res.status(403).json({ error: routingError })
-  }
+    // Valida regra de encaminhamento quando o destinatário foi alterado
+    const newAssignee = assignee_id !== undefined ? assignee_id : card.assignee_id
+    if (assignee_id !== undefined && assignee_id !== card.assignee_id) {
+      const routingError = await checkRoutingAllowed(req.user.id, newAssignee)
+      if (routingError) return res.status(403).json({ error: routingError })
+    }
 
-  if (card.phase_id !== req.body.phase_id && req.body.phase_id) {
-    const oldPhase = await db.prepare('SELECT name FROM phases WHERE id = ?').get(card.phase_id)
-    const newPhase = await db.prepare('SELECT name FROM phases WHERE id = ?').get(req.body.phase_id)
-    await logActivity(card.id, req.user.id, 'moved', `Movido de "${oldPhase?.name}" para "${newPhase?.name}"`)
+    if (card.phase_id !== req.body.phase_id && req.body.phase_id) {
+      const oldPhase = await db.prepare('SELECT name FROM phases WHERE id = ?').get(card.phase_id)
+      const newPhase = await db.prepare('SELECT name FROM phases WHERE id = ?').get(req.body.phase_id)
+      await logActivity(card.id, req.user.id, 'moved', `Movido de "${oldPhase?.name}" para "${newPhase?.name}"`)
+    }
+
+    // Use an explicit JS timestamp to avoid SQL keyword issues across libsql versions
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
+    await db.prepare('UPDATE cards SET title=?, assignee_id=?, due_date=?, priority=?, labels=?, phase_id=?, updated_at=? WHERE id=?')
+      .run(title ?? card.title, newAssignee,
+           due_date !== undefined ? due_date : card.due_date,
+           priority ?? card.priority, labels ?? card.labels,
+           req.body.phase_id ?? card.phase_id,
+           now,
+           card.id)
+    await logActivity(card.id, req.user.id, 'updated', 'Card atualizado')
+    res.json(await db.prepare('SELECT * FROM cards WHERE id = ?').get(card.id))
+  } catch (err) {
+    next(err)
   }
-  await db.prepare('UPDATE cards SET title=?, assignee_id=?, due_date=?, priority=?, labels=?, phase_id=?, updated_at=datetime("now") WHERE id=?')
-    .run(title ?? card.title, newAssignee,
-         due_date !== undefined ? due_date : card.due_date,
-         priority ?? card.priority, labels ?? card.labels,
-         req.body.phase_id ?? card.phase_id, card.id)
-  await logActivity(card.id, req.user.id, 'updated', 'Card atualizado')
-  res.json(await db.prepare('SELECT * FROM cards WHERE id = ?').get(card.id))
 })
 
-router.post('/:id/move', async (req, res) => {
-  const { phase_id, order_index } = req.body
-  const card = await db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id)
-  if (!card) return res.status(404).json({ error: 'Card não encontrado' })
-  const oldPhase = await db.prepare('SELECT name FROM phases WHERE id = ?').get(card.phase_id)
-  const newPhase = await db.prepare('SELECT name FROM phases WHERE id = ?').get(phase_id)
-  await db.prepare('UPDATE cards SET phase_id = ?, order_index = ?, updated_at = datetime("now") WHERE id = ?')
-    .run(phase_id, order_index, card.id)
-  if (card.phase_id !== phase_id)
-    await logActivity(card.id, req.user.id, 'moved', `Movido de "${oldPhase?.name}" para "${newPhase?.name}"`)
-  res.json({ ok: true })
+router.post('/:id/move', async (req, res, next) => {
+  try {
+    const { phase_id, order_index } = req.body
+    const card = await db.prepare('SELECT * FROM cards WHERE id = ?').get(req.params.id)
+    if (!card) return res.status(404).json({ error: 'Card não encontrado' })
+    const oldPhase = await db.prepare('SELECT name FROM phases WHERE id = ?').get(card.phase_id)
+    const newPhase = await db.prepare('SELECT name FROM phases WHERE id = ?').get(phase_id)
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
+    await db.prepare('UPDATE cards SET phase_id = ?, order_index = ?, updated_at = ? WHERE id = ?')
+      .run(phase_id, order_index, now, card.id)
+    if (card.phase_id !== phase_id)
+      await logActivity(card.id, req.user.id, 'moved', `Movido de "${oldPhase?.name}" para "${newPhase?.name}"`)
+    res.json({ ok: true })
+  } catch (err) {
+    next(err)
+  }
 })
 
 router.post('/reorder', async (req, res) => {

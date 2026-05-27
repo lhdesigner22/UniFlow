@@ -73,6 +73,12 @@
   padding: 3px 10px; animation: pulse 1.2s infinite;
 }
 @keyframes pulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+.errorPill {
+  font-size: 11px; color: #ef4444;
+  background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3);
+  border-radius: 50px; padding: 3px 10px;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* ── Two-panel layout ────────────────────────────────────────── */
 .panels {

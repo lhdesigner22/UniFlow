@@ -42,7 +42,12 @@ export default function BoardPage() {
       setIsAdmin(r.data.isAdmin !== false)
       setAllowedAssignees(r.data.allowedAssignees ?? null)
       setLoading(false)
-    }).catch(() => navigate('/'))
+    }).catch(err => {
+      // Only navigate away if the pipe truly doesn't exist (404).
+      // Network / server errors should NOT redirect — the pipe still exists.
+      if (err?.response?.status === 404) navigate('/')
+      else setLoading(false) // stay on page; user can refresh manually
+    })
   }, [pipeId])
 
   useEffect(() => { load() }, [load])

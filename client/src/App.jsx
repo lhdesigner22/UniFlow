@@ -21,7 +21,16 @@ function PrivateRoute({ children }) {
 }
 
 export default function App() {
-  const { fetchMe, token } = useAuthStore()
+  const { fetchMe, token, logout } = useAuthStore()
+
+  // Handle 401 from the axios interceptor (token expired mid-session).
+  // Uses a custom event to avoid a circular import between api.js ↔ authStore.js.
+  useEffect(() => {
+    const handle = () => logout()
+    window.addEventListener('app:unauthorized', handle)
+    return () => window.removeEventListener('app:unauthorized', handle)
+  }, [logout])
+
   useEffect(() => { if (token) fetchMe(); else useAuthStore.setState({ loading: false }) }, [])
 
   return (

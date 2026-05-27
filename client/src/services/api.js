@@ -6,7 +6,10 @@ const baseURL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : '/api'
 
-const api = axios.create({ baseURL })
+const api = axios.create({
+  baseURL,
+  timeout: 30000, // 30 s — request hangs no longer
+})
 
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
@@ -19,7 +22,9 @@ api.interceptors.response.use(
   err => {
     if (err.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      // Dispatch event instead of hard-reloading — lets React Router
+      // redirect cleanly and allows fetchMe() to use its own catch logic.
+      window.dispatchEvent(new CustomEvent('app:unauthorized'))
     }
     return Promise.reject(err)
   }

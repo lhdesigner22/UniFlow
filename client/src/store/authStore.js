@@ -34,8 +34,23 @@ export const useAuthStore = create((set) => ({
     try {
       const { data } = await api.get('/auth/me')
       set({ user: data, loading: false })
-    } catch {
-      set({ user: null, loading: false })
+    } catch (err) {
+      if (err.response?.status === 401) {
+        // Token inválido ou expirado — deslogar
+        localStorage.removeItem('token')
+        set({ user: null, token: null, loading: false })
+      } else {
+        // Erro de rede ou servidor — manter sessão, usar payload do JWT como fallback
+        const token = localStorage.getItem('token')
+        let fallbackUser = null
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]))
+            fallbackUser = { id: payload.id, name: payload.name, email: payload.email }
+          } catch {}
+        }
+        set({ user: fallbackUser, loading: false })
+      }
     }
   },
 }))

@@ -24,6 +24,7 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
   const [newItem, setNewItem] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [closing, setClosing] = useState(false)
+  const [error, setError] = useState('')
   const { user } = useAuthStore()
 
   const handleClose = useCallback(() => {
@@ -58,10 +59,24 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
 
   const update = async (patch) => {
     setSaving(true)
-    const { data } = await api.put(`/pipes/${pipeId}/cards/${cardId}`, { ...card, ...patch })
-    setCard(c => ({ ...c, ...patch }))
-    onUpdate(data)
-    setSaving(false)
+    setError('')
+    try {
+      const { data } = await api.put(`/pipes/${pipeId}/cards/${cardId}`, {
+        title:       card.title,
+        assignee_id: card.assignee_id || null,
+        due_date:    card.due_date    || null,
+        priority:    card.priority,
+        labels:      card.labels,
+        phase_id:    card.phase_id,
+        ...patch,
+      })
+      setCard(c => ({ ...c, ...patch }))
+      onUpdate(data)
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Erro ao salvar. Tente novamente.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const saveField = async (fieldId, value) => {
@@ -109,13 +124,11 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
   const doneCount  = checklist.filter(i => i.done).length
   const phaseName  = phases.find(p => p.id === card.phase_id)?.name || '—'
 
-  const toggleLabel = async (labelId) => {
+  const toggleLabel = (labelId) => {
     const updated = cardLabels.includes(labelId)
       ? cardLabels.filter(l => l !== labelId)
       : [...cardLabels, labelId]
-    const labelsJson = JSON.stringify(updated)
-    await api.put(`/pipes/${pipeId}/cards/${cardId}`, { ...card, labels: labelsJson })
-    setCard(c => ({ ...c, labels: labelsJson }))
+    update({ labels: JSON.stringify(updated) })
   }
 
   const assignees = allowedAssignees
@@ -138,6 +151,7 @@ export default function CardModal({ cardId, pipeId, phases, fields, members, lab
           </div>
           <div className={s.headerRight}>
             {saving && <span className={s.savingPill}>Salvando…</span>}
+            {error  && <span className={s.errorPill} title={error}>⚠ {error}</span>}
             <button className="btn btn-icon" onClick={handleClose} title="Fechar (Esc)">✕</button>
           </div>
         </div>
