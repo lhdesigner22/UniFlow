@@ -9,6 +9,7 @@ import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import AvatarStack from '../components/common/AvatarStack'
 import MemberPicker from '../components/common/MemberPicker'
+import { confirmDialog, alertDialog } from '../store/dialogStore'
 import Column from '../components/board/Column'
 import { CardItemPreview } from '../components/board/CardItem'
 import CardModal from '../components/card/CardModal'
@@ -190,12 +191,16 @@ export default function BoardPage() {
   }
 
   const deleteBoard = async () => {
-    if (!confirm(`Excluir o quadro "${board.name}"? Todas as colunas, cartões e lançamentos de tempo dele serão apagados. Isso não pode ser desfeito.`)) return
+    const ok = await confirmDialog(
+      `Excluir o quadro "${board.name}"? Todas as colunas, cartões e lançamentos de tempo dele serão apagados. Isso não pode ser desfeito.`,
+      { title: 'Excluir quadro' }
+    )
+    if (!ok) return
     try {
       await api.delete(`/boards/${boardId}`)
       navigate('/')
     } catch (e) {
-      alert(e.response?.data?.error || 'Erro ao excluir o quadro.')
+      await alertDialog(e.response?.data?.error || 'Erro ao excluir o quadro.', { title: 'Erro', danger: true })
     }
   }
 

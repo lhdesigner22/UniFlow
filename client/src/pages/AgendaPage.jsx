@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import api from '../services/api'
 import Modal from '../components/common/Modal'
+import { confirmDialog } from '../store/dialogStore'
 import s from './AgendaPage.module.css'
 
 const WEEKDAY_LONG = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
@@ -122,7 +123,7 @@ export default function AgendaPage() {
 
   const deleteEvent = async () => {
     if (!editing) return
-    if (!confirm('Excluir este evento? Isso remove todas as ocorrências dele.')) return
+    if (!(await confirmDialog('Excluir este evento? Isso remove todas as ocorrências dele.'))) return
     await api.delete(`/events/${editing.id}`)
     setShowModal(false)
     loadEvents()

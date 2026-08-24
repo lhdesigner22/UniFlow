@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import MemberPicker from '../components/common/MemberPicker'
+import { confirmDialog } from '../store/dialogStore'
 import { avatarColor } from '../utils/avatarColor'
 import s from './AdminPage.module.css'
 
@@ -132,7 +133,7 @@ export default function AdminPage() {
   }
 
   const deleteUser = async (userId) => {
-    if (!confirm('Excluir este usuário? Isso não pode ser desfeito.')) return
+    if (!(await confirmDialog('Excluir este usuário? Isso não pode ser desfeito.'))) return
     await api.delete(`/admin/users/${userId}`)
     setUsers(prev => prev.filter(u => u.id !== userId))
   }
@@ -151,7 +152,7 @@ export default function AdminPage() {
   }
 
   const deleteDept = async (id) => {
-    if (!confirm('Excluir departamento? Os usuários associados perderão o vínculo.')) return
+    if (!(await confirmDialog('Excluir departamento? Os usuários associados perderão o vínculo.'))) return
     await api.delete(`/admin/departments/${id}`)
     setDepartments(prev => prev.filter(d => d.id !== id))
     setUsers(prev => prev.map(u => u.department_id === id ? { ...u, department_id: null, department_name: null } : u))
@@ -188,7 +189,7 @@ export default function AdminPage() {
   }
 
   const deleteRule = async (id) => {
-    if (!confirm('Excluir esta regra de SLA?')) return
+    if (!(await confirmDialog('Excluir esta regra de SLA?'))) return
     await api.delete(`/admin/sla-rules/${id}`)
     setSlaRules(prev => prev.filter(r => r.id !== id))
   }

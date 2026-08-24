@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
+import ConfirmDialogHost from '../common/ConfirmDialogHost'
 import styles from './AppLayout.module.css'
 
 export default function AppLayout() {
@@ -22,6 +23,8 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </div>
+
+      <ConfirmDialogHost />
     </div>
   )
 }
