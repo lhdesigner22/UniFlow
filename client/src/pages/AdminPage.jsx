@@ -238,6 +238,27 @@ export default function AdminPage() {
     else setDailyRecipients(prev => prev.filter(r => r.id !== id))
   }
 
+  const [testEmail, setTestEmail] = useState('')
+  const [testStatus, setTestStatus] = useState(null)
+  const sendTestEmail = async () => {
+    if (!testEmail.trim()) return
+    setTestStatus({ type: 'loading', text: 'Enviando...' })
+    try {
+      const { data } = await api.post('/admin/settings/email-outbox/test', { to: testEmail.trim() })
+      if (!data.provider) {
+        setTestStatus({ type: 'error', text: 'Nenhum provedor de e-mail configurado ainda (nem Cloudflare EMAIL, nem RESEND_API_KEY).' })
+      } else if (data.sent > 0) {
+        setTestStatus({ type: 'success', text: `Enviado via ${data.provider}! Confira a caixa de entrada de ${testEmail.trim()}.` })
+      } else {
+        setTestStatus({ type: 'error', text: `Falhou via ${data.provider} — veja a linha na fila abaixo pra detalhes do erro.` })
+      }
+      const ob = await api.get('/admin/settings/email-outbox')
+      setOutbox(ob.data || { rows: [], pendingCount: 0 })
+    } catch (e) {
+      setTestStatus({ type: 'error', text: e.response?.data?.error || 'Erro ao enviar teste.' })
+    }
+  }
+
   const outboxRows = outbox.rows ?? outbox.results ?? []
   const pendingOutboxCount = outbox.pendingCount ?? outboxRows.length ?? 0
 
@@ -556,6 +577,25 @@ export default function AdminPage() {
           {/* Fila de e-mail */}
           <div className={s.outboxCard}>
             <h3 className={s.digestTitle}>Fila de e-mail</h3>
+
+            <div className={s.addRecipientRow} style={{ marginBottom: 12 }}>
+              <input
+                className={s.emailInput}
+                placeholder="seu-email@teste.com"
+                value={testEmail}
+                onChange={e => setTestEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendTestEmail()}
+              />
+              <button type="button" className="btn btn-primary btn-sm" onClick={sendTestEmail} disabled={!testEmail.trim() || testStatus?.type === 'loading'}>
+                📨 Enviar e-mail de teste
+              </button>
+            </div>
+            {testStatus && (
+              <p style={{ fontSize: 12, marginBottom: 12, color: testStatus.type === 'success' ? 'var(--green)' : testStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
+                {testStatus.text}
+              </p>
+            )}
+
             <p className={s.outboxNote}>
               <strong>{pendingOutboxCount} {pendingOutboxCount === 1 ? 'e-mail' : 'e-mails'}</strong> aguardando o domínio de envio ser configurado. Isso é esperado por enquanto — os e-mails ficam guardados e serão enviados automaticamente assim que o domínio for configurado.
             </p>

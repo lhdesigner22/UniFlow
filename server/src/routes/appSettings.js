@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
+import { flushOutbox, queueEmail } from '../lib/email.js'
 
 const app = new Hono()
 app.use('*', auth)
@@ -99,6 +100,33 @@ app.get('/email-outbox', async c => {
   const pendingCount = await db.scalar("SELECT COUNT(*) FROM email_outbox WHERE status = 'pending'") ?? 0
 
   return c.json({ rows, pendingCount })
+})
+
+// POST /email-outbox/flush — tenta enviar a fila agora (não espera o cron de
+// 15min). Útil pra testar um provedor recém-configurado.
+app.post('/email-outbox/flush', async c => {
+  const db = c.get('db')
+  const result = await flushOutbox(c.env, db)
+  return c.json(result)
+})
+
+// POST /email-outbox/test — enfileira um e-mail de teste pro endereço informado
+// e já tenta despachar na hora (via flushOutbox). Não usa nenhuma regra/digest.
+app.post('/email-outbox/test', async c => {
+  const db = c.get('db')
+  const { to } = await c.req.json()
+  if (!to) return c.json({ error: 'Informe "to"' }, 400)
+
+  await queueEmail(db, {
+    to_email: to,
+    subject: 'UniFlow — e-mail de teste',
+    html: '<p>Se você está lendo isso, o envio de e-mail do UniFlow está funcionando. 🎉</p>',
+    text: 'Se você está lendo isso, o envio de e-mail do UniFlow está funcionando.',
+    related_type: 'test',
+    related_id: null,
+  })
+  const result = await flushOutbox(c.env, db)
+  return c.json(result)
 })
 
 export default app
