@@ -9,6 +9,12 @@ import boardsRoutes from './routes/boards.js'
 import columnsRoutes from './routes/columns.js'
 import cardsRoutes from './routes/cards.js'
 import timeEntriesRoutes from './routes/timeEntries.js'
+import slaRulesRoutes from './routes/slaRules.js'
+import eventsRoutes from './routes/events.js'
+import appSettingsRoutes from './routes/appSettings.js'
+
+import { runSlaSweep, runDigests } from './lib/schedule.js'
+import { flushOutbox } from './lib/email.js'
 
 const app = new Hono()
 
@@ -28,7 +34,16 @@ app.route('/api/boards', boardsRoutes)
 app.route('/api/boards/:boardId/columns', columnsRoutes)
 app.route('/api/boards/:boardId/cards', cardsRoutes)
 app.route('/api', timeEntriesRoutes)
+app.route('/api/admin/sla-rules', slaRulesRoutes)
+app.route('/api/events', eventsRoutes)
+app.route('/api/admin/settings', appSettingsRoutes)
 
 export default {
   fetch: app.fetch,
+  async scheduled(event, env, ctx) {
+    const db = createDb(env)
+    await runSlaSweep(env, db)
+    await runDigests(env, db)
+    await flushOutbox(env, db)
+  }
 }

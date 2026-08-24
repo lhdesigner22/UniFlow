@@ -27,5 +27,8 @@
 	"migrations": [
 		{ "tag": "v1", "new_sqlite_classes": ["PipeRoom"] },
 		{ "tag": "v2", "deleted_classes": ["PipeRoom"] }
-	]
+	],
+	"triggers": {
+		"crons": ["*/15 * * * *"]
+	}
 }

@@ -1,0 +1,65 @@
+.page { padding: 36px 32px; max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
+.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+/* ── Period nav ── */
+.periodBar { display: flex; align-items: center; gap: 10px; }
+.periodLabel { font-size: 13px; font-weight: 600; color: var(--text); min-width: 180px; }
+
+/* ── Day groups ── */
+.dayList { display: flex; flex-direction: column; gap: 18px; }
+.dayGroup { display: flex; flex-direction: column; gap: 8px; }
+.dayHeader {
+  font-family: var(--font-display); font-size: 13px; font-weight: 700;
+  color: var(--text-muted); text-transform: capitalize;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border2);
+}
+
+.eventList { display: flex; flex-direction: column; gap: 6px; }
+.eventRow {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 11px 14px;
+  cursor: pointer; transition: border-color .15s, box-shadow .15s;
+}
+.eventRow:hover { border-color: var(--brand); box-shadow: var(--shadow-sm); }
+.eventTime {
+  font-size: 12px; font-weight: 700; color: var(--brand);
+  width: 64px; flex-shrink: 0;
+}
+.eventTitle { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eventBadges { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.boardBadge {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+}
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 72px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.emptyIcon {
+  width: 64px; height: 64px; border-radius: 16px;
+  background: var(--surface-2); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); margin-bottom: 4px;
+}
+.empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; }
+.empty p { color: var(--text-muted); max-width: 380px; line-height: 1.6; font-size: 13px; }
+
+/* ── Skeleton ── */
+.skeleton {
+  height: 220px; border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+  background-size: 400% 100%; animation: shimmer 1.8s infinite;
+}
+
+/* ── Modal form ── */
+.formRow { display: flex; gap: 12px; }
+.formRow .form-group { margin-bottom: 14px; }
+.modalActions { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+
+@media (max-width: 768px) {
+  .page { padding: 20px 16px; }
+  .header { flex-direction: column; }
+  .formRow { flex-direction: column; gap: 0; }
+}

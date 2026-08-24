@@ -7,6 +7,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import BoardPage from './pages/BoardPage'
 import TeamTimePage from './pages/TeamTimePage'
+import AgendaPage from './pages/AgendaPage'
 import AdminPage from './pages/AdminPage'
 import GoogleCallback from './pages/GoogleCallback'
 
@@ -40,6 +41,7 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="boards/:boardId" element={<BoardPage />} />
           <Route path="tempo" element={<TeamTimePage />} />
+          <Route path="agenda" element={<AgendaPage />} />
           <Route path="admin" element={<AdminPage />} />
         </Route>
       </Routes>
