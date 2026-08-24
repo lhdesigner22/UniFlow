@@ -1,10 +1,8 @@
 import axios from 'axios'
 
-// Em produção (Vercel) usa a URL do backend Render via variável de ambiente.
-// Em dev, o proxy do Vite redireciona /api → localhost:3001.
-const baseURL = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api'
+// Same-origin agora: o Worker serve tanto os assets estáticos quanto /api/*,
+// então não precisa mais de VITE_API_URL apontando pra um backend separado.
+const baseURL = '/api'
 
 const api = axios.create({
   baseURL,
@@ -21,10 +19,19 @@ api.interceptors.response.use(
   r => r,
   err => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('token')
-      // Dispatch event instead of hard-reloading — lets React Router
-      // redirect cleanly and allows fetchMe() to use its own catch logic.
-      window.dispatchEvent(new CustomEvent('app:unauthorized'))
+      // Don't treat auth-endpoint 401s as "session expired".
+      // A failed login attempt is NOT the same as an expired session.
+      const url = err.config?.url || ''
+      const isAuthEndpoint =
+        url.includes('/auth/login') ||
+        url.includes('/auth/google') ||
+        url.includes('/auth/register')
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('token')
+        // Dispatch event instead of hard-reloading — lets React Router
+        // redirect cleanly and allows fetchMe() to use its own catch logic.
+        window.dispatchEvent(new CustomEvent('app:unauthorized'))
+      }
     }
     return Promise.reject(err)
   }

@@ -96,7 +96,7 @@ export default function Topbar({ onMenuClick }) {
         <span className={s.searchIcon}><IconSearch /></span>
         <input
           className={s.search}
-          placeholder="Buscar cards, pipes..."
+          placeholder="Buscar chamados, eventos..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />

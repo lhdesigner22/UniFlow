@@ -1,31 +1,52 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer, Legend } from 'recharts'
 import api from '../services/api'
+import { downloadFile } from '../utils/download'
 import { useAuthStore } from '../store/authStore'
-import CreatePipeModal from '../components/pipe/CreatePipeModal'
 import s from './DashboardPage.module.css'
 
+const STATUS_META = {
+  abertos:       { label: 'Abertos',       color: '#3b7eff' },
+  em_andamento:  { label: 'Em andamento',  color: '#d97706' },
+  concluidos:    { label: 'Concluídos',    color: '#16a34a' },
+  cancelados:    { label: 'Cancelados',    color: '#64748b' },
+}
+
+function currentMonth() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
 export default function DashboardPage() {
-  const [pipes, setPipes] = useState([])
-  const [showCreate, setShowCreate] = useState(false)
+  const [month, setMonth] = useState(currentMonth())
+  const [kpis, setKpis] = useState(null)
   const [loading, setLoading] = useState(true)
   const { user } = useAuthStore()
   const navigate = useNavigate()
 
   useEffect(() => {
-    api.get('/pipes').then(r => { setPipes(r.data); setLoading(false) }).catch(() => setLoading(false))
-  }, [])
+    setLoading(true)
+    api.get('/demands/kpis', { params: { month } })
+      .then(r => setKpis(r.data))
+      .catch(() => setKpis(null))
+      .finally(() => setLoading(false))
+  }, [month])
 
-  const handleCreate = (pipe) => { setPipes(prev => [pipe, ...prev]); navigate(`/pipe/${pipe.id}`) }
-  const deletePipe = async (e, id) => {
-    e.stopPropagation()
-    if (!confirm('Excluir este pipe e todos os dados?')) return
-    await api.delete(`/pipes/${id}`)
-    setPipes(prev => prev.filter(p => p.id !== id))
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null
+    return (
+      <div className={s.tooltip}>
+        <strong>{label}</strong>
+        {payload.map((p, i) => <div key={i} style={{ color: p.color }}>{p.name}: {p.value}</div>)}
+      </div>
+    )
   }
 
-  const totalCards  = pipes.reduce((s, p) => s + (p.cardCount || 0), 0)
-  const adminCount  = pipes.filter(p => p.role === 'admin').length
+  const isEmpty = !loading && kpis && kpis.totals.total === 0
+  const statusData = kpis ? Object.entries(STATUS_META).map(([key, meta]) => ({
+    name: meta.label, value: kpis.totals[key] || 0, color: meta.color,
+  })).filter(d => d.value > 0) : []
 
   return (
     <div className={s.page}>
@@ -33,129 +54,175 @@ export default function DashboardPage() {
       {/* ── Header ── */}
       <div className={s.pageHeader}>
         <div>
-          <h1 className={s.pageTitle}>Painel de Controle</h1>
+          <h1 className={s.pageTitle}>Painel de KPIs</h1>
           <p className={s.pageSub}>
             Bem-vindo, <strong>{user?.name?.split(' ')[0]}</strong>
             {user?.department_name ? ` · ${user.department_name}` : ''}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-          + Novo Pipe
-        </button>
+        <div className={s.headerActions}>
+          <input type="month" value={month} onChange={e => setMonth(e.target.value)} className={s.monthInput} />
+          <button className="btn btn-ghost" onClick={() => downloadFile(`/demands/export?month=${month}`, `demandas-${month}.csv`)}>
+            ⬇ Exportar CSV
+          </button>
+        </div>
       </div>
 
-      {/* ── Stats ── */}
-      {!loading && pipes.length > 0 && (
-        <div className={s.statsRow}>
-          <div className={s.statItem}>
-            <span className={s.statNumber}>{pipes.length}</span>
-            <span className={s.statLabel}>Pipes ativos</span>
-          </div>
-          <div className={s.statDivider} />
-          <div className={s.statItem}>
-            <span className={s.statNumber}>{totalCards}</span>
-            <span className={s.statLabel}>Cards em aberto</span>
-          </div>
-          <div className={s.statDivider} />
-          <div className={s.statItem}>
-            <span className={s.statNumber}>{adminCount}</span>
-            <span className={s.statLabel}>Você administra</span>
-          </div>
+      {loading ? (
+        <div className={s.grid}>
+          {[1, 2, 3, 4].map(i => <div key={i} className={s.skeleton} />)}
         </div>
+      ) : isEmpty ? (
+        <div className={s.empty}>
+          <div className={s.emptyIcon}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </div>
+          <h3>Nenhuma demanda em {month}</h3>
+          <p>Registre um chamado para começar a acompanhar as demandas do mês.</p>
+          <button className="btn btn-primary" onClick={() => navigate('/chamados')}>+ Novo chamado</button>
+        </div>
+      ) : kpis && (
+        <>
+          {/* ── Stats ── */}
+          <div className={s.statsRow}>
+            <div className={s.statItem}>
+              <span className={s.statNumber}>{kpis.totals.total}</span>
+              <span className={s.statLabel}>Total de demandas</span>
+            </div>
+            <div className={s.statDivider} />
+            <div className={s.statItem}>
+              <span className={s.statNumber}>{kpis.completionRate}%</span>
+              <span className={s.statLabel}>Taxa de conclusão</span>
+            </div>
+            <div className={s.statDivider} />
+            <div className={s.statItem}>
+              <span className={s.statNumber}>{kpis.avgResolutionDays != null ? Math.round(kpis.avgResolutionDays * 10) / 10 : '—'}{kpis.avgResolutionDays != null ? ' dias' : ''}</span>
+              <span className={s.statLabel}>Tempo médio de resolução</span>
+            </div>
+            <div className={s.statDivider} />
+            <div className={s.statItem}>
+              <span className={s.statNumber}>{kpis.totals.eventos}</span>
+              <span className={s.statLabel}>Eventos no mês</span>
+            </div>
+          </div>
+
+          {/* ── Quick actions ── */}
+          <div className={s.quickGrid}>
+            <div className={s.quickCard} onClick={() => navigate('/chamados')}>
+              <div className={s.quickAccent} style={{ background: 'var(--blue)' }} />
+              <div className={s.quickBody}>
+                <span className={s.quickIcon}>📋</span>
+                <div>
+                  <h3>Ver chamados</h3>
+                  <p>{kpis.totals.chamados} chamado{kpis.totals.chamados !== 1 ? 's' : ''} neste mês</p>
+                </div>
+              </div>
+            </div>
+            <div className={s.quickCard} onClick={() => navigate('/eventos')}>
+              <div className={s.quickAccent} style={{ background: 'var(--green)' }} />
+              <div className={s.quickBody}>
+                <span className={s.quickIcon}>📅</span>
+                <div>
+                  <h3>Ver eventos</h3>
+                  <p>{kpis.totals.eventos} evento{kpis.totals.eventos !== 1 ? 's' : ''} neste mês</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Charts ── */}
+          <div className={s.section}>
+            <div className={s.sectionHeader}>
+              <h2 className={s.sectionTitle}>Análise do mês</h2>
+            </div>
+            <div className={s.chartsGrid}>
+              <div className={s.chartCard}>
+                <h4>Demandas por setor</h4>
+                {kpis.byDepartment.length === 0 ? (
+                  <p className={s.chartEmpty}>Sem dados de setor neste mês.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={kpis.byDepartment} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
+                      <XAxis dataKey="department_name" tick={{ fill: 'var(--muted)', fontSize: 11 }} />
+                      <YAxis tick={{ fill: 'var(--muted)', fontSize: 11 }} allowDecimals={false} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="total" name="Total" fill="#3b7eff" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="concluidos" name="Concluídos" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              <div className={s.chartCard}>
+                <h4>Distribuição por status</h4>
+                {statusData.length === 0 ? (
+                  <p className={s.chartEmpty}>Sem dados de status neste mês.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={240}>
+                    <PieChart>
+                      <Pie data={statusData} cx="50%" cy="50%" outerRadius={80} dataKey="value"
+                        label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
+                        {statusData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              <div className={s.chartCard} style={{ gridColumn: '1 / -1' }}>
+                <h4>Comparação mês a mês (últimos 6 meses)</h4>
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={kpis.monthlyTrend} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
+                    <XAxis dataKey="month" tick={{ fill: 'var(--muted)', fontSize: 11 }} />
+                    <YAxis tick={{ fill: 'var(--muted)', fontSize: 11 }} allowDecimals={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line type="monotone" dataKey="total" name="Total" stroke="#3b7eff" strokeWidth={2} dot={{ fill: '#3b7eff', r: 4 }} />
+                    <Line type="monotone" dataKey="completionRate" name="Taxa de conclusão (%)" stroke="#16a34a" strokeWidth={2} dot={{ fill: '#16a34a', r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Upcoming events ── */}
+          <div className={s.section}>
+            <div className={s.sectionHeader}>
+              <h2 className={s.sectionTitle}>Próximos eventos</h2>
+              {kpis.upcomingEvents?.length > 0 && <span className={s.sectionCount}>{kpis.upcomingEvents.length}</span>}
+              <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate('/eventos')}>
+                Ver todos →
+              </button>
+            </div>
+            {(!kpis.upcomingEvents || kpis.upcomingEvents.length === 0) ? (
+              <div className={s.empty} style={{ padding: '40px 24px' }}>
+                <p>Nenhum evento programado.</p>
+              </div>
+            ) : (
+              <div className={s.eventsList}>
+                {kpis.upcomingEvents.map(ev => (
+                  <div key={ev.id} className={s.eventItem} onClick={() => navigate('/eventos')}>
+                    <span className={s.eventDot} style={{ background: ev.department_color || 'var(--blue)' }} />
+                    <span className={s.eventTitle}>{ev.title}</span>
+                    <span className={s.eventDept}>{ev.department_name}</span>
+                    <span className={s.eventDate}>
+                      {ev.event_date ? new Date(ev.event_date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
-
-      {/* ── Pipes section ── */}
-      <div className={s.section}>
-        <div className={s.sectionHeader}>
-          <h2 className={s.sectionTitle}>Pipes</h2>
-          {!loading && pipes.length > 0 && (
-            <span className={s.sectionCount}>{pipes.length}</span>
-          )}
-        </div>
-
-        {loading ? (
-          <div className={s.grid}>
-            {[1,2,3,4].map(i => <div key={i} className={s.skeleton} />)}
-          </div>
-        ) : pipes.length === 0 ? (
-          <div className={s.empty}>
-            <div className={s.emptyIcon}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/>
-              </svg>
-            </div>
-            <h3>Nenhum pipe configurado</h3>
-            <p>Crie seu primeiro pipe para começar a gerenciar aprovações e fluxos de trabalho.</p>
-            <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-              Criar primeiro pipe
-            </button>
-          </div>
-        ) : (
-          <div className={s.grid}>
-            {pipes.map(pipe => (
-              <div key={pipe.id} className={s.card} onClick={() => navigate(`/pipe/${pipe.id}`)}>
-                <div className={s.cardAccent} style={{ background: pipe.color }} />
-
-                <div className={s.cardMain}>
-                  <div className={s.cardTop}>
-                    <div className={s.pipeIconWrap} style={{ color: pipe.color, background: pipe.color + '18' }}>
-                      <span>{pipe.icon}</span>
-                    </div>
-                    <div className={s.cardMenu}>
-                      <button title="Configurações"
-                        onClick={e => { e.stopPropagation(); navigate(`/pipe/${pipe.id}/settings`) }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                        </svg>
-                      </button>
-                      <button title="Excluir" style={{ color:'var(--red)' }}
-                        onClick={e => deletePipe(e, pipe.id)}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  <h3 className={s.pipeName}>{pipe.name}</h3>
-                  {pipe.description && <p className={s.pipeDesc}>{pipe.description}</p>}
-                </div>
-
-                <div className={s.cardFooter}>
-                  <div className={s.cardMeta}>
-                    <span>{pipe.cardCount} card{pipe.cardCount !== 1 ? 's' : ''}</span>
-                    <span className={s.metaDot} />
-                    <span>{pipe.memberCount} membro{pipe.memberCount !== 1 ? 's' : ''}</span>
-                    {pipe.role === 'admin' && <span className={s.adminBadge}>Admin</span>}
-                  </div>
-                  <div className={s.cardActions}>
-                    <button onClick={e => { e.stopPropagation(); navigate(`/pipe/${pipe.id}/reports`) }}>
-                      Relatórios
-                    </button>
-                    <button onClick={e => { e.stopPropagation(); navigate(`/pipe/${pipe.id}/automations`) }}>
-                      Automações
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            <div className={s.addCard} onClick={() => setShowCreate(true)}>
-              <div className={s.addIcon}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </div>
-              <span>Novo Pipe</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {showCreate && <CreatePipeModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
     </div>
   )
 }

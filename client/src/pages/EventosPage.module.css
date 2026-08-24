@@ -1,0 +1,54 @@
+.page { padding: 36px 32px; max-width: 1000px; display: flex; flex-direction: column; gap: 20px; }
+
+.pageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.pageTitle { font-size: 1.4rem; font-weight: 700; letter-spacing: -.02em; }
+.pageSub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+.filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.filters select, .filters input { width: auto; min-width: 150px; }
+
+.list { display: flex; flex-direction: column; gap: 8px; }
+.item {
+  display: flex; gap: 16px; align-items: center;
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 14px 18px;
+  cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.item:hover { border-color: var(--border); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+.itemDate {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 52px; height: 52px; flex-shrink: 0;
+  background: var(--navy3); border: 1px solid var(--border2); border-radius: 10px;
+}
+.itemDay { font-size: 1.1rem; font-weight: 700; color: var(--white); line-height: 1.1; }
+.itemMonth { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+
+.itemBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.itemTop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.itemTitle { font-size: 14px; font-weight: 600; color: var(--white); }
+.itemMeta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); }
+
+.deptDot { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dc); flex-shrink: 0; }
+
+/* ── Empty / skeleton ── */
+.empty { text-align: center; padding: 80px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.emptyIcon { font-size: 40px; opacity: .5; }
+.empty h3 { font-size: 1.1rem; font-weight: 600; }
+.empty p { color: var(--muted); max-width: 360px; line-height: 1.6; font-size: 13px; }
+
+.skeletonList { display: flex; flex-direction: column; gap: 8px; }
+.skeletonRow {
+  height: 76px; border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
+  background-size: 400% 100%; animation: shimmer 1.8s infinite;
+}
+@keyframes shimmer { from { background-position: -400% 0; } to { background-position: 400% 0; } }
+
+@media (max-width: 768px) {
+  .page { padding: 20px 16px; gap: 16px; }
+  .pageHeader { flex-direction: column; gap: 10px; }
+  .item { flex-wrap: wrap; }
+  .itemTop { flex-direction: column; align-items: flex-start; gap: 4px; }
+}

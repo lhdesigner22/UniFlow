@@ -1,13 +1,15 @@
-import jwt from 'jsonwebtoken'
+import { verifyJwt } from '../lib/jwt.js'
 
-export function auth(req, res, next) {
-  const header = req.headers.authorization
-  if (!header) return res.status(401).json({ error: 'Token não fornecido' })
+// Middleware Hono — equivalente ao middleware Express de antes, mas
+// usando `c.set('user', ...)` / `c.get('user')` em vez de `req.user`.
+export async function auth(c, next) {
+  const header = c.req.header('Authorization')
+  if (!header) return c.json({ error: 'Token não fornecido' }, 401)
   const token = header.split(' ')[1]
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET)
-    next()
+    c.set('user', await verifyJwt(token, c.env.JWT_SECRET))
+    await next()
   } catch {
-    res.status(401).json({ error: 'Token inválido' })
+    return c.json({ error: 'Token inválido' }, 401)
   }
 }

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
-import CreatePipeModal from '../pipe/CreatePipeModal'
 import s from './Sidebar.module.css'
 
 function IconHome() {
@@ -22,10 +20,19 @@ function IconShield() {
   )
 }
 
-function IconPlus() {
+function IconTicket() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4a2 2 0 1 1 0 4v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4a2 2 0 1 1 0-4z"/>
+    </svg>
+  )
+}
+
+function IconCalendar() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
   )
 }
@@ -40,8 +47,6 @@ function IconChevron({ collapsed }) {
 }
 
 export default function Sidebar({ mobileOpen, onClose }) {
-  const [pipes, setPipes] = useState([])
-  const [showCreate, setShowCreate] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
@@ -50,22 +55,12 @@ export default function Sidebar({ mobileOpen, onClose }) {
   // Close mobile sidebar on route change
   useEffect(() => { onClose?.() }, [location.pathname])
 
-  useEffect(() => {
-    api.get('/pipes').then(r => setPipes(r.data)).catch(() => {})
-  }, [])
-
-  const handleCreate = (pipe) => {
-    setPipes(prev => [pipe, ...prev])
-    navigate(`/pipe/${pipe.id}`)
-  }
-
   const initials = user?.name?.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || '?'
 
   // On mobile we always show labels regardless of desktop collapse state
   const showLabels = !collapsed || mobileOpen
 
   return (
-    <>
       <aside className={`${s.sidebar} ${collapsed ? s.collapsed : ''} ${mobileOpen ? s.mobileOpen : ''}`}>
 
         {/* Logo */}
@@ -85,6 +80,14 @@ export default function Sidebar({ mobileOpen, onClose }) {
             <span className={s.navIcon}><IconHome /></span>
             {showLabels && <span>Dashboard</span>}
           </NavLink>
+          <NavLink to="/chamados" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
+            <span className={s.navIcon}><IconTicket /></span>
+            {showLabels && <span>Chamados</span>}
+          </NavLink>
+          <NavLink to="/eventos" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
+            <span className={s.navIcon}><IconCalendar /></span>
+            {showLabels && <span>Eventos</span>}
+          </NavLink>
           {user?.system_role === 'super_admin' && (
             <NavLink to="/admin" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
               <span className={s.navIcon}><IconShield /></span>
@@ -92,32 +95,6 @@ export default function Sidebar({ mobileOpen, onClose }) {
             </NavLink>
           )}
         </nav>
-
-        {/* Pipes */}
-        <div className={s.section}>
-          {showLabels && (
-            <div className={s.sectionHeader}>
-              <span>Pipes</span>
-              <button className={s.addBtn} onClick={() => setShowCreate(true)} title="Novo Pipe">
-                <IconPlus />
-              </button>
-            </div>
-          )}
-          <div className={s.pipeList}>
-            {pipes.map(pipe => (
-              <NavLink key={pipe.id} to={`/pipe/${pipe.id}`}
-                className={({ isActive }) => `${s.pipeItem} ${isActive ? s.pipeActive : ''}`}>
-                <span className={s.pipeColor} style={{ background: pipe.color }} />
-                {showLabels && <span className={s.pipeName}>{pipe.name}</span>}
-              </NavLink>
-            ))}
-            {pipes.length === 0 && showLabels && (
-              <button className={s.createFirst} onClick={() => setShowCreate(true)}>
-                + Criar pipe
-              </button>
-            )}
-          </div>
-        </div>
 
         {/* Footer */}
         <div className={s.footer}>
@@ -140,8 +117,5 @@ export default function Sidebar({ mobileOpen, onClose }) {
           </div>
         </div>
       </aside>
-
-      {showCreate && <CreatePipeModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
-    </>
   )
 }

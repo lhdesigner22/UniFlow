@@ -177,14 +177,6 @@ export default function LoginPage() {
           <p className={s.foot}>
             Não tem uma conta? <Link to="/register">Criar conta</Link>
           </p>
-
-          <div className={s.demoBox}>
-            <span className={s.demoLabel}>Conta demo</span>
-            <div className={s.demoCredential}>
-              <span>admin@uniflow.app</span>
-              <span style={{ color:'var(--muted)' }}>/ admin123</span>
-            </div>
-          </div>
         </div>
       </main>
     </div>

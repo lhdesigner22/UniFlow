@@ -1,22 +1,23 @@
-import { Router } from 'express'
-import db from '../db.js'
+import { Hono } from 'hono'
 import { auth } from '../middleware/auth.js'
 
-const router = Router()
-router.use(auth)
+const app = new Hono()
+app.use('*', auth)
 
 // Busca usuários para adicionar em pipes
 // super_admin → vê todos  |  outros → vê apenas o seu departamento
-router.get('/search', async (req, res) => {
-  const { q, exclude } = req.query  // exclude = IDs já membros (separados por vírgula)
-  if (!q || q.trim().length < 2) return res.json([])
+app.get('/search', async c => {
+  const db = c.get('db')
+  const q = c.req.query('q')
+  const exclude = c.req.query('exclude')  // exclude = IDs já membros (separados por vírgula)
+  if (!q || q.trim().length < 2) return c.json([])
 
   const requester = await db.prepare(
     'SELECT system_role, department_id FROM users WHERE id = ?'
-  ).get(req.user.id)
+  ).get(c.get('user').id)
 
   const pattern = `%${q.trim()}%`
-  const excluded = [req.user.id, ...(exclude ? exclude.split(',') : [])]
+  const excluded = [c.get('user').id, ...(exclude ? exclude.split(',') : [])]
   const placeholders = excluded.map(() => '?').join(',')
 
   let users
@@ -52,7 +53,7 @@ router.get('/search', async (req, res) => {
     `).all(pattern, pattern, ...excluded)
   }
 
-  res.json(users)
+  return c.json(users)
 })
 
-export default router
+export default app

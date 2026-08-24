@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
-import RoutingAdmin from '../components/admin/RoutingAdmin'
 import s from './AdminPage.module.css'
 
 const COLORS = ['#4a7cf7','#22c55e','#f59e0b','#ef4444','#8b5cf6','#14b8a6','#ec4899','#f97316','#64748b']
@@ -18,7 +17,6 @@ export default function AdminPage() {
   const [tab, setTab] = useState('users')
   const [users, setUsers] = useState([])
   const [departments, setDepartments] = useState([])
-  const [pipes, setPipes] = useState([])
   const [newDept, setNewDept] = useState({ name: '', color: '#4a7cf7' })
   const [deptMsg, setDeptMsg] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -28,11 +26,9 @@ export default function AdminPage() {
     Promise.all([
       api.get('/admin/users'),
       api.get('/admin/departments'),
-      api.get('/admin/pipes'),
-    ]).then(([u, d, p]) => {
+    ]).then(([u, d]) => {
       setUsers(u.data)
       setDepartments(d.data)
-      setPipes(p.data)
       setLoading(false)
     })
   }, [me])
@@ -89,16 +85,13 @@ export default function AdminPage() {
         <button className={`${s.tab} ${tab === 'departments' ? s.active : ''}`} onClick={() => setTab('departments')}>
           🏢 Departamentos <span className={s.badge}>{departments.length}</span>
         </button>
-        <button className={`${s.tab} ${tab === 'routing' ? s.active : ''}`} onClick={() => setTab('routing')}>
-          🔀 Encaminhamento <span className={s.badge}>{pipes.length}</span>
-        </button>
       </div>
 
       {/* ── Tab: Usuários ── */}
       {tab === 'users' && (
         <div className={s.section}>
           <div className={s.info}>
-            <strong>🔐 Como funciona:</strong> Defina o <em>departamento</em> de cada usuário para que gestores só vejam o seu time na hora de adicionar colaboradores aos pipes. Promova a <em>Super Admin</em> quem deve ter acesso irrestrito ao sistema.
+            <strong>🔐 Como funciona:</strong> Defina o <em>departamento</em> de cada usuário para organizar chamados e eventos por setor. Promova a <em>Super Admin</em> quem deve ter acesso irrestrito ao sistema.
           </div>
           <div className={s.table}>
             <div className={s.tableHead}>
@@ -156,23 +149,11 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── Tab: Encaminhamento ── */}
-      {tab === 'routing' && (
-        <div className={s.section}>
-          <div className={s.info}>
-            <strong>🔀 Regras de Encaminhamento</strong> controlam para quais pessoas ou grupos cada colaborador pode encaminhar cards.
-            Selecione um pipe abaixo para gerenciar seus grupos personalizados e regras.{' '}
-            <em>Super Admin tem acesso a todos os pipes do sistema.</em>
-          </div>
-          <RoutingAdmin />
-        </div>
-      )}
-
       {/* ── Tab: Departamentos ── */}
       {tab === 'departments' && (
         <div className={s.section}>
           <div className={s.info}>
-            <strong>🏢 Departamentos</strong> agrupam usuários por equipe. Um <em>Gestor de TI</em> no departamento <em>TI</em> só verá colaboradores do mesmo departamento ao adicionar membros em seus pipes.
+            <strong>🏢 Departamentos</strong> agrupam usuários por equipe e são usados como setor de destino de chamados e eventos.
           </div>
 
           <div className={s.deptGrid}>

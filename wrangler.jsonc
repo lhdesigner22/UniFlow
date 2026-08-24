@@ -1,0 +1,32 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "uniflow",
+	"main": "server/src/worker.js",
+	"compatibility_date": "2026-08-21",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"directory": "./client/dist",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "uniflow",
+			"database_id": "5e7598bf-d493-43e9-b593-29b014330d94"
+		}
+	],
+	// R2 desativado por enquanto (exige assinatura paga na Cloudflare) — quando
+	// quiser ativar anexos: `npx wrangler r2 bucket create uniflow-uploads` e
+	// devolver este bloco:
+	// "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "uniflow-uploads" }],
+	"triggers": {
+		"crons": [
+			"0 * * * *"
+		]
+	}
+}
