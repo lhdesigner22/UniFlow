@@ -1,0 +1,26 @@
+.card {
+  background: var(--surface); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm); padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  cursor: pointer; transition: box-shadow .15s, transform .1s;
+}
+.card:hover { box-shadow: var(--shadow-md); }
+.card.overlay { box-shadow: var(--shadow-md); cursor: grabbing; transform: rotate(1.5deg); }
+
+.labels { display: flex; gap: 4px; flex-wrap: wrap; }
+.labelChip { width: 28px; height: 6px; border-radius: 4px; display: inline-block; }
+
+.title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+
+.metaRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.badge {
+  font-size: 11px; font-weight: 600; color: var(--text-muted);
+  background: var(--surface-2); border-radius: 4px; padding: 2px 6px;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.badge.danger { color: #fff; background: var(--danger); }
+.badge.warning { color: #7a4a04; background: rgba(245,158,11,.25); }
+[data-theme="dark"] .badge.warning { color: #fbbf24; background: rgba(245,158,11,.18); }
+.badge.muted { color: var(--text-muted); }
+
+.membersRow { display: flex; justify-content: flex-end; }

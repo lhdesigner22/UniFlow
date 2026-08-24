@@ -1,138 +1,99 @@
 .page { padding: 36px 32px; max-width: 1300px; display: flex; flex-direction: column; gap: 28px; }
 
-/* ── Page header ─────────────────────────────────────────────── */
-.pageHeader {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-}
-.pageTitle { font-size: 1.4rem; font-weight: 700; letter-spacing: -.02em; }
-.pageSub { font-size: 13px; color: var(--muted); margin-top: 3px; }
-.pageSub strong { color: var(--light); font-weight: 600; }
+/* ── Header ──────────────────────────────────────────────────── */
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.title { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; letter-spacing: -.02em; }
+.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
-.headerActions { display: flex; align-items: center; gap: 10px; }
-.monthInput { width: auto; }
-
-/* ── Stats row ───────────────────────────────────────────────── */
-.statsRow {
-  display: flex; align-items: center; gap: 0;
-  background: var(--card); border: 1px solid var(--border2);
-  border-radius: var(--radius); padding: 0;
-  overflow: hidden; box-shadow: var(--shadow-sm);
+/* ── Running timer bar ───────────────────────────────────────── */
+.runningBar {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,107,74,.1); border: 1px solid rgba(255,107,74,.25);
+  border-radius: var(--radius); padding: 12px 16px; font-size: 13px;
+  color: var(--text);
 }
-.statItem {
-  flex: 1; padding: 18px 24px;
-  display: flex; flex-direction: column; gap: 4px;
+.runningDot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  animation: pulse 1.4s infinite; flex-shrink: 0;
 }
-.statNumber {
-  font-size: 1.6rem; font-weight: 700;
-  letter-spacing: -.03em; color: var(--white); line-height: 1;
-}
-.statLabel { font-size: 12px; color: var(--muted); }
-.statDivider { width: 1px; height: 40px; background: var(--border2); flex-shrink: 0; }
-
-/* ── Quick action tiles ──────────────────────────────────────── */
-.quickGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-.quickCard {
-  background: var(--card); border: 1px solid var(--border2);
-  border-radius: var(--radius); cursor: pointer; overflow: hidden;
-  display: flex; flex-direction: column;
-  transition: border-color .15s, box-shadow .15s, transform .15s;
-  box-shadow: var(--shadow-sm);
-}
-.quickCard:hover { border-color: var(--border); transform: translateY(-2px); box-shadow: var(--shadow-md); }
-.quickAccent { height: 3px; flex-shrink: 0; }
-.quickBody { display: flex; align-items: center; gap: 14px; padding: 18px; }
-.quickIcon { font-size: 26px; flex-shrink: 0; }
-.quickBody h3 { font-size: 14px; font-weight: 600; color: var(--white); }
-.quickBody p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.runningBar button { margin-left: auto; }
+.runningBar button + button { margin-left: 0; }
 
 /* ── Section ─────────────────────────────────────────────────── */
 .section { display: flex; flex-direction: column; gap: 14px; }
-.sectionHeader { display: flex; align-items: center; gap: 10px; }
-.sectionTitle { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.sectionCount {
-  font-size: 11px; font-weight: 700; color: var(--muted);
-  background: var(--border2); border-radius: 50px; padding: 1px 8px;
-}
+.sectionTitle { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
 
-/* ── Charts ──────────────────────────────────────────────────── */
-.chartsGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
-.chartCard {
-  background: var(--card); border: 1px solid var(--border2);
-  border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm);
-}
-.chartCard h4 { font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 8px; }
-.chartEmpty { font-size: 12px; color: var(--muted); padding: 40px 0; text-align: center; }
-.tooltip {
-  background: var(--navy2); border: 1px solid var(--border2);
-  border-radius: 8px; padding: 8px 12px; font-size: 12px;
-  box-shadow: var(--shadow-md);
-}
+/* ── Boards grid ─────────────────────────────────────────────── */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 
-/* ── Upcoming events ─────────────────────────────────────────── */
-.eventsList { display: flex; flex-direction: column; gap: 6px; }
-.eventItem {
+.boardTile {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); overflow: hidden; cursor: pointer;
+  box-shadow: var(--shadow-sm); transition: box-shadow .15s, transform .15s;
+  display: flex; flex-direction: column;
+}
+.boardTile:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.boardAccent { height: 64px; flex-shrink: 0; opacity: .88; }
+.boardBody { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.boardName { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--text); }
+.boardDesc {
+  font-size: 12px; color: var(--text-muted); line-height: 1.4;
+  overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.boardFooter { display: flex; align-items: center; justify-content: space-between; margin-top: auto; gap: 8px; }
+.boardMemberCount { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+.newBoardTile {
+  border: 1.5px dashed var(--border2); border-radius: var(--radius);
+  background: transparent; color: var(--text-muted);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; min-height: 140px; font-size: 13px; font-weight: 500;
+  transition: border-color .15s, color .15s;
+}
+.newBoardTile:hover { border-color: var(--brand); color: var(--brand); }
+.newBoardPlus { font-size: 26px; font-weight: 300; line-height: 1; }
+
+/* ── My cards list ───────────────────────────────────────────── */
+.cardsList { display: flex; flex-direction: column; gap: 6px; }
+.cardRow {
   display: flex; align-items: center; gap: 12px;
-  background: var(--card); border: 1px solid var(--border2);
+  background: var(--surface); border: 1px solid var(--border2);
   border-radius: var(--radius-sm); padding: 10px 14px;
-  cursor: pointer; transition: border-color .15s;
-  font-size: 13px;
+  cursor: pointer; transition: border-color .15s; font-size: 13px;
 }
-.eventItem:hover { border-color: var(--border); }
-.eventDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.eventTitle { flex: 1; font-weight: 600; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.eventDept { color: var(--muted); font-size: 12px; flex-shrink: 0; }
-.eventDate { color: var(--muted); font-size: 12px; flex-shrink: 0; white-space: nowrap; }
-
-/* ── Grid (loading skeleton) ─────────────────────────────────── */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.cardRow:hover { border-color: var(--brand); }
+.cardDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cardTitle { flex: 1; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cardBoard { color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
+.cardDue { color: var(--text-muted); font-size: 12px; flex-shrink: 0; white-space: nowrap; }
 
 /* ── Empty state ─────────────────────────────────────────────── */
-.empty { text-align: center; padding: 80px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.empty { text-align: center; padding: 72px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .emptyIcon {
   width: 64px; height: 64px; border-radius: 16px;
-  background: var(--card); border: 1px solid var(--border2);
+  background: var(--surface-2); border: 1px solid var(--border2);
   display: flex; align-items: center; justify-content: center;
-  color: var(--muted); margin-bottom: 4px;
+  color: var(--text-muted); margin-bottom: 4px;
 }
-.empty h3 { font-size: 1.1rem; font-weight: 600; }
-.empty p { color: var(--muted); max-width: 360px; line-height: 1.6; font-size: 13px; }
+.empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; }
+.empty p { color: var(--text-muted); max-width: 380px; line-height: 1.6; font-size: 13px; }
 
 /* ── Skeleton ────────────────────────────────────────────────── */
 .skeleton {
-  height: 180px; border-radius: var(--radius);
-  background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
+  height: 150px; border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
   background-size: 400% 100%;
   animation: shimmer 1.8s infinite;
 }
-@keyframes shimmer {
-  from { background-position: -400% 0; }
-  to   { background-position:  400% 0; }
-}
+
+/* ── Create-board color swatches ─────────────────────────────── */
+.colorSwatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer; flex-shrink: 0; }
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
   .page { padding: 20px 16px; gap: 20px; }
-
-  .pageHeader { flex-direction: column; gap: 8px; }
-  .headerActions { width: 100%; }
-  .monthInput { flex: 1; }
-
-  /* Stats: 2-column grid */
-  .statsRow {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-  .statDivider { display: none; }
-  .statItem {
-    padding: 14px 16px;
-    border-right: 1px solid var(--border2);
-    border-bottom: 1px solid var(--border2);
-  }
-  .statItem:nth-child(2n) { border-right: none; }
-  .statItem:nth-last-child(-n+2) { border-bottom: none; }
-  .statNumber { font-size: 1.3rem; }
-
-  .grid { grid-template-columns: 1fr; gap: 12px; }
-  .chartsGrid { grid-template-columns: 1fr; }
-  .eventItem { flex-wrap: wrap; }
+  .grid { grid-template-columns: 1fr; }
+  .runningBar { flex-wrap: wrap; }
 }

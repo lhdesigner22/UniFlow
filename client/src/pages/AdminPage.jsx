@@ -91,7 +91,7 @@ export default function AdminPage() {
       {tab === 'users' && (
         <div className={s.section}>
           <div className={s.info}>
-            <strong>🔐 Como funciona:</strong> Defina o <em>departamento</em> de cada usuário para organizar chamados e eventos por setor. Promova a <em>Super Admin</em> quem deve ter acesso irrestrito ao sistema.
+            <strong>🔐 Como funciona:</strong> Defina o <em>departamento</em> de cada usuário para organizar a equipe por setor. Promova a <em>Super Admin</em> quem deve ter acesso irrestrito ao sistema.
           </div>
           <div className={s.table}>
             <div className={s.tableHead}>
@@ -153,7 +153,7 @@ export default function AdminPage() {
       {tab === 'departments' && (
         <div className={s.section}>
           <div className={s.info}>
-            <strong>🏢 Departamentos</strong> agrupam usuários por equipe e são usados como setor de destino de chamados e eventos.
+            <strong>🏢 Departamentos</strong> agrupam usuários por equipe dentro da organização.
           </div>
 
           <div className={s.deptGrid}>

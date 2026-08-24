@@ -5,8 +5,8 @@ import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
-import ChamadosPage from './pages/ChamadosPage'
-import EventosPage from './pages/EventosPage'
+import BoardPage from './pages/BoardPage'
+import TeamTimePage from './pages/TeamTimePage'
 import AdminPage from './pages/AdminPage'
 import GoogleCallback from './pages/GoogleCallback'
 
@@ -38,8 +38,8 @@ export default function App() {
         <Route path="/auth/google/callback" element={<GoogleCallback />} />
         <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
           <Route index element={<DashboardPage />} />
-          <Route path="chamados" element={<ChamadosPage />} />
-          <Route path="eventos" element={<EventosPage />} />
+          <Route path="boards/:boardId" element={<BoardPage />} />
+          <Route path="tempo" element={<TeamTimePage />} />
           <Route path="admin" element={<AdminPage />} />
         </Route>
       </Routes>

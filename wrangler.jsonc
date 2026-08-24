@@ -24,9 +24,8 @@
 	// quiser ativar anexos: `npx wrangler r2 bucket create uniflow-uploads` e
 	// devolver este bloco:
 	// "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "uniflow-uploads" }],
-	"triggers": {
-		"crons": [
-			"0 * * * *"
-		]
-	}
+	"migrations": [
+		{ "tag": "v1", "new_sqlite_classes": ["PipeRoom"] },
+		{ "tag": "v2", "deleted_classes": ["PipeRoom"] }
+	]
 }
