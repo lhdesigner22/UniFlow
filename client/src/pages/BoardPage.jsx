@@ -189,6 +189,16 @@ export default function BoardPage() {
     setCards(prev => prev.filter(c => c.id !== cardId))
   }
 
+  const deleteBoard = async () => {
+    if (!confirm(`Excluir o quadro "${board.name}"? Todas as colunas, cartões e lançamentos de tempo dele serão apagados. Isso não pode ser desfeito.`)) return
+    try {
+      await api.delete(`/boards/${boardId}`)
+      navigate('/')
+    } catch (e) {
+      alert(e.response?.data?.error || 'Erro ao excluir o quadro.')
+    }
+  }
+
   if (loading) return <div className={s.loading}>Carregando quadro...</div>
   if (!board) return <div className={s.loading}>Quadro não encontrado.</div>
 
@@ -224,6 +234,11 @@ export default function BoardPage() {
             )}
           </div>
           <button className="btn btn-ghost btn-sm" onClick={() => navigate('/tempo')}>Tempo da equipe</button>
+          {board.my_role === 'owner' && (
+            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={deleteBoard} title="Excluir quadro">
+              🗑️ Excluir
+            </button>
+          )}
         </div>
       </div>
 
