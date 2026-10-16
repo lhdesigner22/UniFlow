@@ -56,14 +56,13 @@ cd .. && npx wrangler deploy
 Checklist completo de deploy, secrets e cron jobs: seção **Deploy e
 Operação**, mais adiante neste documento.
 
-## Pastas que você pode ignorar
+## Hospedagem antiga (removida)
 
-Na raiz do repositório sobraram alguns arquivos de quando o projeto rodava em
-Render + Vercel + Turso (antes da migração pra Cloudflare): `railway.toml`,
-`render.yaml`, `start.bat`, `uniflow.db`, `uploads/`, e um `index.html` solto
-na raiz (~45 KB, não confundir com `client/index.html`, que é o de verdade).
-Nada disso é usado hoje — nenhum deploy, script ou import aponta pra eles.
-Seguros de apagar num dia de faxina.
+O projeto rodou em Render + Vercel + Turso antes da migração pra Cloudflare.
+Os arquivos dessa época (`render.yaml`, `railway.toml`, `start.bat` e um
+`index.html` solto na raiz) foram removidos em out/2026, e o serviço
+`uniflow-backend` do Render foi apagado. Se aparecer `uniflow.db` ou
+`uploads/` na raiz de alguma máquina, também é sobra local (fora do git).
 
 ## Como este documento está organizado
 

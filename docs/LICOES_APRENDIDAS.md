@@ -132,9 +132,11 @@ foi descartado sem sempre limpar 100% os rastros:
    banco NUNCA foi aplicada e nada foi ao ar; descartado.
 4. Modelo atual: quadros Kanban estilo Trello + tempo, decisão final.
 
-Por isso: `railway.toml`, `render.yaml`, `start.bat`, `uniflow.db`,
-`uploads/` e um `index.html` solto na raiz do repo são sobra da fase 1, sem
-uso hoje. E se um dia encontrar uma referência de código ou comentário
+Os arquivos da fase 1 (`railway.toml`, `render.yaml`, `start.bat` e um
+`index.html` solto na raiz) foram removidos em out/2026 — o serviço antigo
+do Render ainda estava ligado ao repositório e tentava (e falhava) fazer
+deploy a cada push no main; foi apagado no painel do Render. `uniflow.db` e
+`uploads/`, se existirem numa máquina, são sobra local fora do git. E se um dia encontrar uma referência de código ou comentário
 mencionando "Pipefy", "demandas", "chamados internos" com KPI mensal, ou
 pastas vazias tipo `client/src/components/automation/` — é sobra dessas
 fases, não uma feature ativa quebrada.
