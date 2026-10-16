@@ -2,7 +2,8 @@ import { Hono } from 'hono'
 import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
 import { driveUploadFile, driveDownloadFile, driveDeleteFile, driveConfigured } from '../lib/driveClient.js'
-import { accessOf, departmentFilter, departmentForCreate, departmentForUpdate, canSeeDepartment, canModifyDepartment } from '../lib/permissions.js'
+import { accessOf, departmentFilter, departmentForCreate, departmentForUpdate, canSeeDepartment, canModifyDepartment, levelOf } from '../lib/permissions.js'
+import { normalizeLink, isLinkError } from '../lib/safeUrl.js'
 
 const app = new Hono()
 app.use('*', auth) // qualquer usuário logado lê e cria — é uma base compartilhada; editar/excluir é só autor ou super_admin (ver POST/PUT/DELETE)
@@ -109,6 +110,11 @@ app.post('/:id/attachment', async c => {
   if (!allowed) return c.json({ error: 'Sem permissão' }, 403)
   if (!driveConfigured(c.env)) return c.json({ error: 'Armazenamento externo (Google Drive) ainda não configurado.' }, 503)
 
+  // Barra pelo tamanho declarado ANTES de ler o corpo: o parseBody carrega
+  // tudo na memória do Worker (128 MB) antes da checagem de file.size abaixo.
+  // (+1 MB de folga pros cabeçalhos do multipart.)
+  if (Number(c.req.header('Content-Length') || 0) > MAX_ATTACHMENT_BYTES + 1024 * 1024)
+    return c.json({ error: 'Arquivo grande demais — máx. 95 MB.' }, 413)
   const body = await c.req.parseBody()
   const file = body.file
   if (!file || typeof file === 'string') return c.json({ error: 'Nenhum arquivo enviado' }, 400)
@@ -177,12 +183,14 @@ app.post('/', async c => {
   const { title, category, content, link_url, department_id } = await c.req.json()
   if (!title?.trim()) return c.json({ error: 'Título é obrigatório' }, 400)
   const cat = CATEGORIES.includes(category) ? category : 'outro'
+  const link = normalizeLink(link_url)
+  if (isLinkError(link)) return c.json(link, 400)
 
   const id = uuid()
   await db.prepare(`
     INSERT INTO kb_articles (id, title, category, content, link_url, created_by, department_id)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(id, title.trim(), cat, content || null, link_url || null, user.id, departmentForCreate(await accessOf(c), department_id))
+  `).run(id, title.trim(), cat, content || null, link ?? null, user.id, departmentForCreate(await accessOf(c), department_id))
 
   return c.json(await db.prepare(`SELECT ${LIST_COLUMNS} FROM kb_articles a LEFT JOIN users u ON u.id = a.created_by LEFT JOIN departments dd ON dd.id = a.department_id WHERE a.id = ?`).get(id))
 })
@@ -200,11 +208,19 @@ app.put('/:id', async c => {
 
   const { title, category, content, link_url, department_id } = await c.req.json()
   const cat = CATEGORIES.includes(category) ? category : article.category
+  // Mover entre Base de Conhecimento e Gestão exige poder editar as duas (o
+  // portão do worker.js só olha a categoria atual do artigo).
+  const moduleOf = k => (k === 'gestao' ? 'gestao' : 'kb')
+  if (moduleOf(cat) !== moduleOf(article.category) && levelOf(await accessOf(c), moduleOf(cat)) !== 'edit') {
+    return c.json({ error: 'Seu cargo não pode mover o documento para esta área.' }, 403)
+  }
+  const link = normalizeLink(link_url)
+  if (isLinkError(link)) return c.json(link, 400)
 
   await db.prepare(`
     UPDATE kb_articles SET title = ?, category = ?, content = ?, link_url = ?, department_id = ?, updated_at = datetime('now')
     WHERE id = ?
-  `).run(title?.trim() || article.title, cat, content !== undefined ? content : article.content, link_url !== undefined ? link_url : article.link_url, departmentForUpdate(await accessOf(c), article.department_id, department_id), id)
+  `).run(title?.trim() || article.title, cat, content !== undefined ? content : article.content, link !== undefined ? link : article.link_url, departmentForUpdate(await accessOf(c), article.department_id, department_id), id)
 
   return c.json(await db.prepare(`SELECT ${LIST_COLUMNS} FROM kb_articles a LEFT JOIN users u ON u.id = a.created_by LEFT JOIN departments dd ON dd.id = a.department_id WHERE a.id = ?`).get(id))
 })

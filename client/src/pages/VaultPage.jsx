@@ -6,6 +6,7 @@ import { confirmDialog, alertDialog } from '../store/dialogStore'
 import Modal from '../components/common/Modal'
 import MemberPicker from '../components/common/MemberPicker'
 import s from './VaultPage.module.css'
+import { safeHref } from '../utils/safeHref'
 
 function timeAgo(iso) {
   if (!iso) return null
@@ -229,7 +230,7 @@ function EntryCard({ entry, canManage, onEdit, onDelete }) {
         </div>
       </div>
       {entry.notes && <p className={s.notes}>{entry.notes}</p>}
-      {entry.url && <a className={s.cardLink} href={entry.url} target="_blank" rel="noreferrer">🔗 Abrir link</a>}
+      {entry.url && <a className={s.cardLink} href={safeHref(entry.url)} target="_blank" rel="noreferrer">🔗 Abrir link</a>}
       <div className={s.cardFooter}>
         <span className={s.cardMeta}>{entry.author_name || 'Alguém'} · {timeAgo(entry.updated_at)}</span>
       </div>

@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
+import { normalizeLink, isLinkError } from '../lib/safeUrl.js'
 import { driveUploadFile, driveDownloadFile, driveDeleteFile, driveConfigured } from '../lib/driveClient.js'
 import { accessOf, departmentFilter, departmentForCreate, departmentForUpdate, canSeeDepartment, canModifyDepartment } from '../lib/permissions.js'
 
@@ -94,6 +95,11 @@ app.post('/:id/attachment', async c => {
   if (!allowed) return c.json({ error: 'Sem permissão' }, 403)
   if (!driveConfigured(c.env)) return c.json({ error: 'Armazenamento externo (Google Drive) ainda não configurado.' }, 503)
 
+  // Barra pelo tamanho declarado ANTES de ler o corpo: o parseBody carrega
+  // tudo na memória do Worker (128 MB) antes da checagem de file.size abaixo.
+  // (+1 MB de folga pros cabeçalhos do multipart.)
+  if (Number(c.req.header('Content-Length') || 0) > MAX_ATTACHMENT_BYTES + 1024 * 1024)
+    return c.json({ error: 'Arquivo grande demais — máx. 95 MB.' }, 413)
   const body = await c.req.parseBody()
   const file = body.file
   if (!file || typeof file === 'string') return c.json({ error: 'Nenhum arquivo enviado' }, 400)
@@ -158,6 +164,8 @@ app.post('/', async c => {
   const { location, model, ip, department, link_url, department_id } = await c.req.json()
   if (!LOCATIONS.includes(location)) return c.json({ error: 'Local inválido (use sede, adm, centro, g5 ou clinicas)' }, 400)
   if (!model?.trim()) return c.json({ error: 'Nome do modelo é obrigatório' }, 400)
+  const link = normalizeLink(link_url)
+  if (isLinkError(link)) return c.json(link, 400)
 
   const id = uuid()
   // Entra no fim da lista daquele local.
@@ -165,7 +173,7 @@ app.post('/', async c => {
   await db.prepare(`
     INSERT INTO printers (id, location, model, ip, department, link_url, order_index, created_by, department_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, location, model.trim(), ip?.trim() || null, department?.trim() || null, link_url || null, (last?.m ?? -1) + 1, user.id, departmentForCreate(await accessOf(c), department_id))
+  `).run(id, location, model.trim(), ip?.trim() || null, department?.trim() || null, link ?? null, (last?.m ?? -1) + 1, user.id, departmentForCreate(await accessOf(c), department_id))
 
   return c.json(await db.prepare(`SELECT ${LIST_COLUMNS} FROM printers p LEFT JOIN users u ON u.id = p.created_by LEFT JOIN departments dd ON dd.id = p.department_id WHERE p.id = ?`).get(id))
 })
@@ -198,6 +206,8 @@ app.put('/:id', async c => {
 
   const { location, model, ip, department, link_url, department_id } = await c.req.json()
   const loc = LOCATIONS.includes(location) ? location : printer.location
+  const link = normalizeLink(link_url)
+  if (isLinkError(link)) return c.json(link, 400)
 
   await db.prepare(`
     UPDATE printers SET location = ?, model = ?, ip = ?, department = ?, link_url = ?, department_id = ?, updated_at = datetime('now')
@@ -207,7 +217,7 @@ app.put('/:id', async c => {
     model?.trim() || printer.model,
     ip !== undefined ? (ip?.trim() || null) : printer.ip,
     department !== undefined ? (department?.trim() || null) : printer.department,
-    link_url !== undefined ? link_url : printer.link_url,
+    link !== undefined ? link : printer.link_url,
     departmentForUpdate(await accessOf(c), printer.department_id, department_id),
     id
   )

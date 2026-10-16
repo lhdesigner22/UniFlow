@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
+import { isScriptLink, LINK_ERROR } from '../lib/safeUrl.js'
 import { encryptSecret, decryptSecret } from '../lib/vaultCrypto.js'
 
 // Cofre de senhas — acesso (ver e editar) NÃO segue o system_role normal:
@@ -111,6 +112,7 @@ app.post('/', async c => {
   const { title, category, username, password, url, notes } = await c.req.json()
   if (!title?.trim()) return c.json({ error: 'Título é obrigatório' }, 400)
   if (!password) return c.json({ error: 'Senha é obrigatória' }, 400)
+  if (isScriptLink(url)) return c.json({ error: LINK_ERROR }, 400)
 
   const { ciphertext, iv } = await encryptSecret(c.env, password)
   const id = uuid()
@@ -133,6 +135,7 @@ app.put('/:id', async c => {
   if (!row) return c.json({ error: 'Item não encontrado' }, 404)
 
   const { title, category, username, password, url, notes } = await c.req.json()
+  if (isScriptLink(url)) return c.json({ error: LINK_ERROR }, 400)
   let passwordEnc = row.password_enc
   let passwordIv = row.password_iv
   if (password) {

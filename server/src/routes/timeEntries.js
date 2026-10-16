@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
+import { getVisibleBoardIds } from '../lib/boardAccess.js'
+import { escapeCsv } from '../lib/csv.js'
 
 // Roteador único montado em `/api` (bare) no worker.js — os caminhos completos
 // são escritos por extenso aqui dentro (/cards/:cardId/time/..., /time/...)
@@ -162,23 +164,32 @@ app.delete('/time/:id', async c => {
   return c.json({ ok: true })
 })
 
-// Monta a query base de summary/export — filtros compartilhados
-function buildFilters(query) {
+// Monta a query base de summary/export — filtros compartilhados. Só entram
+// os quadros que a pessoa enxerga (mesma regra das Métricas) — antes o
+// relatório somava/exportava o tempo de TODOS os quadros de todo mundo.
+// Retorna null quando o boardId pedido não é visível.
+async function buildFilters(db, userId, query) {
   const to = query.to || new Date().toISOString().slice(0, 10)
   const fromDefault = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   const from = query.from || fromDefault
-  const boardId = query.boardId || null
-  return { from, to, boardId }
+  let ids = await getVisibleBoardIds(db, userId)
+  if (query.boardId) {
+    if (!ids.includes(query.boardId)) return null
+    ids = [query.boardId]
+  }
+  // Sem quadro visível: filtro que não casa nada (IN () é inválido no SQLite).
+  const boardFilter = ids.length
+    ? `AND te.card_id IN (SELECT id FROM cards WHERE board_id IN (${ids.map(() => '?').join(',')}))`
+    : 'AND 0'
+  return { from, to, boardFilter, args: [from, to, ...ids] }
 }
 
 // GET /time/summary?boardId=&from=&to=
 app.get('/time/summary', async c => {
   const db = c.get('db')
-  const { from, to, boardId } = buildFilters(c.req.query())
-
-  const boardFilter = boardId ? 'AND te.card_id IN (SELECT id FROM cards WHERE board_id = ?)' : ''
-  const args = [from, to]
-  if (boardId) args.push(boardId)
+  const filters = await buildFilters(db, c.get('user').id, c.req.query())
+  if (!filters) return c.json({ error: 'Sem acesso a este quadro' }, 403)
+  const { from, to, boardFilter, args } = filters
 
   const totalSeconds = await db.scalar(`
     SELECT COALESCE(SUM(te.duration_seconds), 0) FROM time_entries te
@@ -205,11 +216,9 @@ app.get('/time/summary', async c => {
 // GET /time/export — CSV
 app.get('/time/export', async c => {
   const db = c.get('db')
-  const { from, to, boardId } = buildFilters(c.req.query())
-
-  const boardFilter = boardId ? 'AND te.card_id IN (SELECT id FROM cards WHERE board_id = ?)' : ''
-  const args = [from, to]
-  if (boardId) args.push(boardId)
+  const filters = await buildFilters(db, c.get('user').id, c.req.query())
+  if (!filters) return c.json({ error: 'Sem acesso a este quadro' }, 403)
+  const { from, to, boardFilter, args } = filters
 
   const rows = await db.prepare(`
     SELECT te.*, u.name as user_name, cd.title as card_title, b.name as board_name
@@ -220,11 +229,6 @@ app.get('/time/export', async c => {
     WHERE te.duration_seconds IS NOT NULL AND date(te.started_at) BETWEEN ? AND ? ${boardFilter}
     ORDER BY te.started_at
   `).all(...args)
-
-  const escapeCsv = v => {
-    const s = String(v ?? '')
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-  }
 
   const headers = ['Usuário', 'Quadro', 'Cartão', 'Data', 'Duração (h:mm)', 'Observação']
   const lines = [headers.map(escapeCsv).join(',')]

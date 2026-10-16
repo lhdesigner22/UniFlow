@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
+import { normalizeLink, isLinkError } from '../lib/safeUrl.js'
+import { escapeCsv } from '../lib/csv.js'
 import { createNotification } from './notifications.js'
 import { accessOf, departmentFilter, departmentForCreate, departmentForUpdate, canSeeDepartment, canModifyDepartment } from '../lib/permissions.js'
 
@@ -117,6 +119,8 @@ app.post('/', async c => {
     quantity, unit_price, link_url, notes, approver_ids, reference_month, department_id,
   } = await c.req.json()
   if (!item_name?.trim()) return c.json({ error: 'Nome do item é obrigatório' }, 400)
+  const link = normalizeLink(link_url)
+  if (isLinkError(link)) return c.json(link, 400)
 
   const approverIds = [...new Set(Array.isArray(approver_ids) ? approver_ids : [])].filter(x => x !== user.id)
   if (approverIds.length === 0) return c.json({ error: 'Escolha pelo menos um aprovador' }, 400)
@@ -134,7 +138,7 @@ app.post('/', async c => {
     location?.trim() || null,
     Number.isFinite(+quantity) && +quantity > 0 ? Math.round(+quantity) : 1,
     Number.isFinite(+unit_price) ? +unit_price : 0,
-    link_url?.trim() || null,
+    link ?? null,
     notes?.trim() || null,
     /^\d{4}-\d{2}$/.test(reference_month) ? reference_month : currentMonth(),
     user.id,
@@ -170,6 +174,8 @@ app.put('/:id', async c => {
   if (!allowed) return c.json({ error: 'Sem permissão' }, 403)
 
   const { item_name, ticket_number, department, description, location, quantity, unit_price, link_url, notes, reference_month, department_id } = await c.req.json()
+  const link = normalizeLink(link_url)
+  if (isLinkError(link)) return c.json(link, 400)
 
   await db.prepare(`
     UPDATE purchase_requests SET
@@ -184,7 +190,7 @@ app.put('/:id', async c => {
     location !== undefined ? (location?.trim() || null) : row.location,
     Number.isFinite(+quantity) && +quantity > 0 ? Math.round(+quantity) : row.quantity,
     Number.isFinite(+unit_price) ? +unit_price : row.unit_price,
-    link_url !== undefined ? (link_url?.trim() || null) : row.link_url,
+    link !== undefined ? link : row.link_url,
     notes !== undefined ? (notes?.trim() || null) : row.notes,
     /^\d{4}-\d{2}$/.test(reference_month) ? reference_month : row.reference_month,
     departmentForUpdate(await accessOf(c), row.department_id, department_id),
@@ -291,10 +297,6 @@ app.get('/export', async c => {
   `).all(...vis.args)
   for (const row of rows) row.approvers = await getApprovers(db, row.id)
 
-  const escapeCsv = v => {
-    const str = String(v ?? '')
-    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
-  }
   const headers = ['Mês', 'Nome', 'Chamado', 'Departamento', 'Descrição', 'Unidade/Sede', 'Qtd', 'Valor Unitário', 'Valor Total', 'Link', 'Observação', 'Status', 'Aprovador(es)', 'Cadastrado por', 'Criado em']
   const lines = [headers.map(escapeCsv).join(',')]
   for (const r of rows) {

@@ -225,6 +225,11 @@ app.post('/:id/attachment', async c => {
   if (approval.requested_by !== user.id) return c.json({ error: 'Sem permissão' }, 403)
   if (!driveConfigured(c.env)) return c.json({ error: 'Armazenamento externo (Google Drive) ainda não configurado.' }, 503)
 
+  // Barra pelo tamanho declarado ANTES de ler o corpo: o parseBody carrega
+  // tudo na memória do Worker (128 MB) antes da checagem de file.size abaixo.
+  // (+1 MB de folga pros cabeçalhos do multipart.)
+  if (Number(c.req.header('Content-Length') || 0) > MAX_ATTACHMENT_BYTES + 1024 * 1024)
+    return c.json({ error: 'Arquivo grande demais — máx. 95 MB.' }, 413)
   const body = await c.req.parseBody()
   const file = body.file
   if (!file || typeof file === 'string') return c.json({ error: 'Nenhum arquivo enviado' }, 400)

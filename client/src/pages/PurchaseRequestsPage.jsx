@@ -15,6 +15,7 @@ import Avatar from '../components/common/Avatar'
 import s from './PurchaseRequestsPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
+import { safeHref } from '../utils/safeHref'
 
 const STATUSES = [
   { key: 'pendente', label: 'Pendente' },
@@ -495,7 +496,7 @@ export default function PurchaseRequestsPage() {
                       <td className={s.mono}>{fmtMoney(r.quantity * r.unit_price)}</td>
                       <td className={s.linkCell}>
                         {r.link_url
-                          ? <a className={s.cardLink} href={r.link_url} target="_blank" rel="noreferrer" title={r.link_url}>🔗</a>
+                          ? <a className={s.cardLink} href={safeHref(r.link_url)} target="_blank" rel="noreferrer" title={r.link_url}>🔗</a>
                           : '—'}
                       </td>
                       <td className={s.descCell} title={r.notes}>{r.notes || '—'}</td>

@@ -40,10 +40,16 @@ npx wrangler deploy
 Resumo: `wrangler dev -c server/test-e2e/wrangler.test.jsonc --local --persist-to <dir> --var JWT_SECRET:testsecret`,
 tokens JWT assinados com `testsecret` (payload `{id,name,email,tv:0}`), usuários inseridos direto no D1 local.
 No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Reinicie o `wrangler dev` depois de mudar código** (nem sempre recarrega).
+- **Se o `wrangler dev`/`d1 --local` quebrar** com "access violation" (aconteceu em out/2026 no Windows 11 Insider 26300, qualquer
+  versão do wrangler): `cd server && node test-e2e/node-server.mjs` roda o mesmo worker.js no Node com D1 em SQLite (memória,
+  migrações + seeds) na porta 8799 — as suítes rodam igual. Sem tempo real nem arquivos estáticos.
+- Suítes: `roles`, `dept`, `security` (nesta ordem: o `security` força novo login do analista e invalida o token tv:0 dele).
 
 ## Armadilhas do ambiente (Windows)
-- Shell Bash do Claude: **evite `node -e`/heredocs com crases e `${}`** e `sed` com texto complexo — grave scripts Python/Node em arquivo e rode.
-  Python real: `C:\Users\Luiz\AppData\Local\Programs\Python\Python314\python.exe` (o `python` do PATH é um stub da Store).
+- Shell Bash do Claude: **evite `node -e`/heredocs com crases e `${}`** e `sed` com texto complexo — grave scripts Node em arquivo e rode,
+  ou use a ferramenta de edição. Barras invertidas (`\d`, `\-`) se perdem em heredoc→JS: regex só pela ferramenta de edição.
+  Não há Python instalado nesta máquina (o `python` do PATH é um stub da Store).
+- `npm audit fix` no `server/` sobe o wrangler — não use; atualize só o pacote necessário (ex: `npm install hono@x`).
 - `cd` no Bash persiste entre comandos e muda o diretório de trabalho — use caminhos absolutos ou `cd` explícito.
 - `wrangler d1 execute --command` com várias linhas falha em silêncio → use `--file`.
 - `wrangler tail --format json` (o `pretty` esconde `console.log`).
@@ -56,6 +62,18 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   `5,20,35,50` cache de técnicos; `10,25,40,55` Total de Chamados; `0 12 * * SUN` grade de salas (Browser Rendering).
 - Frontend `client/src`: React+Vite, estilos em CSS Modules, estado com zustand (`store/`), `services/api.js` (axios; manda
   `X-Client-Id` e `X-Department-View`), `hooks/useLiveRefresh.js`.
+
+## Segurança (revisão de out/2026) — decisões do Luiz
+- **Login só pelo Google**, domínios fixos no código: `colegioser.com`, `fecaf.com.br`, `pro.fecaf.com.br` (`ALLOWED_LOGIN_DOMAINS`
+  em `routes/auth.js`; o secret `ALLOWED_DOMAIN` não é mais lido) + `email_verified`. `/login` e `/register` respondem 410.
+- Sessão revogável: o portão do worker.js (e o `auth` nos recursos que ele pula) compara `tv` do token com `users.token_version`
+  e barra usuário excluído — "Forçar novo login" corta na hora.
+- **CSP sem script inline**: `client/public/_headers` (estáticos) + middleware no worker.js (API). Script novo no `index.html` vai
+  em arquivo de `public/`. Domínio externo novo (fetch, iframe, fonte) precisa entrar na CSP do `_headers`.
+- Links digitados viram `<a href>`: validar no servidor (`lib/safeUrl.js`: `normalizeLink`, ou `isScriptLink` no Cofre) e no front
+  (`utils/safeHref.js`). CSV exportado usa `lib/csv.js` (neutraliza fórmula). Portão do KB: com id na rota vale a categoria do artigo.
+- Pendente (não feito): token na URL dos downloads (`?token=`) → trocar por ticket curto; rate limit; `react-router` 7 / `vite` 8
+  (avisos do `npm audit` são do servidor de desenvolvimento).
 
 ## Permissões (cargos × departamentos) — decisões do Luiz
 - **Cargos configuráveis** (tabela `roles`, Admin → aba Cargos): por módulo `none|view|edit` + escopo `all|department`.

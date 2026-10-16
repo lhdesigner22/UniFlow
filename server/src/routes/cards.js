@@ -264,6 +264,9 @@ app.post('/:id/members', async c => {
 })
 
 // DELETE /:id/members/:userId
+// (Aqui e nos itens de etiqueta/checklist abaixo, o `card_id IN (... board_id = ?)`
+// amarra o cartão ao quadro da URL — sem isso, quem é membro do quadro A
+// alterava cartões do quadro B sabendo o id.)
 app.delete('/:id/members/:userId', async c => {
   const db = c.get('db')
   const user = c.get('user')
@@ -275,7 +278,7 @@ app.delete('/:id/members/:userId', async c => {
   if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
   if (!allowed) return c.json({ error: 'Sem acesso a este quadro' }, 403)
 
-  await db.prepare('DELETE FROM card_members WHERE card_id = ? AND user_id = ?').run(id, targetUserId)
+  await db.prepare('DELETE FROM card_members WHERE card_id = ? AND user_id = ? AND card_id IN (SELECT id FROM cards WHERE board_id = ?)').run(id, targetUserId, boardId)
   return c.json({ ok: true })
 })
 
@@ -321,7 +324,7 @@ app.delete('/:id/labels/:labelId', async c => {
   if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
   if (!allowed) return c.json({ error: 'Sem acesso a este quadro' }, 403)
 
-  await db.prepare('DELETE FROM card_labels WHERE card_id = ? AND label_id = ?').run(id, labelId)
+  await db.prepare('DELETE FROM card_labels WHERE card_id = ? AND label_id = ? AND card_id IN (SELECT id FROM cards WHERE board_id = ?)').run(id, labelId, boardId)
   return c.json({ ok: true })
 })
 
@@ -364,7 +367,7 @@ app.put('/:id/checklist/:itemId', async c => {
   if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
   if (!allowed) return c.json({ error: 'Sem acesso a este quadro' }, 403)
 
-  const item = await db.prepare('SELECT * FROM card_checklist WHERE id = ? AND card_id = ?').get(itemId, id)
+  const item = await db.prepare('SELECT * FROM card_checklist WHERE id = ? AND card_id = ? AND card_id IN (SELECT id FROM cards WHERE board_id = ?)').get(itemId, id, boardId)
   if (!item) return c.json({ error: 'Item não encontrado' }, 404)
 
   const { title, done } = await c.req.json()
@@ -388,7 +391,7 @@ app.delete('/:id/checklist/:itemId', async c => {
   if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
   if (!allowed) return c.json({ error: 'Sem acesso a este quadro' }, 403)
 
-  await db.prepare('DELETE FROM card_checklist WHERE id = ? AND card_id = ?').run(itemId, id)
+  await db.prepare('DELETE FROM card_checklist WHERE id = ? AND card_id = ? AND card_id IN (SELECT id FROM cards WHERE board_id = ?)').run(itemId, id, boardId)
   return c.json({ ok: true })
 })
 

@@ -13,6 +13,7 @@ import Reveal from '../components/common/Reveal'
 import s from './PrintersPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
+import { safeHref } from '../utils/safeHref'
 
 // Mesmo teto aplicado no servidor — 95 MB, o máximo seguro dentro do limite
 // real de corpo de requisição da Cloudflare (100 MB no plano atual, um teto
@@ -275,7 +276,7 @@ export default function PrintersPage() {
                         </button>
                       )}
                       {p.link_url && (
-                        <a className={s.cardLink} href={p.link_url} target="_blank" rel="noreferrer">🔗 Link de instalação</a>
+                        <a className={s.cardLink} href={safeHref(p.link_url)} target="_blank" rel="noreferrer">🔗 Link de instalação</a>
                       )}
                       <div className={s.cardFooter}>
                         <span className={s.cardMeta}>{p.author_name || 'Alguém'} · {timeAgo(p.updated_at)}</span>

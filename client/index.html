@@ -17,21 +17,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Aplica tema antes do React renderizar (evita flash) -->
-    <script>(function(){var t=localStorage.getItem('uniflow-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
-    <!-- OAuth callback: fecha o popup imediatamente sem esperar o bundle React -->
-    <script>
-      if (window.location.pathname === '/auth/google/callback') {
-        var p = new URLSearchParams(window.location.hash.slice(1));
-        if (window.opener) {
-          window.opener.postMessage(
-            { type: 'google-oauth', idToken: p.get('id_token'), error: p.get('error') },
-            window.location.origin
-          );
-        }
-        window.close();
-      }
-    </script>
+    <!-- Tema antes do React renderizar (evita flash) e fechamento rápido do
+         popup do Google. Em arquivos de public/ (não inline) para a
+         Content-Security-Policy poder proibir scripts inline — ver public/_headers. -->
+    <script src="/theme-init.js"></script>
+    <script src="/oauth-callback.js"></script>
   </head>
   <body>
     <div id="root"></div>

@@ -10,6 +10,7 @@ import Reveal from '../components/common/Reveal'
 import s from './GestaoPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
+import { safeHref } from '../utils/safeHref'
 
 // Mesma infra da Base de Conhecimento (kb_articles + upload no Google
 // Drive) — só que numa categoria própria ("gestao"), que o servidor já
@@ -240,7 +241,7 @@ export default function GestaoPage() {
                 </button>
               )}
               {d.link_url && (
-                <a className={s.cardLink} href={d.link_url} target="_blank" rel="noreferrer">🔗 Abrir documento</a>
+                <a className={s.cardLink} href={safeHref(d.link_url)} target="_blank" rel="noreferrer">🔗 Abrir documento</a>
               )}
               <div className={s.cardFooter}>
                 <span className={s.cardMeta}>{d.author_name || 'Alguém'} · {timeAgo(d.updated_at)}</span>

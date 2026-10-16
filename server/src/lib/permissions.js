@@ -79,7 +79,7 @@ function allLevels(level) {
 // departmentId, permissions: { módulo: nível } }.
 export async function loadAccess(db, userId) {
   const u = await db.prepare(`
-    SELECT u.id, u.system_role, u.department_id, u.role_id,
+    SELECT u.id, u.system_role, u.department_id, u.role_id, u.token_version,
            r.name AS role_name, r.scope AS role_scope, r.permissions AS role_permissions
     FROM users u
     LEFT JOIN roles r ON r.id = COALESCE(u.role_id, 'role-colaborador')
@@ -87,7 +87,7 @@ export async function loadAccess(db, userId) {
   `).get(userId)
   if (!u) return null
 
-  const base = { userId: u.id, systemRole: u.system_role || 'user', roleId: u.role_id, departmentId: u.department_id || null }
+  const base = { userId: u.id, systemRole: u.system_role || 'user', roleId: u.role_id, departmentId: u.department_id || null, tokenVersion: u.token_version || 0 }
 
   // Super Admin: tudo, todos os departamentos — sempre, independente do cargo.
   if (u.system_role === 'super_admin') {

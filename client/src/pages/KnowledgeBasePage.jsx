@@ -10,6 +10,7 @@ import Reveal from '../components/common/Reveal'
 import s from './KnowledgeBasePage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
+import { safeHref } from '../utils/safeHref'
 
 // O anexo vai pro Google Drive (storage externo — ver server/src/lib/driveClient.js),
 // não mais pro banco. Teto de 95 MB — o máximo seguro dentro do limite real
@@ -282,7 +283,7 @@ export default function KnowledgeBasePage() {
                   </button>
                 )}
                 {a.link_url && (
-                  <a className={s.cardLink} href={a.link_url} target="_blank" rel="noreferrer">🔗 Abrir documento</a>
+                  <a className={s.cardLink} href={safeHref(a.link_url)} target="_blank" rel="noreferrer">🔗 Abrir documento</a>
                 )}
                 <div className={s.cardFooter}>
                   <span className={s.cardMeta}>{a.author_name || 'Alguém'} · {timeAgo(a.updated_at)}</span>

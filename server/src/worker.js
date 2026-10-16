@@ -58,6 +58,23 @@ app.use('*', async (c, next) => {
   await next()
 })
 
+// Cabeçalhos de segurança das respostas da API (os arquivos estáticos recebem
+// os seus por client/public/_headers). `no-store`: dado de API nunca fica em
+// cache do navegador/proxy — a não ser que a rota já tenha definido o seu.
+app.use('/api/*', async (c, next) => {
+  await next()
+  if (c.res.status === 101) return // WebSocket — cabeçalhos imutáveis
+  // Resposta repassada direto de um fetch() tem cabeçalhos imutáveis → copia.
+  try { c.res.headers.set('X-Content-Type-Options', 'nosniff') } catch { c.res = new Response(c.res.body, c.res) }
+  const h = c.res.headers
+  h.set('X-Content-Type-Options', 'nosniff')
+  h.set('X-Frame-Options', 'DENY')
+  h.set('Referrer-Policy', 'no-referrer')
+  h.set('Strict-Transport-Security', 'max-age=31536000')
+  h.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; sandbox")
+  if (!h.has('Cache-Control')) h.set('Cache-Control', 'no-store')
+})
+
 // ACESSO POR CARGO — um único portão para o sistema inteiro (em vez de repetir
 // a checagem rota por rota, que é fácil esquecer). Para cada requisição:
 //   1. carrega o acesso da pessoa (cargo + departamento) — 1 consulta — e deixa
@@ -87,7 +104,11 @@ app.use('/api/*', async (c, next) => {
 
   const db = c.get('db')
   const access = await loadAccess(db, payload.id)
-  if (!access) return await next() // usuário não existe mais — a rota resolve
+  // Usuário excluído, ou sessão derrubada pelo "Forçar novo login" (o
+  // token_version do banco andou): corta na hora, sem esperar o token expirar.
+  if (!access) return c.json({ error: 'Usuário não encontrado — faça login novamente.' }, 401)
+  if ((payload.tv || 0) !== access.tokenVersion) return c.json({ error: 'Sessão renovada — faça login novamente.' }, 401)
+  c.set('user', payload)
   // "Ver como departamento" (só pra quem enxerga tudo): estreita as listas, nunca amplia.
   if (access.scope === 'all') {
     const view = c.req.header('X-Department-View')
@@ -104,14 +125,17 @@ app.use('/api/*', async (c, next) => {
 
   // A Base de Conhecimento serve também a Gestão (category=gestao): o módulo
   // depende da categoria — na URL, no corpo (criar/editar) ou no artigo (apagar).
+  // Ordem importa (falha corrigida em out/2026): com id na rota vale SEMPRE a
+  // categoria do artigo, e ao criar vale a do corpo — o ?category= da URL só
+  // serve pra listagem. Antes o ?category=outro passava na frente e deixava
+  // quem não tem a Gestão baixar/criar documento dela. Mudar a categoria de
+  // um artigo no PUT é checado na própria rota (kb.js).
   let kbCategory
   if (resource === 'kb') {
-    kbCategory = c.req.query('category')
-    if (!kbCategory) {
-      const articleId = c.req.path.split('/')[3]
-      if (articleId) kbCategory = (await db.prepare('SELECT category FROM kb_articles WHERE id = ?').get(articleId))?.category
-      else if (!isRead) { try { kbCategory = (await c.req.raw.clone().json())?.category } catch { /* sem corpo JSON */ } }
-    }
+    const articleId = c.req.path.split('/')[3]
+    if (articleId) kbCategory = (await db.prepare('SELECT category FROM kb_articles WHERE id = ?').get(articleId))?.category
+    else if (!isRead) { try { kbCategory = (await c.req.raw.clone().json())?.category } catch { /* sem corpo JSON */ } }
+    else kbCategory = c.req.query('category')
   }
 
   const module = moduleForRequest(c.req.path, { kbCategory })

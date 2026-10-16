@@ -289,7 +289,8 @@ app.delete('/:id/labels/:labelId', async c => {
   if (!role) return c.json({ error: 'Sem acesso a este quadro' }, 403)
 
   await db.batch([
-    { sql: 'DELETE FROM card_labels WHERE label_id = ?', args: [labelId] },
+    // Só se a etiqueta for deste quadro (senão apagava etiqueta de quadro alheio dos cartões).
+    { sql: 'DELETE FROM card_labels WHERE label_id IN (SELECT id FROM board_labels WHERE id = ? AND board_id = ?)', args: [labelId, id] },
     { sql: 'DELETE FROM board_labels WHERE id = ? AND board_id = ?', args: [labelId, id] },
   ])
 

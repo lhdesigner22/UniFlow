@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
 import { sendLoanDeadlineEmail, sendLoanQuickMessage, DEADLINE_PERIODS } from '../lib/loanDeadlineEmail.js'
 import { isAllowedLoanEmail, LOAN_EMAIL_ERROR } from '../lib/loanEmailDomains.js'
+import { escapeCsv } from '../lib/csv.js'
 import { accessOf, departmentFilter, departmentForCreate, departmentForUpdate, canSeeDepartment, canModifyDepartment } from '../lib/permissions.js'
 
 // Empréstimo de Equipamentos — qualquer usuário logado pode registrar um
@@ -291,10 +292,6 @@ app.get('/export', async c => {
   `).all(...dept.args)
 
   const STATUS_LABEL = { aguardando_devolucao: 'Aguardando devolução', devolvido: 'Devolvido', uso_permanente: 'Uso Permanente' }
-  const escapeCsv = v => {
-    const str = String(v ?? '')
-    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
-  }
   const headers = ['Data', 'Solicitante', 'Email', 'Equipamento', 'Patrimônio', 'Prédio', 'Sala/Localidade', 'Observação', 'Situação', 'Devolvido em', 'Cadastrado por', 'Criado em']
   const lines = [headers.map(escapeCsv).join(',')]
   for (const r of rows) {

@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { v4 as uuid } from 'uuid'
-import { verifyPassword } from '../lib/password.js'
 import { signJwt } from '../lib/jwt.js'
 import { verifyGoogleIdToken, decodeJwtPayload } from '../lib/googleAuth.js'
 import { auth } from '../middleware/auth.js'
@@ -10,6 +9,9 @@ const app = new Hono()
 
 // E-mails que sempre recebem super_admin automaticamente
 const OWNER_EMAILS = ['luiz.sanchez@colegioser.com']
+
+// Únicos domínios que podem entrar (ver POST /google).
+const ALLOWED_LOGIN_DOMAINS = ['colegioser.com', 'fecaf.com.br', 'pro.fecaf.com.br']
 
 // Auto-promove donos e e-mails listados em SUPER_ADMIN_EMAILS para super_admin
 async function autoPromote(db, env, userId, email) {
@@ -29,18 +31,9 @@ app.get('/health', c => c.json({ ok: true }))
 // tente chamar.
 app.post('/register', c => c.json({ error: 'Cadastro por e-mail/senha desativado. Entre com sua conta Google.' }, 410))
 
-app.post('/login', async c => {
-  const db = c.get('db')
-  const { email, password } = await c.req.json()
-  let user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email)
-  if (!user || !(await verifyPassword(password, user.password)))
-    return c.json({ error: 'Credenciais inválidas' }, 401)
-
-  await autoPromote(db, c.env, user.id, user.email)
-  user = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
-  const token = await signJwt({ id: user.id, name: user.name, email: user.email, tv: user.token_version || 0 }, c.env.JWT_SECRET)
-  return c.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, system_role: user.system_role } })
-})
+// Login por e-mail/senha também desativado (out/2026): não tinha limite de
+// tentativas nem a restrição de domínio do Google. 410, igual ao /register.
+app.post('/login', c => c.json({ error: 'Login por e-mail/senha desativado. Entre com sua conta Google.' }, 410))
 
 app.post('/google', async c => {
   const db = c.get('db')
@@ -52,15 +45,12 @@ app.post('/google', async c => {
 
   try {
     // 0. Diagnóstico: decodifica o token sem verificar para comparar audience
+    // (o detalhe fica só no log — a resposta não expõe a configuração).
     try {
-      const rawPayload = decodeJwtPayload(credential)
-      const tokenAud = rawPayload.aud
-      const configuredId = c.env.GOOGLE_CLIENT_ID
-      if (tokenAud !== configuredId) {
-        console.error('❌ GOOGLE_CLIENT_ID MISMATCH! token aud:', tokenAud, ' configurado:', configuredId)
-        return c.json({
-          error: `GOOGLE_CLIENT_ID incorreto no servidor. Token foi emitido para "${tokenAud}" mas o servidor espera "${configuredId}". Corrija a variável GOOGLE_CLIENT_ID.`
-        }, 401)
+      const tokenAud = decodeJwtPayload(credential).aud
+      if (tokenAud !== c.env.GOOGLE_CLIENT_ID) {
+        console.error('❌ GOOGLE_CLIENT_ID MISMATCH! token aud:', tokenAud, ' configurado:', c.env.GOOGLE_CLIENT_ID)
+        return c.json({ error: 'Configuração incorreta do Google OAuth (GOOGLE_CLIENT_ID). Contate o administrador.' }, 401)
       }
     } catch { /* se falhar a decodificação, tenta verificar mesmo assim */ }
 
@@ -68,13 +58,16 @@ app.post('/google', async c => {
     const payload = await verifyGoogleIdToken(credential, c.env.GOOGLE_CLIENT_ID)
     const { email, name, picture, sub: googleId } = payload
 
-    // 2. Restrição de domínio (opcional)
-    if (c.env.ALLOWED_DOMAIN && c.env.ALLOWED_DOMAIN.trim() !== '') {
-      const allowed = c.env.ALLOWED_DOMAIN.split(',').map(d => d.trim().toLowerCase())
-      const emailDomain = email.split('@')[1]?.toLowerCase()
-      if (!allowed.includes(emailDomain)) {
-        return c.json({ error: `Acesso restrito ao domínio: ${c.env.ALLOWED_DOMAIN}. Use seu e-mail corporativo.` }, 403)
-      }
+    // 2. E-mail verificado pelo Google + restrição de domínio. A lista é fixa
+    // no código (decisão do Luiz, out/2026): antes dependia do secret opcional
+    // ALLOWED_DOMAIN e, sem ele, QUALQUER conta Google entrava como Colaborador.
+    // Domínio inteiro — conta de aluno (@a.fecaf.com.br) não entra.
+    if (payload.email_verified !== true) {
+      return c.json({ error: 'E-mail da conta Google não verificado.' }, 403)
+    }
+    const emailDomain = String(email || '').split('@')[1]?.toLowerCase()
+    if (!ALLOWED_LOGIN_DOMAINS.includes(emailDomain)) {
+      return c.json({ error: `Acesso restrito a contas ${ALLOWED_LOGIN_DOMAINS.map(d => '@' + d).join(', ')}. Use seu e-mail corporativo.` }, 403)
     }
 
     // 3. Encontrar ou criar usuário
@@ -122,7 +115,7 @@ app.post('/google', async c => {
     } else if (msg.includes('invalid_grant') || msg.includes('invalid token')) {
       userError = 'Token Google inválido. Tente novamente.'
     } else {
-      userError = `Falha na autenticação com Google: ${e.message}`
+      userError = 'Falha na autenticação com Google. Tente novamente.'
     }
     return c.json({ error: userError }, 401)
   }
@@ -171,7 +164,10 @@ app.get('/me', auth, async c => {
 app.put('/me', auth, async c => {
   const db = c.get('db')
   const { name, avatar } = await c.req.json()
-  await db.prepare('UPDATE users SET name = ?, avatar = ? WHERE id = ?').run(name, avatar, c.get('user').id)
+  // Foto só por https (vira <img src>); nome obrigatório e com tamanho limitado.
+  if (!String(name || '').trim() || String(name).length > 120) return c.json({ error: 'Nome inválido' }, 400)
+  if (avatar && !/^https:\/\//i.test(String(avatar))) return c.json({ error: 'Foto inválida' }, 400)
+  await db.prepare('UPDATE users SET name = ?, avatar = ? WHERE id = ?').run(String(name).trim(), avatar || null, c.get('user').id)
   return c.json({ ok: true })
 })
 

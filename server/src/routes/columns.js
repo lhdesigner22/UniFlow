@@ -37,6 +37,30 @@ app.post('/', async c => {
   return c.json(await db.prepare('SELECT * FROM columns WHERE id = ?').get(id))
 })
 
+// (Antes do PUT /:id — senão o Hono casa "reorder" como :id e esta rota nunca roda.)
+// PUT /reorder — body { columns: [{id, order_index}] }
+app.put('/reorder', async c => {
+  const db = c.get('db')
+  const user = c.get('user')
+  const boardId = c.req.param('boardId')
+
+  const { board, allowed } = await checkBoardAccess(db, boardId, user.id)
+  if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
+  if (!allowed) return c.json({ error: 'Sem acesso a este quadro' }, 403)
+
+  const { columns } = await c.req.json()
+  if (!Array.isArray(columns)) return c.json({ error: 'columns deve ser um array' }, 400)
+
+  await db.batch(
+    columns.map(col => ({
+      sql: 'UPDATE columns SET order_index = ? WHERE id = ? AND board_id = ?',
+      args: [col.order_index, col.id, boardId],
+    }))
+  )
+
+  return c.json(await db.prepare('SELECT * FROM columns WHERE board_id = ? AND deleted_at IS NULL ORDER BY order_index').all(boardId))
+})
+
 // PUT /:id
 app.put('/:id', async c => {
   const db = c.get('db')
@@ -146,29 +170,6 @@ app.delete('/:id/permanent', async c => {
   ])
 
   return c.json({ ok: true })
-})
-
-// PUT /reorder — body { columns: [{id, order_index}] }
-app.put('/reorder', async c => {
-  const db = c.get('db')
-  const user = c.get('user')
-  const boardId = c.req.param('boardId')
-
-  const { board, allowed } = await checkBoardAccess(db, boardId, user.id)
-  if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
-  if (!allowed) return c.json({ error: 'Sem acesso a este quadro' }, 403)
-
-  const { columns } = await c.req.json()
-  if (!Array.isArray(columns)) return c.json({ error: 'columns deve ser um array' }, 400)
-
-  await db.batch(
-    columns.map(col => ({
-      sql: 'UPDATE columns SET order_index = ? WHERE id = ? AND board_id = ?',
-      args: [col.order_index, col.id, boardId],
-    }))
-  )
-
-  return c.json(await db.prepare('SELECT * FROM columns WHERE board_id = ? AND deleted_at IS NULL ORDER BY order_index').all(boardId))
 })
 
 export default app
