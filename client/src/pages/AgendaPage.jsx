@@ -1,14 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import api from '../services/api'
+import { useAuthStore } from '../store/authStore'
+import { canEdit as canEditModule } from '../utils/permissions'
+import { useLiveRefresh } from '../hooks/useLiveRefresh'
 import Modal from '../components/common/Modal'
+import Reveal from '../components/common/Reveal'
 import { confirmDialog } from '../store/dialogStore'
 import s from './AgendaPage.module.css'
+import DepartmentSelect from '../components/common/DepartmentSelect'
+import { defaultDepartment } from '../store/departmentStore'
 
 const WEEKDAY_LONG = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+const WEEKDAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 const MONTH_LONG = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 const RECURRENCE_LABEL = { weekly: 'Semanal', monthly: 'Mensal' }
 
-const EMPTY_FORM = { title: '', description: '', board_id: '', event_date: '', event_time: '', recurrence_type: 'none', recurrence_until: '' }
+const EMPTY_FORM = { title: '', description: '', board_id: '', event_date: '', event_time: '', recurrence_type: 'none', recurrence_until: '', department_id: null }
 
 function isoDate(d) { return d.toISOString().slice(0, 10) }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x }
@@ -34,9 +41,15 @@ function formatRangeLabel(from, to) {
   const b = parseLocalDate(to)
   return `${a.getDate()} de ${MONTH_LONG[a.getMonth()]} – ${b.getDate()} de ${MONTH_LONG[b.getMonth()]}`
 }
+function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1) }
+function endOfMonth(d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0) }
+function addMonths(d, n) { return new Date(d.getFullYear(), d.getMonth() + n, 1) }
+function isSameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate() }
 
 export default function AgendaPage() {
+  const [view, setView] = useState('list') // 'list' | 'calendar'
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
+  const [monthAnchor, setMonthAnchor] = useState(() => new Date())
   const [events, setEvents] = useState([])
   const [boards, setBoards] = useState([])
   const [loading, setLoading] = useState(true)
@@ -46,21 +59,39 @@ export default function AgendaPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [formMsg, setFormMsg] = useState(null)
+  const [dayPopup, setDayPopup] = useState(null) // string YYYY-MM-DD (dia clicado no calendário) ou null
 
-  const from = isoDate(weekStart)
-  const to = isoDate(addDays(weekStart, 6))
+  // Grade do calendário: começa na segunda da semana que contém o dia 1º,
+  // termina no domingo da semana que contém o último dia do mês — assim as
+  // semanas ficam completas, com dias do mês anterior/seguinte esmaecidos.
+  const gridStart = startOfWeek(startOfMonth(monthAnchor))
+  const gridEnd = addDays(startOfWeek(endOfMonth(monthAnchor)), 6)
+
+  const from = view === 'calendar' ? isoDate(gridStart) : isoDate(weekStart)
+  const to = view === 'calendar' ? isoDate(gridEnd) : isoDate(addDays(weekStart, 6))
+
+  const goPrev = () => view === 'calendar' ? setMonthAnchor(a => addMonths(a, -1)) : setWeekStart(w => addDays(w, -7))
+  const goNext = () => view === 'calendar' ? setMonthAnchor(a => addMonths(a, 1)) : setWeekStart(w => addDays(w, 7))
+  const goToday = () => { setWeekStart(startOfWeek(new Date())); setMonthAnchor(new Date()) }
+
+  const periodLabel = view === 'calendar'
+    ? `${MONTH_LONG[monthAnchor.getMonth()].charAt(0).toUpperCase()}${MONTH_LONG[monthAnchor.getMonth()].slice(1)} de ${monthAnchor.getFullYear()}`
+    : formatRangeLabel(from, to)
 
   useEffect(() => { api.get('/boards').then(r => setBoards(r.data || [])).catch(() => {}) }, [])
 
-  const loadEvents = useCallback(() => {
-    setLoading(true)
+  // `silent` = recarga em segundo plano (tempo real): sem "carregando" e, se
+  // falhar, mantém os eventos que já estão na tela.
+  const loadEvents = useCallback(({ silent } = {}) => {
+    if (!silent) setLoading(true)
     api.get('/events', { params: { from, to } })
       .then(r => setEvents(r.data || []))
-      .catch(() => setEvents([]))
+      .catch(() => { if (!silent) setEvents([]) })
       .finally(() => setLoading(false))
   }, [from, to])
 
   useEffect(() => { loadEvents() }, [loadEvents])
+  useLiveRefresh(['events'], () => loadEvents({ silent: true })) // outro aparelho criou/mudou/apagou um evento
 
   const boardById = id => boards.find(b => b.id === id)
 
@@ -74,9 +105,13 @@ export default function AgendaPage() {
     byDay[d].sort((a, b) => (a.event_time || '').localeCompare(b.event_time || ''))
   }
 
-  const openCreate = () => {
+  const { user } = useAuthStore()
+  const writable = canEditModule(user, 'agenda') // cargo que só VÊ a Agenda não cria evento
+
+  const openCreate = (dateStr) => {
+    if (!writable) return
     setEditing(null)
-    setForm({ ...EMPTY_FORM, event_date: from })
+    setForm({ ...EMPTY_FORM, event_date: dateStr || from, department_id: defaultDepartment() })
     setFormMsg(null)
     setShowModal(true)
   }
@@ -91,6 +126,7 @@ export default function AgendaPage() {
       event_time: occ.event_time || '',
       recurrence_type: occ.recurrence_type || 'none',
       recurrence_until: occ.recurrence_until ? occ.recurrence_until.slice(0, 10) : '',
+      department_id: occ.department_id ?? null,
     })
     setFormMsg(null)
     setShowModal(true)
@@ -108,6 +144,7 @@ export default function AgendaPage() {
       event_time: form.event_time || null,
       recurrence_type: form.recurrence_type,
       recurrence_until: form.recurrence_type !== 'none' ? (form.recurrence_until || null) : null,
+      department_id: form.department_id,
     }
     try {
       if (editing) await api.put(`/events/${editing.id}`, payload)
@@ -136,18 +173,32 @@ export default function AgendaPage() {
           <h1 className={s.title}>Agenda</h1>
           <p className={s.sub}>Eventos da equipe, com recorrência semanal ou mensal.</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>+ Novo evento</button>
+        {writable && <button className="btn btn-primary" onClick={() => openCreate()}>+ Novo evento</button>}
       </div>
 
       <div className={s.periodBar}>
-        <button className="btn btn-ghost btn-sm" onClick={() => setWeekStart(w => addDays(w, -7))} title="Semana anterior">←</button>
-        <span className={s.periodLabel}>{formatRangeLabel(from, to)}</span>
-        <button className="btn btn-ghost btn-sm" onClick={() => setWeekStart(w => addDays(w, 7))} title="Próxima semana">→</button>
-        <button className="btn btn-ghost btn-sm" onClick={() => setWeekStart(startOfWeek(new Date()))}>Hoje</button>
+        <button className="btn btn-ghost btn-sm" onClick={goPrev} title={view === 'calendar' ? 'Mês anterior' : 'Semana anterior'}>←</button>
+        <span className={s.periodLabel}>{periodLabel}</span>
+        <button className="btn btn-ghost btn-sm" onClick={goNext} title={view === 'calendar' ? 'Próximo mês' : 'Próxima semana'}>→</button>
+        <button className="btn btn-ghost btn-sm" onClick={goToday}>Hoje</button>
+
+        <div className={s.viewToggle}>
+          <button className={`${s.viewToggleBtn} ${view === 'list' ? s.active : ''}`} onClick={() => setView('list')}>📋 Lista</button>
+          <button className={`${s.viewToggleBtn} ${view === 'calendar' ? s.active : ''}`} onClick={() => setView('calendar')}>📅 Calendário</button>
+        </div>
       </div>
 
       {loading ? (
         <div className={s.skeleton} />
+      ) : view === 'calendar' ? (
+        <CalendarView
+          gridStart={gridStart}
+          gridEnd={gridEnd}
+          monthAnchor={monthAnchor}
+          byDay={byDay}
+          onOpenEvent={openEdit}
+          onDayClick={setDayPopup}
+        />
       ) : days.length === 0 ? (
         <div className={s.empty}>
           <div className={s.emptyIcon}>
@@ -160,12 +211,12 @@ export default function AgendaPage() {
           </div>
           <h3>Nenhum evento nesta semana</h3>
           <p>Crie um evento para começar a organizar a agenda da equipe.</p>
-          <button className="btn btn-primary" onClick={openCreate}>+ Novo evento</button>
+          {writable && <button className="btn btn-primary" onClick={() => openCreate()}>+ Novo evento</button>}
         </div>
       ) : (
         <div className={s.dayList}>
-          {days.map(day => (
-            <div key={day} className={s.dayGroup}>
+          {days.map((day, i) => (
+            <Reveal key={day} delay={Math.min(i, 8) * 50} className={s.dayGroup}>
               <div className={s.dayHeader}>{formatDayHeader(day)}</div>
               <div className={s.eventList}>
                 {byDay[day].map(ev => {
@@ -176,7 +227,7 @@ export default function AgendaPage() {
                       <span className={s.eventTitle}>{ev.title}</span>
                       <div className={s.eventBadges}>
                         {board && (
-                          <span className={s.boardBadge} style={{ background: (board.color || '#0EA5A5') + '22', color: board.color || '#0EA5A5' }}>
+                          <span className={s.boardBadge} style={{ background: (board.color || '#3B82F6') + '22', color: board.color || '#3B82F6' }}>
                             {board.name}
                           </span>
                         )}
@@ -188,9 +239,13 @@ export default function AgendaPage() {
                   )
                 })}
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
+      )}
+
+      {view === 'calendar' && !loading && (
+        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Clique num dia pra ver os eventos dele; clique num evento pra editar direto.</p>
       )}
 
       {showModal && (
@@ -247,6 +302,7 @@ export default function AgendaPage() {
             )}
           </div>
 
+          <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
           {formMsg && <p style={{ fontSize: 12, color: 'var(--danger)', marginBottom: 10 }}>{formMsg}</p>}
 
           <div className={s.modalActions}>
@@ -264,6 +320,105 @@ export default function AgendaPage() {
           </div>
         </Modal>
       )}
+
+      {dayPopup && (
+        <Modal title={formatDayHeader(dayPopup)} onClose={() => setDayPopup(null)} width={420}>
+          <div className={s.eventList} style={{ marginBottom: 14 }}>
+            {(byDay[dayPopup] || []).length === 0 && (
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nenhum evento neste dia.</p>
+            )}
+            {(byDay[dayPopup] || []).map(ev => {
+              const board = boardById(ev.board_id)
+              return (
+                <div
+                  key={`${ev.id}-${ev.occurrence_date}`}
+                  className={s.eventRow}
+                  onClick={() => { setDayPopup(null); openEdit(ev) }}
+                >
+                  <span className={s.eventTime}>{ev.event_time || 'Dia todo'}</span>
+                  <span className={s.eventTitle}>{ev.title}</span>
+                  <div className={s.eventBadges}>
+                    {board && (
+                      <span className={s.boardBadge} style={{ background: (board.color || '#3B82F6') + '22', color: board.color || '#3B82F6' }}>
+                        {board.name}
+                      </span>
+                    )}
+                    {ev.recurrence_type !== 'none' && (
+                      <span className="badge badge-purple">{RECURRENCE_LABEL[ev.recurrence_type] || ev.recurrence_type}</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {writable && (
+          <button className="btn btn-primary" onClick={() => { const d = dayPopup; setDayPopup(null); openCreate(d) }}>
+            + Novo evento neste dia
+          </button>
+          )}
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// Quantos eventos mostrar por dia antes de resumir em "+N mais" — em telas
+// estreitas, o texto do chip fica ilegível, então mostramos só 1 e deixamos o
+// resto pro popup do dia (já existe, e funciona bem como "ver tudo" no mobile).
+function useMaxVisibleEvents() {
+  const [max, setMax] = useState(() => (typeof window !== 'undefined' && window.innerWidth <= 640 ? 1 : 3))
+  useEffect(() => {
+    const onResize = () => setMax(window.innerWidth <= 640 ? 1 : 3)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  return max
+}
+
+function CalendarView({ gridStart, gridEnd, monthAnchor, byDay, onOpenEvent, onDayClick }) {
+  const maxVisible = useMaxVisibleEvents()
+  const days = []
+  for (let d = new Date(gridStart); d <= gridEnd; d.setDate(d.getDate() + 1)) days.push(new Date(d))
+  const today = new Date()
+
+  return (
+    <div>
+      <div className={s.calendarWeekHead}>
+        {WEEKDAY_SHORT.map(w => <span key={w}>{w}</span>)}
+      </div>
+      <div className={s.calendarGrid}>
+        {days.map(day => {
+          const dateStr = isoDate(day)
+          const dayEvents = byDay[dateStr] || []
+          const outside = day.getMonth() !== monthAnchor.getMonth()
+          const isToday = isSameDay(day, today)
+          const visible = dayEvents.slice(0, maxVisible)
+          const extra = dayEvents.length - visible.length
+
+          return (
+            <div
+              key={dateStr}
+              className={`${s.calendarCell} ${outside ? s.outside : ''} ${isToday ? s.today : ''}`}
+              onClick={() => onDayClick(dateStr)}
+            >
+              <span className={s.calendarDayNum}>{day.getDate()}</span>
+              <div className={s.calendarEvents}>
+                {visible.map(ev => (
+                  <span
+                    key={`${ev.id}-${ev.occurrence_date}`}
+                    className={s.calendarEventChip}
+                    onClick={e => { e.stopPropagation(); onOpenEvent(ev) }}
+                    title={`${ev.event_time || 'Dia todo'} — ${ev.title}`}
+                  >
+                    {ev.event_time ? `${ev.event_time} ` : ''}{ev.title}
+                  </span>
+                ))}
+                {extra > 0 && <span className={s.calendarEventMore}>+{extra} mais</span>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

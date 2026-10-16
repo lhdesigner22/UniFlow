@@ -15,6 +15,10 @@
   flex: 1;
   overflow: auto;
 }
+.pageTransition {
+  min-height: 100%;
+  animation: pageIn .5s var(--ease-smooth) both;
+}
 
 /* Mobile sidebar backdrop */
 .backdrop {

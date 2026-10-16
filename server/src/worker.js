@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
 import { createDb } from './db.js'
+import { verifyJwt } from './lib/jwt.js'
+import { loadAccess, levelOf, moduleForRequest } from './lib/permissions.js'
 
 import authRoutes from './routes/auth.js'
 import adminRoutes from './routes/admin.js'
@@ -12,9 +14,40 @@ import timeEntriesRoutes from './routes/timeEntries.js'
 import slaRulesRoutes from './routes/slaRules.js'
 import eventsRoutes from './routes/events.js'
 import appSettingsRoutes from './routes/appSettings.js'
+import glpiRoutes from './routes/glpi.js'
+import glpiBacklogRoutes from './routes/glpiBacklog.js'
+import glpiTotalRoutes from './routes/glpiTotal.js'
+import kbRoutes from './routes/kb.js'
+import printersRoutes from './routes/printers.js'
+import metricsRoutes from './routes/metrics.js'
+import approvalsRoutes from './routes/approvals.js'
+import purchaseRequestsRoutes from './routes/purchaseRequests.js'
+import companiesRoutes from './routes/companies.js'
+import partnersRoutes from './routes/partners.js'
+import internetLinksRoutes from './routes/internetLinks.js'
+import orgChartRoutes from './routes/orgChart.js'
+import teamKudosRoutes from './routes/teamKudos.js'
+import vaultRoutes from './routes/vault.js'
+import vlansRoutes from './routes/vlans.js'
+import equipmentLoansRoutes from './routes/equipmentLoans.js'
+import equipmentInventoryRoutes from './routes/equipmentInventory.js'
+import roomScheduleRoutes from './routes/roomSchedule.js'
+import directoryRoutes from './routes/directory.js'
+import journeyRoutes from './routes/journey.js'
+import liveRoutes from './routes/live.js'
+import { broadcastLive } from './lib/liveHub.js'
+
+// O Durable Object precisa ser exportado do módulo principal do Worker.
+export { LiveHub } from './lib/liveHub.js'
 
 import { runSlaSweep, runDigests } from './lib/schedule.js'
 import { flushOutbox } from './lib/email.js'
+import { runGlpiSync } from './lib/glpiSync.js'
+import { solveDuplicates } from './lib/glpiDuplicateSolver.js'
+import { runGlpiBacklogSync } from './lib/glpiBacklogSync.js'
+import { runGlpiTotalSync } from './lib/glpiTotalSync.js'
+import { runRoomScheduleSync } from './lib/roomScheduleSync.js'
+import { refreshGlpiTechCache } from './lib/glpiTechCache.js'
 
 const app = new Hono()
 
@@ -25,7 +58,96 @@ app.use('*', async (c, next) => {
   await next()
 })
 
+// ACESSO POR CARGO — um único portão para o sistema inteiro (em vez de repetir
+// a checagem rota por rota, que é fácil esquecer). Para cada requisição:
+//   1. carrega o acesso da pessoa (cargo + departamento) — 1 consulta — e deixa
+//      em c.get('access'), pras rotas filtrarem por departamento;
+//   2. descobre de qual MÓDULO é a rota (Agenda, Empréstimos, Compras...);
+//   3. cargo sem acesso ao módulo → 403; cargo que só pode VER → só leitura (GET).
+// Recursos fora da lista de módulos (auth, notificações, busca de pessoas, cofre,
+// VLANs, admin) têm controle próprio nas rotas.
+//
+// Perfil "Auditor" (system_role='auditor'): enxerga tudo de todo mundo, mas não
+// pode alterar NADA além da Base de Conhecimento — essa regra também mora aqui:
+// qualquer requisição não-GET dele é rejeitada antes de chegar nas rotas.
+const NO_ACCESS_CHECK = new Set(['auth', 'notifications', 'live'])
+app.use('/api/*', async (c, next) => {
+  const resource = c.req.path.split('/')[2]
+  if (!resource || NO_ACCESS_CHECK.has(resource)) return await next()
+
+  const header = c.req.header('Authorization')
+  const token = header ? header.split(' ')[1] : c.req.query('token')
+  if (!token) return await next() // sem token — a auth de cada rota resolve com 401
+  let payload
+  try {
+    payload = await verifyJwt(token, c.env.JWT_SECRET)
+  } catch {
+    return await next() // token inválido — a auth de cada rota resolve com 401
+  }
+
+  const db = c.get('db')
+  const access = await loadAccess(db, payload.id)
+  if (!access) return await next() // usuário não existe mais — a rota resolve
+  // "Ver como departamento" (só pra quem enxerga tudo): estreita as listas, nunca amplia.
+  if (access.scope === 'all') {
+    const view = c.req.header('X-Department-View')
+    if (view) access.viewDept = view
+  }
+  c.set('access', access)
+
+  const method = c.req.method
+  const isRead = method === 'GET' || method === 'HEAD' || method === 'OPTIONS'
+
+  if (!isRead && access.systemRole === 'auditor' && resource !== 'kb') {
+    return c.json({ error: 'Este perfil (Auditor) tem acesso só de leitura — a única exceção é a Base de Conhecimento.' }, 403)
+  }
+
+  // A Base de Conhecimento serve também a Gestão (category=gestao): o módulo
+  // depende da categoria — na URL, no corpo (criar/editar) ou no artigo (apagar).
+  let kbCategory
+  if (resource === 'kb') {
+    kbCategory = c.req.query('category')
+    if (!kbCategory) {
+      const articleId = c.req.path.split('/')[3]
+      if (articleId) kbCategory = (await db.prepare('SELECT category FROM kb_articles WHERE id = ?').get(articleId))?.category
+      else if (!isRead) { try { kbCategory = (await c.req.raw.clone().json())?.category } catch { /* sem corpo JSON */ } }
+    }
+  }
+
+  const module = moduleForRequest(c.req.path, { kbCategory })
+  if (module) {
+    const level = levelOf(access, module)
+    if (level === 'none') return c.json({ error: 'Seu cargo não tem acesso a esta área.' }, 403)
+    if (!isRead && level === 'view') return c.json({ error: 'Seu cargo só pode visualizar esta área (sem alterar).' }, 403)
+  }
+  await next()
+})
+
+// Tempo real: depois de QUALQUER alteração bem-sucedida (POST/PUT/PATCH/DELETE),
+// avisa os aparelhos conectados que aquele recurso mudou — o recurso é o 1º
+// pedaço do caminho (/api/equipment-loans/... → "equipment-loans"). Fica antes
+// das rotas, então vale pra todas sem precisar mexer em cada uma. Sai em
+// segundo plano (waitUntil), não atrasa a resposta. O X-Client-Id deixa o
+// aparelho que fez a alteração ignorar o próprio aviso (ele já se atualizou).
+const LIVE_SKIP_RESOURCES = new Set(['live', 'auth', 'notifications'])
+app.use('/api/*', async (c, next) => {
+  await next()
+  const method = c.req.method
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return
+  if (c.res.status >= 400) return
+  const parts = c.req.path.split('/') // ['', 'api', recurso, ...]
+  const resource = parts[2]
+  if (!resource || LIVE_SKIP_RESOURCES.has(resource)) return
+  c.executionCtx.waitUntil(broadcastLive(c.env, {
+    r: resource,
+    b: resource === 'boards' ? parts[3] : undefined, // id do quadro, pra só recarregar o quadro certo
+    s: resource === 'boards' ? parts[4] : undefined, // 'cards', 'columns'... (a lista de quadros do menu só muda sem isso)
+    c: c.req.header('X-Client-Id') || undefined,
+  }))
+})
+
 // Routes
+app.route('/api/live', liveRoutes)
 app.route('/api/auth', authRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/users', usersRoutes)
@@ -37,13 +159,124 @@ app.route('/api', timeEntriesRoutes)
 app.route('/api/admin/sla-rules', slaRulesRoutes)
 app.route('/api/events', eventsRoutes)
 app.route('/api/admin/settings', appSettingsRoutes)
+app.route('/api/admin/glpi', glpiRoutes)
+app.route('/api/glpi-backlog', glpiBacklogRoutes)
+app.route('/api/glpi-total', glpiTotalRoutes)
+app.route('/api/kb', kbRoutes)
+app.route('/api/printers', printersRoutes)
+app.route('/api/metrics', metricsRoutes)
+app.route('/api/approvals', approvalsRoutes)
+app.route('/api/purchase-requests', purchaseRequestsRoutes)
+app.route('/api/companies', companiesRoutes)
+app.route('/api/partners', partnersRoutes)
+app.route('/api/internet-links', internetLinksRoutes)
+app.route('/api/org-chart', orgChartRoutes)
+app.route('/api/team-kudos', teamKudosRoutes)
+app.route('/api/vault', vaultRoutes)
+app.route('/api/vlans', vlansRoutes)
+app.route('/api/equipment-loans', equipmentLoansRoutes)
+app.route('/api/equipment-inventory', equipmentInventoryRoutes)
+app.route('/api/room-schedule', roomScheduleRoutes)
+app.route('/api/directory', directoryRoutes)
+app.route('/api/journey', journeyRoutes)
+
+async function processGlpiQueues(env, db) {
+  const flags = await db.prepare("SELECT key, value FROM app_settings WHERE key IN ('glpi_import_pending', 'glpi_dup_autosolve', 'glpi_dup_auto')").all()
+  const on = k => flags.find(f => f.key === k)?.value === 'true'
+  const setFlag = (k, v) => db.prepare(
+    "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+  ).run(k, v)
+
+  if (on('glpi_import_pending')) {
+    const r = await runGlpiSync(env, db, { max: 25 })
+    if (r?.skipped) await setFlag('glpi_import_pending', 'false') // desativada/sem credenciais: não insiste
+    else if (r.created > 0 || r.duplicates > 0) await broadcastLive(env, { r: 'events' })
+    return
+  }
+
+  // `glpi_dup_auto` = opção PERMANENTE do Admin ("solucionar duplicatas
+  // automaticamente"): toda duplicata nova é solucionada sozinha, sem clique.
+  // `glpi_dup_autosolve` = temporária, ligada pelo botão "Limpar duplicatas"
+  // até a fila zerar.
+  const permanent = on('glpi_dup_auto')
+  if (on('glpi_dup_autosolve') || permanent) {
+    const s = await solveDuplicates(env, db, { limit: 12 })
+    if (s.changedAgenda) await broadcastLive(env, { r: 'events' })
+    const progressed = s.solved + s.skipped + s.notFound > 0
+    // Acabou a fila (ou travou: erro de permissão etc.) → desliga o segundo plano
+    // temporário. A opção permanente continua ligada e tenta de novo no próximo minuto.
+    if (s.remaining === 0 || (!progressed && s.errors.length > 0)) await setFlag('glpi_dup_autosolve', 'false')
+  }
+}
 
 export default {
   fetch: app.fetch,
   async scheduled(event, env, ctx) {
     const db = createDb(env)
-    await runSlaSweep(env, db)
-    await runDigests(env, db)
-    await flushOutbox(env, db)
+
+    // "* * * * *" — a cada 1 min: SÓ a busca de chamados em aberto do
+    // Backlog (uma única chamada de busca ao GLPI, ~1 página). Não resolve
+    // técnico aqui — usa o cache já pronto em D1 (ver glpi_tech_cache) em
+    // vez de baixar Ticket_User/User de novo a cada execução. Essa
+    // separação existe porque rodar a resolução de técnico (a parte cara)
+    // a cada 1 min foi o que disparou o consumo de CPU do Worker.
+    if (event.cron === '* * * * *') {
+      await runGlpiBacklogSync(env, db).catch(e => console.error('GLPI backlog sync error', e.message))
+
+      // Filas grandes do GLPI processadas aos poucos, um lote por minuto (o
+      // limite de 50 subrequests por execução não deixa fazer tudo de uma vez).
+      // Só UM dos dois por minuto, pra somar com o backlog acima sem estourar:
+      //   1) importação de chamados novos pra Agenda, enquanto sobrar fila;
+      //   2) depois, a limpeza de duplicatas (ligada pelo botão do Admin).
+      // Com as duas flags desligadas isso custa 1 consulta ao banco por minuto.
+      await processGlpiQueues(env, db).catch(e => console.error('GLPI queues error', e.message))
+    }
+
+    // "*/15 * * * *" — SLA + digests + sync de Eventos pra Agenda + outbox.
+    //
+    // IMPORTANTE: cada passo tem seu próprio catch, isolado dos outros. Bug
+    // real encontrado e corrigido aqui: nenhum desses passos tinha catch —
+    // se QUALQUER um lançasse uma exceção, tudo que vinha DEPOIS naquele
+    // tick era abortado, inclusive `flushOutbox` — ou seja, `runDigests`
+    // enfileirava o e-mail do resumo diário/semanal certinho, mas ele nunca
+    // chegava a ser enviado de verdade porque um passo seguinte quebrava
+    // antes de chegar no flush (aconteceu de verdade: 3 dias seguidos de
+    // "Compromissos de hoje" ficaram presos como pending). Isolando cada
+    // passo, uma falha num não impede mais os outros de rodar.
+    if (event.cron === '*/15 * * * *') {
+      await runSlaSweep(env, db).catch(e => console.error('SLA sweep error', e.message))
+      await runDigests(env, db).catch(e => console.error('Digests error', e.message))
+      await runGlpiSync(env, db)
+        .then(r => { if (r?.created > 0) return broadcastLive(env, { r: 'events' }) }) // eventos novos na Agenda → atualiza quem estiver olhando
+        .catch(e => console.error('GLPI events sync error', e.message))
+      await flushOutbox(env, db).catch(e => console.error('Flush outbox error', e.message))
+    }
+
+    // "5,20,35,50 * * * *" — refresh do cache de técnicos: baixa TODA a
+    // coleção de Ticket_User + User do GLPI. Isolado num tick próprio (não
+    // junto com Eventos/Total) por causa do limite de 50 subrequests POR
+    // INVOCAÇÃO do Worker Free — cada init/kill de sessão e cada página
+    // paginada do GLPI conta como 1 subrequest, e empilhar essa busca com
+    // outras no mesmo tick estourava esse limite (erro real visto em
+    // produção: "Too many subrequests by single Worker invocation").
+    if (event.cron === '5,20,35,50 * * * *') {
+      await refreshGlpiTechCache(env, db).catch(e => console.error('GLPI tech cache refresh error', e.message))
+    }
+
+    // "10,25,40,55 * * * *" — "Total de Chamados": varre TODO o histórico da
+    // entidade (milhares de chamados resolvidos/fechados). Isolado no seu
+    // próprio tick pelo mesmo motivo do cache de técnicos acima — 5 min
+    // depois dele, então já lê o cache de técnicos fresco desta mesma volta.
+    if (event.cron === '10,25,40,55 * * * *') {
+      await runGlpiTotalSync(env, db).catch(e => console.error('GLPI total sync error', e.message))
+    }
+
+    // "0 12 * * SUN" — domingo: atualiza sozinho a cópia da grade de salas do
+    // site de horários (semana atual + a seguinte).
+    if (event.cron === '0 12 * * SUN') {
+      await runRoomScheduleSync(env)
+        .then(r => console.log(`Room schedule sync ok: ${r.rows} linhas`))
+        .catch(e => console.error('Room schedule sync error', e.message))
+    }
   }
 }

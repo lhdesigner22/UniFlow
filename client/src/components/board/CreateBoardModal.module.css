@@ -1,0 +1,2 @@
+.colorSwatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer; flex-shrink: 0; }

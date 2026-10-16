@@ -1,0 +1,103 @@
+.page { padding: 36px 32px; display: flex; flex-direction: column; gap: 20px; }
+.loading { display: flex; align-items: center; justify-content: center; height: 60vh; color: var(--text-muted); }
+
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
+.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+/* ── Tabs (Recebidas / Enviadas) ── */
+.tabs { display: flex; gap: 6px; }
+.tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border2);
+  background: var(--surface); color: var(--text-muted); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .12s;
+}
+.tab:hover { border-color: var(--brand); color: var(--text); }
+.tabActive { background: var(--brand); border-color: var(--brand); color: white; }
+.tabCount {
+  background: var(--danger, #EF4444); color: #fff; border-radius: 999px;
+  font-size: 10px; font-weight: 700; padding: 1px 6px; min-width: 16px; text-align: center;
+}
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 72px 24px; }
+.empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+.empty p { color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 13px; }
+
+/* ── Lista ── */
+.list { display: flex; flex-direction: column; gap: 8px; }
+.row {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow-sm);
+  cursor: pointer; transition: border-color .12s;
+}
+.row:hover { border-color: var(--brand); }
+.rowMain { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.rowTitle { font-size: 14px; font-weight: 700; color: var(--text); }
+.rowMeta { font-size: 12px; color: var(--text-muted); }
+.rowAvatars { display: flex; gap: -6px; }
+.rowAvatars > * { margin-left: -6px; border: 2px solid var(--surface); }
+.rowAvatars > *:first-child { margin-left: 0; }
+
+/* ── Status badge (reutilizado na lista e no detalhe) ── */
+.statusBadge {
+  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.statusPending { background: rgba(245,158,11,.15); color: #b45309; }
+[data-theme="dark"] .statusPending { color: #fbbf24; }
+.statusApproved { background: rgba(34,197,94,.15); color: #15803d; }
+[data-theme="dark"] .statusApproved { color: #4ade80; }
+.statusRejected { background: rgba(239,68,68,.15); color: #b91c1c; }
+[data-theme="dark"] .statusRejected { color: #f87171; }
+
+/* ── Chips de aprovadores (form de criação) ── */
+.chipsRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface-2); border-radius: 20px; padding: 3px 10px 3px 4px;
+  font-size: 12px; color: var(--text);
+}
+.chipRemove { background: none; border: none; color: var(--text-muted); font-size: 14px; line-height: 1; padding: 0 2px; }
+.chipRemove:hover { color: var(--danger); }
+.inviteWrap { position: relative; }
+
+.attachmentRow {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 12px; border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--surface-2); font-size: 13px;
+}
+.fileError { font-size: 12px; color: var(--danger, #EF4444); margin-top: 6px; }
+
+/* ── Detalhe ── */
+.detailHeader { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.dueBadge { font-size: 12px; color: var(--text-muted); }
+.metaRow { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+.description { font-size: 13px; color: var(--text); line-height: 1.5; white-space: pre-line; margin-bottom: 10px; }
+.cardLink {
+  font: inherit; font-size: 12.5px; color: var(--brand); font-weight: 600; text-decoration: none;
+  border: none; background: none; padding: 0; margin: 0 0 10px; cursor: pointer; text-align: left; width: fit-content;
+  display: block;
+}
+.cardLink:hover { text-decoration: underline; }
+
+.section { border-top: 1px solid var(--border2); padding-top: 14px; margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.sectionTitle { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+
+.approverList { display: flex; flex-direction: column; gap: 10px; }
+.approverRow { display: flex; align-items: center; gap: 10px; }
+.approverInfo { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.approverName { font-size: 13px; font-weight: 600; color: var(--text); }
+.approverComment { font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+.decideRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.dangerZone { border-top: 1px solid var(--border2); padding-top: 14px; margin-top: 10px; }
+
+@media (max-width: 768px) {
+  .page { padding: 20px 16px; gap: 16px; }
+  .header { flex-direction: column; }
+  .row { flex-wrap: wrap; }
+}

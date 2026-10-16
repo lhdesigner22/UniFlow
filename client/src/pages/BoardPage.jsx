@@ -2,15 +2,18 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   DndContext, useDroppable, useSensor, useSensors, PointerSensor,
-  closestCorners, DragOverlay,
+  closestCorners, closestCenter, DragOverlay,
 } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { SortableContext, useSortable, verticalListSortingStrategy, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import api from '../services/api'
+import { useLiveRefresh } from '../hooks/useLiveRefresh'
 import { useAuthStore } from '../store/authStore'
 import AvatarStack from '../components/common/AvatarStack'
 import MemberPicker from '../components/common/MemberPicker'
 import { confirmDialog, alertDialog } from '../store/dialogStore'
 import Column from '../components/board/Column'
+import ColumnTrashModal from '../components/board/ColumnTrashModal'
 import { CardItemPreview } from '../components/board/CardItem'
 import CardModal from '../components/card/CardModal'
 import { avatarColor } from '../utils/avatarColor'
@@ -18,7 +21,27 @@ import s from './BoardPage.module.css'
 
 const COL = id => `column:${id}`
 const CARD = id => `card:${id}`
+const COLDRAG = id => `col:${id}`
 const unwrap = id => (typeof id === 'string' ? id.split(':').slice(1).join(':') : id)
+
+// Enquanto arrasta uma COLUNA, só considera outras colunas (prefixo "col:")
+// na detecção de colisão; enquanto arrasta um CARTÃO, ignora as colunas e
+// considera só cartões/áreas de coluna (prefixo "card:"/"column:"). Sem
+// isso, os dois tipos de arraste (aninhados um dentro do outro) disputam a
+// mesma colisão e o reordenar de coluna às vezes não "pega". Coluna usa
+// closestCenter (mesmo algoritmo já usado em InternetLinksPage.jsx pra
+// reordenar uma fileira simples) — closestCorners é pensado pra grade 2D
+// (entrar numa coluna vinda de cima/baixo) e, numa fileira só, às vezes
+// resolvia "mais perto" como a própria coluna de origem, fazendo o drop
+// não mover nada (a caixa só voltava pro lugar).
+function collisionDetectionStrategy(args) {
+  const isColumnDrag = String(args.active.id).startsWith('col:')
+  const filtered = args.droppableContainers.filter(c =>
+    isColumnDrag ? String(c.id).startsWith('col:') : !String(c.id).startsWith('col:')
+  )
+  const detector = isColumnDrag ? closestCenter : closestCorners
+  return detector({ ...args, droppableContainers: filtered })
+}
 
 export default function BoardPage() {
   const { boardId } = useParams()
@@ -29,30 +52,70 @@ export default function BoardPage() {
   const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeCard, setActiveCard] = useState(null) // dnd-kit drag preview
+  const [activeColumn, setActiveColumn] = useState(null) // dnd-kit drag preview (coluna)
   const [openCardId, setOpenCardId] = useState(null)
   const [showInvite, setShowInvite] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [newColName, setNewColName] = useState('')
   const [addingColumn, setAddingColumn] = useState(false)
+  const [showTrash, setShowTrash] = useState(false)
+  const [trashCount, setTrashCount] = useState(0)
 
   const cardsRef = useRef(cards)
   cardsRef.current = cards
 
-  const load = useCallback(() => {
-    setLoading(true)
+  const editingNameRef = useRef(editingName)
+  editingNameRef.current = editingName
+
+  // `silent` = recarga em segundo plano (tempo real): sem tela de "carregando"
+  // e sem mexer no nome do quadro se a pessoa estiver editando ele agora.
+  const load = useCallback(({ silent } = {}) => {
+    if (!silent) setLoading(true)
     Promise.all([
       api.get(`/boards/${boardId}`),
       api.get(`/boards/${boardId}/cards`),
     ]).then(([b, c]) => {
       setBoard(b.data)
-      setNameDraft(b.data.name)
+      if (!editingNameRef.current) setNameDraft(b.data.name)
       setCards(c.data || [])
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [boardId])
 
+  // Quantas colunas estão na lixeira — só pro botão saber se mostra o
+  // numerozinho; a lista em si é buscada de novo quando o modal abre.
+  const loadTrashCount = useCallback(() => {
+    api.get(`/boards/${boardId}/columns/trash`)
+      .then(r => setTrashCount((r.data || []).length))
+      .catch(() => {})
+  }, [boardId])
+  useEffect(() => { loadTrashCount() }, [loadTrashCount])
+
   useEffect(() => { load() }, [load])
+
+  // Tempo real: outro aparelho mexeu neste quadro (cartão, coluna, membro,
+  // tempo...) → recarrega em silêncio. Se a pessoa estiver ARRASTANDO algo,
+  // espera ela soltar (senão o cartão "pularia" debaixo do mouse) e só então
+  // atualiza — com uma folga, pra o movimento dela já ter sido gravado antes.
+  const draggingRef = useRef(false)
+  draggingRef.current = !!(activeCard || activeColumn)
+  const pendingLiveRef = useRef(false)
+  useLiveRefresh(['boards', 'cards', 'time'], msg => {
+    if (msg?.r === 'boards' && msg.b && msg.b !== boardId) return // era outro quadro
+    if (draggingRef.current) { pendingLiveRef.current = true; return }
+    load({ silent: true })
+    loadTrashCount()
+  })
+  useEffect(() => {
+    if (activeCard || activeColumn || !pendingLiveRef.current) return
+    const t = setTimeout(() => {
+      if (!pendingLiveRef.current) return
+      pendingLiveRef.current = false
+      load({ silent: true })
+    }, 1200)
+    return () => clearTimeout(t)
+  }, [activeCard, activeColumn])
 
   const columns = useMemo(
     () => (board?.columns || []).slice().sort((a, b) => a.order_index - b.order_index),
@@ -75,13 +138,18 @@ export default function BoardPage() {
   const findColumnOfCard = cardId => cards.find(c => c.id === cardId)?.column_id
 
   const handleDragStart = e => {
-    const id = unwrap(e.active.id)
+    const rawId = String(e.active.id)
+    if (rawId.startsWith('col:')) {
+      setActiveColumn(columns.find(c => c.id === unwrap(rawId)) || null)
+      return
+    }
+    const id = unwrap(rawId)
     setActiveCard(cards.find(c => c.id === id) || null)
   }
 
   const handleDragOver = e => {
     const { active, over } = e
-    if (!over) return
+    if (!over || String(active.id).startsWith('col:')) return
     const activeId = unwrap(active.id)
     const overRaw = over.id
     const overIsColumn = overRaw.startsWith('column:')
@@ -109,6 +177,23 @@ export default function BoardPage() {
 
   const handleDragEnd = async e => {
     const { active, over } = e
+
+    if (String(active.id).startsWith('col:')) {
+      setActiveColumn(null)
+      if (!over || active.id === over.id) return
+      const oldIndex = columns.findIndex(c => COLDRAG(c.id) === active.id)
+      const newIndex = columns.findIndex(c => COLDRAG(c.id) === over.id)
+      if (oldIndex === -1 || newIndex === -1) return
+      const reordered = arrayMove(columns, oldIndex, newIndex).map((c, i) => ({ ...c, order_index: i }))
+      setBoard(prev => ({ ...prev, columns: reordered }))
+      try {
+        await api.put(`/boards/${boardId}/columns/reorder`, { columns: reordered.map(c => ({ id: c.id, order_index: c.order_index })) })
+      } catch {
+        load() // rollback via refetch
+      }
+      return
+    }
+
     setActiveCard(null)
     if (!over) return
     const activeId = unwrap(active.id)
@@ -175,6 +260,32 @@ export default function BoardPage() {
     } catch { setAddingColumn(false) }
   }
 
+  const renameColumn = async (columnId, name) => {
+    const prevBoard = board
+    setBoard(prev => ({ ...prev, columns: prev.columns.map(c => c.id === columnId ? { ...c, name } : c) }))
+    try {
+      await api.put(`/boards/${boardId}/columns/${columnId}`, { name })
+    } catch (e) {
+      setBoard(prevBoard)
+      await alertDialog(e.response?.data?.error || 'Erro ao renomear a coluna.', { title: 'Erro', danger: true })
+    }
+  }
+
+  const deleteColumn = async columnId => {
+    const prevBoard = board
+    const prevCards = cards
+    setBoard(prev => ({ ...prev, columns: prev.columns.filter(c => c.id !== columnId) }))
+    setCards(prev => prev.filter(c => c.column_id !== columnId))
+    try {
+      await api.delete(`/boards/${boardId}/columns/${columnId}`)
+      setTrashCount(n => n + 1)
+    } catch (e) {
+      setBoard(prevBoard)
+      setCards(prevCards)
+      await alertDialog(e.response?.data?.error || 'Erro ao excluir a coluna.', { title: 'Erro', danger: true })
+    }
+  }
+
   const addCard = async (columnId, title) => {
     try {
       const { data } = await api.post(`/boards/${boardId}/cards`, { title, column_id: columnId })
@@ -186,8 +297,34 @@ export default function BoardPage() {
     setCards(prev => prev.map(c => c.id === cardId ? { ...c, ...patch } : c))
   }
 
+  // Toggle rápido do status direto no card do quadro (sem abrir o modal) —
+  // cicla não iniciado → em andamento → concluído → não iniciado.
+  const toggleCardProgress = async (card, nextProgress) => {
+    const prevProgress = card.progress
+    patchCardLocal(card.id, { progress: nextProgress })
+    try {
+      await api.put(`/boards/${boardId}/cards/${card.id}`, { progress: nextProgress })
+    } catch {
+      patchCardLocal(card.id, { progress: prevProgress })
+    }
+  }
+
   const removeCardLocal = (cardId) => {
     setCards(prev => prev.filter(c => c.id !== cardId))
+  }
+
+  const archiveBoard = async () => {
+    const ok = await confirmDialog(
+      `Arquivar o quadro "${board.name}"? Ele sai da lista principal, mas nada é apagado dá pra restaurar depois em "Quadros arquivados".`,
+      { title: 'Arquivar quadro' }
+    )
+    if (!ok) return
+    try {
+      await api.post(`/boards/${boardId}/archive`)
+      navigate('/')
+    } catch (e) {
+      await alertDialog(e.response?.data?.error || 'Erro ao arquivar o quadro.', { title: 'Erro', danger: true })
+    }
   }
 
   const deleteBoard = async () => {
@@ -238,7 +375,14 @@ export default function BoardPage() {
               />
             )}
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/tempo')}>Tempo da equipe</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setShowTrash(true)} title="Colunas excluídas">
+            🗑️ Lixeira{trashCount > 0 ? ` (${trashCount})` : ''}
+          </button>
+          {(board.my_role === 'owner' || board.my_role === 'admin' || board.my_role === 'dept_admin' || user?.system_role === 'super_admin') && (
+            <button className="btn btn-ghost btn-sm" onClick={archiveBoard} title="Arquivar quadro">
+              📦 Arquivar
+            </button>
+          )}
           {board.my_role === 'owner' && (
             <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={deleteBoard} title="Excluir quadro">
               🗑️ Excluir
@@ -249,25 +393,35 @@ export default function BoardPage() {
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetectionStrategy}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <div className={s.board}>
-          {columns.map(col => (
-            <ColumnDroppable key={col.id} column={col}>
-              <SortableContext items={(cardsByColumn[col.id] || []).map(c => CARD(c.id))} strategy={verticalListSortingStrategy}>
-                <Column
-                  column={col}
-                  cards={cardsByColumn[col.id] || []}
-                  onOpenCard={id => setOpenCardId(id)}
-                  onAddCard={title => addCard(col.id, title)}
-                  cardIdWrap={CARD}
-                />
-              </SortableContext>
-            </ColumnDroppable>
-          ))}
+          <SortableContext items={columns.map(c => COLDRAG(c.id))} strategy={horizontalListSortingStrategy}>
+            {columns.map(col => (
+              <ColumnSortable key={col.id} column={col}>
+                {dragHandleProps => (
+                  <ColumnDroppable column={col}>
+                    <SortableContext items={(cardsByColumn[col.id] || []).map(c => CARD(c.id))} strategy={verticalListSortingStrategy}>
+                      <Column
+                        column={col}
+                        cards={cardsByColumn[col.id] || []}
+                        onOpenCard={id => setOpenCardId(id)}
+                        onAddCard={title => addCard(col.id, title)}
+                        onToggleProgress={toggleCardProgress}
+                        cardIdWrap={CARD}
+                        onRename={name => renameColumn(col.id, name)}
+                        onDelete={() => deleteColumn(col.id)}
+                        dragHandleProps={dragHandleProps}
+                      />
+                    </SortableContext>
+                  </ColumnDroppable>
+                )}
+              </ColumnSortable>
+            ))}
+          </SortableContext>
 
           <div className={s.newColumn}>
             {addingColumn ? (
@@ -287,6 +441,7 @@ export default function BoardPage() {
 
         <DragOverlay>
           {activeCard ? <CardItemPreview card={activeCard} /> : null}
+          {activeColumn ? <ColumnPreview column={activeColumn} count={(cardsByColumn[activeColumn.id] || []).length} /> : null}
         </DragOverlay>
       </DndContext>
 
@@ -301,6 +456,14 @@ export default function BoardPage() {
           onDeleted={() => { removeCardLocal(openCardId); setOpenCardId(null) }}
         />
       )}
+
+      {showTrash && (
+        <ColumnTrashModal
+          boardId={boardId}
+          onClose={() => { setShowTrash(false); loadTrashCount() }}
+          onChanged={load}
+        />
+      )}
     </div>
   )
 }
@@ -308,4 +471,29 @@ export default function BoardPage() {
 function ColumnDroppable({ column, children }) {
   const { setNodeRef } = useDroppable({ id: COL(column.id) })
   return <div ref={setNodeRef} className="board-column-drop">{children}</div>
+}
+
+// Envolve cada coluna pra ela ser arrastável (reordenar) — só o "grip" no
+// cabeçalho (Column.jsx) ativa o arraste (`dragHandleProps`), o resto da
+// coluna continua clicável normalmente (cartões, botões etc.).
+function ColumnSortable({ column, children }) {
+  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: COLDRAG(column.id) })
+  const style = {
+    transform: CSS.Transform.toString(transform), transition,
+    opacity: isDragging ? 0.4 : 1, flexShrink: 0,
+  }
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({ ...attributes, ...listeners })}
+    </div>
+  )
+}
+
+function ColumnPreview({ column, count }) {
+  return (
+    <div className={s.columnPreview}>
+      <span>{column.name}</span>
+      <span className={s.columnPreviewCount}>{count}</span>
+    </div>
+  )
 }

@@ -1,32 +1,39 @@
-/* ── Brand tokens (Fase 4 — identidade visual "Trello-like") ──── */
+/* ── Brand tokens (Fase 6 — identidade "SaaS empresarial", alinhada
+   à paleta do UniFECAF Jukebox: azul + verde sobre navy escuro) ──── */
 :root {
-  --brand: #0EA5A5;        /* teal — colaboração */
-  --brand-dark: #0B8484;
-  --accent: #FF6B4A;        /* coral — energia/CTA */
-  --accent-dark: #E4553A;
-  --bg: #F4F6F9;             /* canvas claro, estilo Trello */
+  --brand: #3B82F6;        /* azul — ação primária, alinhado ao ecossistema UniFECAF */
+  --brand-dark: #2563EB;
+  --accent: #22C55E;        /* verde — marca/destaque secundário */
+  --accent-dark: #16A34A;
+  --bg: #F5F7FB;             /* canvas claro, neutro e sóbrio */
   --surface: #FFFFFF;
-  --surface-2: #EEF1F6;
-  --text: #1F2430;
-  --text-muted: #6B7280;
-  --border: #E2E6EC;
+  --surface-2: #EEF2FA;
+  --text: #101A2E;
+  --text-muted: #5B6B8C;
+  --border: #DFE4F0;
   --success: #22C55E; --warning: #F59E0B; --danger: #EF4444;
-  --radius: 12px; --radius-sm: 8px;
-  --shadow-sm: 0 1px 2px rgba(16,24,40,.06);
-  --shadow-md: 0 4px 10px rgba(16,24,40,.08);
+  --radius: 10px; --radius-sm: 8px;
+  --shadow-sm: 0 1px 2px rgba(16,24,40,.05);
+  --shadow-md: 0 4px 12px rgba(16,24,40,.07);
   --font-body: 'Inter', sans-serif;
-  --font-display: 'Outfit', sans-serif;  /* nova fonte pra títulos, sinaliza o redesign */
+  --font-display: 'Inter', sans-serif;  /* tipografia única — leitura mais sóbria/corporativa */
 
   /* ── extras não fixados no plano, mas necessários pra manter a
      estrutura existente coerente com a nova paleta ── */
-  --radius-lg: 16px;
-  --shadow-lg: 0 20px 64px rgba(16,24,40,.18);
+  --radius-lg: 14px;
+  --shadow-lg: 0 20px 64px rgba(16,24,40,.16);
   --ease: cubic-bezier(.4,0,.2,1);
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  /* "ease-out-expo" — desacelera bem devagar no final, sem nenhum bounce.
+     É a curva por trás do efeito "aparece suave ao rolar a página" pedido
+     (estilo inter.co) — usada pelo <Reveal> (components/common/Reveal.jsx)
+     e pela transição de página em AppLayout.module.css. */
+  --ease-smooth: cubic-bezier(.16, 1, .3, 1);
   color-scheme: light;
 }
 [data-theme="dark"] {
-  --bg: #12151C; --surface: #1A1E28; --surface-2: #21262F;
-  --text: #E7E9EE; --text-muted: #97A0B3; --border: #2A2F3A;
+  --bg: #0B1120; --surface: #121B31; --surface-2: #17223D;
+  --text: #E8EDF7; --text-muted: #8592B4; --border: #223055;
   --shadow-sm: 0 1px 4px rgba(0,0,0,.4);
   --shadow-md: 0 4px 20px rgba(0,0,0,.5);
   --shadow-lg: 0 20px 64px rgba(0,0,0,.65);
@@ -50,7 +57,7 @@
   --light: var(--text);
   --muted: var(--text-muted);
   --border2: var(--border);
-  --border: rgba(14,165,165,.28);
+  --border: rgba(59,130,246,.22);
   --blue: var(--brand);
   --blue2: var(--brand-dark);
   --blue3: var(--brand-dark);
@@ -59,15 +66,15 @@
   --red: var(--danger);
   --red2: #b91c1c;
   --amber: var(--warning);
-  --purple: #845EF7;
-  --teal: var(--brand);
-  --glow: rgba(14,165,165,.08);
+  --purple: #8B5CF6;
+  --teal: var(--accent);
+  --glow: rgba(59,130,246,.08);
   --scrollbar: rgba(31,36,48,.16);
   --sidebar-bg: var(--surface);
 }
 [data-theme="dark"] {
-  --border: rgba(14,165,165,.32);
-  --glow: rgba(14,165,165,.12);
+  --border: rgba(59,130,246,.28);
+  --glow: rgba(59,130,246,.14);
   --scrollbar: rgba(255,255,255,.1);
 }
 
@@ -117,7 +124,7 @@ input, textarea, select {
 }
 input:focus, textarea:focus, select:focus {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(14,165,165,.15);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
 }
 input::placeholder, textarea::placeholder { color: var(--text-muted); }
 select option { background: var(--surface); color: var(--text); }
@@ -139,17 +146,17 @@ textarea { resize: vertical; }
 .btn-primary {
   background: var(--brand); color: #fff;
 }
-.btn-primary:hover { background: var(--brand-dark); }
+.btn-primary:hover { background: var(--brand-dark); box-shadow: 0 4px 14px rgba(59,130,246,.35); }
 .btn-primary:active { background: var(--brand-dark); }
 .btn-accent { background: var(--accent); color: #fff; }
-.btn-accent:hover { background: var(--accent-dark); }
+.btn-accent:hover { background: var(--accent-dark); box-shadow: 0 4px 14px rgba(34,197,94,.35); }
 .btn-green  { background: var(--success); color: #fff; }
-.btn-green:hover { background: #16a34a; }
+.btn-green:hover { background: #16a34a; box-shadow: 0 4px 14px rgba(34,197,94,.35); }
 .btn-ghost {
   background: transparent; color: var(--text-muted);
   border: 1px solid var(--border2);
 }
-.btn-ghost:hover { border-color: rgba(14,165,165,.35); color: var(--text); }
+.btn-ghost:hover { border-color: rgba(59,130,246,.35); color: var(--text); }
 .btn-danger {
   background: rgba(239,68,68,.08); color: var(--danger);
   border: 1px solid rgba(239,68,68,.18);
@@ -160,8 +167,14 @@ textarea { resize: vertical; }
   justify-content: center; background: transparent;
   border: none; color: var(--text-muted); border-radius: var(--radius-sm);
 }
-.btn-icon:hover { background: var(--border2); color: var(--text); }
+.btn-icon:hover { background: var(--border2); color: var(--text); transform: scale(1.08); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Lift on hover, press down on click — every button feels alive without
+   any single one screaming for attention. Skipped for disabled/icon-only
+   buttons above (icon ones already get their own scale-up). */
+.btn:not(:disabled):not(.btn-icon):hover { transform: translateY(-1px); }
+.btn:not(:disabled):active { transform: translateY(0) scale(.96); }
 
 /* ── Badges ──────────────────────────────────────────────────── */
 .badge {
@@ -169,18 +182,18 @@ textarea { resize: vertical; }
   padding: 2px 8px; border-radius: 4px;
   font-size: 11px; font-weight: 600; line-height: 1.6;
 }
-.badge-blue   { background: rgba(14,165,165,.12);  color: #0d8f8f; }
+.badge-blue   { background: rgba(59,130,246,.12);  color: #1d4ed8; }
 .badge-green  { background: rgba(34,197,94,.14);   color: #16a34a; }
 .badge-red    { background: rgba(239,68,68,.12);   color: #dc2626; }
 .badge-amber  { background: rgba(245,158,11,.14);  color: #b45309; }
-.badge-purple { background: rgba(132,94,247,.14);  color: #6d3fe0; }
+.badge-purple { background: rgba(139,92,246,.14);  color: #6d3fe0; }
 .badge-gray   { background: var(--border2);        color: var(--text-muted); }
 
-[data-theme="dark"] .badge-blue   { color: #5eead4; }
+[data-theme="dark"] .badge-blue   { color: #93c5fd; }
 [data-theme="dark"] .badge-green  { color: #4ade80; }
 [data-theme="dark"] .badge-red    { color: #f87171; }
 [data-theme="dark"] .badge-amber  { color: #fbbf24; }
-[data-theme="dark"] .badge-purple { color: #b8a1fb; }
+[data-theme="dark"] .badge-purple { color: #c4b5fd; }
 
 /* ── Avatar ──────────────────────────────────────────────────── */
 .avatar {
@@ -189,6 +202,7 @@ textarea { resize: vertical; }
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 12px; font-weight: 600; flex-shrink: 0;
   border: 2px solid var(--surface);
+  transition: transform .15s var(--ease-spring);
 }
 
 /* Overlapping avatar stack — quadros/cards "mais coletivo" */
@@ -228,12 +242,63 @@ textarea { resize: vertical; }
   from { background-position: -400% 0; }
   to   { background-position:  400% 0; }
 }
+/* Página inteira entrando — usado pelo AppLayout a cada troca de rota */
+@keyframes pageIn {
+  from { opacity:0; transform:translateY(10px) scale(.99); }
+  to   { opacity:1; transform:none; }
+}
+/* Pop de confirmação — cliques que merecem um "sim, aconteceu" (dar
+   estrela/lua, marcar concluído, favoritar...) */
+@keyframes pop {
+  0%   { transform:scale(1); }
+  40%  { transform:scale(1.35); }
+  100% { transform:scale(1); }
+}
+/* Anel de pulso — chama atenção pra algo novo sem travar a UI (badge de
+   notificação não lida, indicador "ao vivo") */
+@keyframes ringPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(239,68,68,.55); }
+  100% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+}
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(10deg); }
+  60% { transform: rotate(-6deg); }
+  80% { transform: rotate(4deg); }
+}
 
 .fade-in { animation: fadeIn .2s var(--ease); }
 .spinner { animation: spin .9s linear infinite; display: inline-block; }
+.pop-anim { animation: pop .35s var(--ease-spring); }
+
+/* ── Reveal ao rolar a página (estilo inter.co) ─────────────────
+   Usado pelo componente <Reveal> (components/common/Reveal.jsx): começa
+   invisível/deslocado, e quando entra na tela ganha `.is-visible`, que
+   dispara a transição — desacelera bem suave (--ease-smooth), sem bounce,
+   parada só uma vez (o componente para de observar depois do 1º reveal).
+   `--reveal-delay` é opcional, setada inline pra escalonar itens de uma
+   lista/grid um pouco depois do anterior. */
+.reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity .7s var(--ease-smooth), transform .7s var(--ease-smooth);
+  transition-delay: var(--reveal-delay, 0s);
+}
+.reveal.is-visible { opacity: 1; transform: none; }
 
 .scroll-x { overflow-x: auto; }
 .scroll-y { overflow-y: auto; }
+
+/* Respeita quem pediu menos movimento no sistema — nada de bounce/parallax
+   pra essas pessoas, só a troca de estado em si. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* ── Mobile globals ──────────────────────────────────────────── */
 /* Remove double-tap zoom delay on touch devices */

@@ -4,9 +4,17 @@ import api from '../services/api'
 import { downloadFile } from '../utils/download'
 import { avatarColor } from '../utils/avatarColor'
 import { formatDuration } from '../utils/formatDuration'
+import Reveal from '../components/common/Reveal'
 import s from './TeamTimePage.module.css'
 
-function isoDate(d) { return d.toISOString().slice(0, 10) }
+// Data local em YYYY-MM-DD. `d.toISOString()` converte pra UTC — à noite em
+// Brasília (UTC-3) isso pode virar o dia seguinte, deslocando o período
+// padrão do filtro em um dia (mesma classe de bug corrigida em CardModal.jsx
+// via `todayLocalISO`).
+function isoDate(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d }
 
 export default function TeamTimePage() {
@@ -83,7 +91,7 @@ export default function TeamTimePage() {
           </div>
 
           <div className={s.chartsGrid}>
-            <div className={s.chartCard}>
+            <Reveal className={s.chartCard}>
               <h4>Horas por pessoa</h4>
               {byUserChart.length === 0 ? (
                 <p className={s.chartEmpty}>Sem lançamentos no período.</p>
@@ -100,9 +108,9 @@ export default function TeamTimePage() {
                   </BarChart>
                 </ResponsiveContainer>
               )}
-            </div>
+            </Reveal>
 
-            <div className={s.chartCard}>
+            <Reveal delay={80} className={s.chartCard}>
               <h4>Tendência diária</h4>
               {byDayChart.length === 0 ? (
                 <p className={s.chartEmpty}>Sem lançamentos no período.</p>
@@ -117,7 +125,7 @@ export default function TeamTimePage() {
                   </LineChart>
                 </ResponsiveContainer>
               )}
-            </div>
+            </Reveal>
           </div>
         </>
       )}

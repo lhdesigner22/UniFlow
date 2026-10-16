@@ -51,8 +51,15 @@ export async function runSlaSweep(env, db) {
 }
 
 // Expande eventos (incluindo recorrentes) em ocorrências concretas dentro de [from, to] (strings 'YYYY-MM-DD')
-export async function expandEventsInRange(db, from, to) {
-  const events = await db.prepare('SELECT * FROM events ORDER BY event_date').all()
+// `dept` (opcional): { sql, args } de departmentFilter() — a Agenda da tela só mostra
+// o que o departamento da pessoa enxerga. Sem ele (resumos por e-mail) traz tudo.
+export async function expandEventsInRange(db, from, to, dept = { sql: '', args: [] }) {
+  const events = await db.prepare(`
+    SELECT e.*, d.name AS department_name, d.color AS department_color
+    FROM events e LEFT JOIN departments d ON d.id = e.department_id
+    WHERE 1=1${dept.sql.replaceAll('department_id', 'e.department_id')}
+    ORDER BY e.event_date
+  `).all(...dept.args)
   const fromD = new Date(from + 'T00:00:00Z')
   const toD = new Date(to + 'T00:00:00Z')
   const occurrences = []
@@ -112,18 +119,22 @@ export async function runDigests(env, db) {
     await setSetting(db, 'last_weekly_digest_sent', localDateStr)
   }
 
-  // Alerta diário (compromissos de amanhã, hora configurável, padrão 22h)
+  // Alerta diário (compromissos do próprio dia, hora configurável, padrão 22h).
+  // Antes buscava sempre "amanhã" (fazia sentido pro padrão de 22h — véspera).
+  // Agora mostra os compromissos do dia em que o alerta realmente dispara —
+  // certo tanto pra quem configura de manhã (6h, quer ver o dia que começa)
+  // quanto pra quem mantém à noite (22h, já é o dia seguinte quando o cron roda
+  // logo depois da meia-noite... mas o disparo em si é sempre no dia local atual).
   const dailyEnabled = (await getSetting(db, 'daily_digest_enabled', 'false')) === 'true'
   const dailyHour = parseInt(await getSetting(db, 'daily_digest_hour', '22'), 10)
   const lastDaily = await getSetting(db, 'last_daily_digest_sent', '')
   if (dailyEnabled && localHour === dailyHour && lastDaily !== localDateStr) {
-    const tomorrow = new Date(localMs + 86400000).toISOString().slice(0, 10)
-    const occurrences = await expandEventsInRange(db, tomorrow, tomorrow)
-    const subject = `Compromissos de amanhã (${occurrences.length})`
+    const occurrences = await expandEventsInRange(db, localDateStr, localDateStr)
+    const subject = `Compromissos de hoje (${occurrences.length})`
     const text = occurrences.length
       ? occurrences.map(o => `- ${o.event_time || ''} ${o.title}`).join('\n')
-      : 'Nenhum compromisso agendado para amanhã.'
-    const html = `<h2>Compromissos de amanhã</h2><ul>${occurrences.map(o => `<li>${o.event_time || ''} — ${o.title}</li>`).join('') || '<li>Nenhum compromisso.</li>'}</ul>`
+      : 'Nenhum compromisso agendado para hoje.'
+    const html = `<h2>Compromissos de hoje</h2><ul>${occurrences.map(o => `<li>${o.event_time || ''} — ${o.title}</li>`).join('') || '<li>Nenhum compromisso.</li>'}</ul>`
     const recipients = await db.prepare("SELECT * FROM digest_recipients WHERE digest_type = 'daily'").all()
     for (const r of recipients) {
       if (r.user_id) await createNotification(db, r.user_id, 'agenda', subject, text.slice(0, 200), '/agenda')

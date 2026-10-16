@@ -1,9 +1,10 @@
 import { Hono } from 'hono'
 import { v4 as uuid } from 'uuid'
-import { hashPassword, verifyPassword } from '../lib/password.js'
+import { verifyPassword } from '../lib/password.js'
 import { signJwt } from '../lib/jwt.js'
 import { verifyGoogleIdToken, decodeJwtPayload } from '../lib/googleAuth.js'
 import { auth } from '../middleware/auth.js'
+import { loadAccess } from '../lib/permissions.js'
 
 const app = new Hono()
 
@@ -22,30 +23,11 @@ async function autoPromote(db, env, userId, email) {
 
 app.get('/health', c => c.json({ ok: true }))
 
-app.post('/register', async c => {
-  const db = c.get('db')
-  const { name, email, password } = await c.req.json()
-  if (!name || !email || !password) return c.json({ error: 'Campos obrigatórios' }, 400)
-  const exists = await db.prepare('SELECT id FROM users WHERE email = ?').get(email)
-  if (exists) return c.json({ error: 'E-mail já cadastrado' }, 409)
-
-  const hash = await hashPassword(password)
-  const id = uuid()
-  await db.prepare('INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)').run(id, name, email, hash)
-
-  // Primeiro usuário do sistema vira super_admin automaticamente
-  // (antes rodava a cada boot em db.js; agora é decidido na hora do cadastro)
-  const totalUsers = await db.scalar('SELECT COUNT(*) FROM users')
-  if (totalUsers === 1) {
-    await db.prepare("UPDATE users SET system_role = 'super_admin' WHERE id = ?").run(id)
-  } else {
-    await autoPromote(db, c.env, id, email)
-  }
-
-  const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(id)
-  const token = await signJwt({ id, name, email }, c.env.JWT_SECRET)
-  return c.json({ token, user: { id, name, email, system_role: user.system_role } })
-})
+// Cadastro por e-mail/senha desativado — a entrada agora é só via Google
+// (conta corporativa). Rota mantida (410 Gone) em vez de removida, caso
+// algum cliente antigo (app instalado como PWA, aba com cache velho) ainda
+// tente chamar.
+app.post('/register', c => c.json({ error: 'Cadastro por e-mail/senha desativado. Entre com sua conta Google.' }, 410))
 
 app.post('/login', async c => {
   const db = c.get('db')
@@ -56,7 +38,7 @@ app.post('/login', async c => {
 
   await autoPromote(db, c.env, user.id, user.email)
   user = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
-  const token = await signJwt({ id: user.id, name: user.name, email: user.email }, c.env.JWT_SECRET)
+  const token = await signJwt({ id: user.id, name: user.name, email: user.email, tv: user.token_version || 0 }, c.env.JWT_SECRET)
   return c.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, system_role: user.system_role } })
 })
 
@@ -105,8 +87,13 @@ app.post('/google', async c => {
         .run(id, name, email, '', picture || null, googleId)
       user = await db.prepare('SELECT * FROM users WHERE id = ?').get(id)
     } else {
-      await db.prepare('UPDATE users SET google_id = ?, avatar = CASE WHEN avatar IS NULL OR avatar = "" THEN ? ELSE avatar END WHERE id = ?')
-        .run(googleId, picture || null, user.id)
+      // Sempre sincroniza com a foto ATUAL do Google (não só na primeira
+      // vez) — antes só gravava se `avatar` estivesse vazio, então quem
+      // adicionava/trocava a foto no Google depois de já ter uma conta
+      // aqui nunca via a atualização. Só não sobrescreve se o Google não
+      // mandar `picture` nesse login (mantém o que já tinha).
+      await db.prepare('UPDATE users SET google_id = ?, avatar = ? WHERE id = ?')
+        .run(googleId, picture || user.avatar || null, user.id)
       user = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
     }
 
@@ -119,7 +106,7 @@ app.post('/google', async c => {
     user = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
 
     // 5. Emitir JWT igual ao login normal
-    const token = await signJwt({ id: user.id, name: user.name, email: user.email }, c.env.JWT_SECRET)
+    const token = await signJwt({ id: user.id, name: user.name, email: user.email, tv: user.token_version || 0 }, c.env.JWT_SECRET)
     return c.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, system_role: user.system_role } })
 
   } catch (e) {
@@ -143,12 +130,41 @@ app.post('/google', async c => {
 
 app.get('/me', auth, async c => {
   const db = c.get('db')
+  const tokenUser = c.get('user')
   const user = await db.prepare(`
-    SELECT u.id, u.name, u.email, u.avatar, u.system_role, u.department_id, u.created_at,
+    SELECT u.id, u.name, u.email, u.avatar, u.system_role, u.department_id, u.created_at, u.token_version,
            d.name as department_name
     FROM users u LEFT JOIN departments d ON d.id = u.department_id
     WHERE u.id = ?
-  `).get(c.get('user').id)
+  `).get(tokenUser.id)
+  if (!user) return c.json({ error: 'Usuário não encontrado' }, 401)
+
+  // Se um Super Admin "forçou novo login" dessa conta (ver POST
+  // /admin/users/:id/force-relogin), o token_version do banco já andou —
+  // o token que a pessoa ainda carrega tem o valor antigo, então nem
+  // precisa esperar os 7 dias de expiração normais: já barra aqui.
+  if ((tokenUser.tv || 0) !== (user.token_version || 0)) {
+    return c.json({ error: 'Sessão renovada — faça login novamente.' }, 401)
+  }
+
+  // Pro Sidebar decidir se mostra o link do Cofre de Senhas (acesso não
+  // segue o system_role normal — ver server/src/routes/vault.js).
+  if (user.system_role === 'super_admin') {
+    user.has_vault_access = true
+  } else {
+    const grant = await db.prepare('SELECT 1 FROM vault_access WHERE user_id = ?').get(user.id)
+    user.has_vault_access = !!grant
+  }
+
+  // Cargo, permissões por módulo e escopo (todos os departamentos ou só o dele) —
+  // o front usa isso pra esconder menus/botões. A regra de verdade é aplicada
+  // no servidor (worker.js); isto é só pra interface não mostrar o que não vale.
+  const access = await loadAccess(db, user.id)
+  user.role_id = access.roleId || (user.system_role === 'super_admin' ? 'role-super-admin' : user.system_role === 'auditor' ? 'role-auditor' : 'role-colaborador')
+  user.role_name = access.roleName
+  user.permissions = access.permissions
+  user.scope = access.scope
+
   return c.json(user)
 })
 

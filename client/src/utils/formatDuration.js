@@ -9,6 +9,27 @@ export function parseDbTimestamp(ts) {
   return new Date(ts.replace(' ', 'T') + 'Z')
 }
 
+// Datas "puras" (sem hora), tipo `due_date` de card, vêm como "YYYY-MM-DD".
+// `new Date("YYYY-MM-DD")` trata isso como meia-noite UTC — em fuso negativo
+// (Brasília, UTC-3) isso exibe o dia ANTERIOR ao real. Parseia os componentes
+// direto como data local pra evitar esse shift (mesma correção já usada em
+// client/src/pages/AgendaPage.jsx `parseLocalDate`).
+export function parseDateOnly(dateStr) {
+  if (!dateStr) return null
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+// "Hoje" em YYYY-MM-DD no fuso LOCAL do navegador. `new Date().toISOString()`
+// usa UTC — depois das ~21h em Brasília (UTC-3) isso já viraria o dia
+// seguinte. Usado como valor padrão de formulários (ex: lançamento manual de
+// tempo).
+export function todayLocalISO() {
+  const d = new Date()
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function formatDuration(seconds) {
   const total = Math.max(0, Math.round(seconds || 0))
   const h = Math.floor(total / 3600)

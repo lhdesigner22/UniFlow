@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { clientId } from './clientId'
 
 // Same-origin agora: o Worker serve tanto os assets estáticos quanto /api/*,
 // então não precisa mais de VITE_API_URL apontando pra um backend separado.
@@ -12,6 +13,12 @@ const api = axios.create({
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+  config.headers['X-Client-Id'] = clientId // tempo real: a própria aba ignora o aviso da sua alteração
+  // "Ver como departamento" (só tem efeito pra quem enxerga todos os departamentos)
+  try {
+    const view = localStorage.getItem('deptView')
+    if (view) config.headers['X-Department-View'] = view
+  } catch { /* sem localStorage */ }
   return config
 })
 

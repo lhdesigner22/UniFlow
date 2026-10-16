@@ -33,15 +33,59 @@
   display: flex; align-items: center; gap: 10px;
   padding: 8px 10px; border-radius: 7px;
   color: var(--muted); font-weight: 500; font-size: 13px;
-  transition: all .12s; white-space: nowrap; position: relative;
+  transition: all .16s var(--ease); white-space: nowrap; position: relative;
 }
-.navItem:hover { background: var(--border2); color: var(--white); }
+.navItem:hover { background: var(--border2); color: var(--white); transform: translateX(2px); }
 .navItem.active { background: var(--glow); color: var(--blue); font-weight: 600; }
 .navItem.active::before {
   content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
   width: 2px; height: 55%; border-radius: 0 2px 2px 0; background: var(--blue);
+  animation: growIn .2s var(--ease);
 }
-.navIcon { display: flex; align-items: center; justify-content: center; width: 18px; flex-shrink: 0; }
+@keyframes growIn { from { height: 0; } to { height: 55%; } }
+.navItem:hover .navIcon { transform: scale(1.12); }
+.navIcon { display: flex; align-items: center; justify-content: center; width: 18px; flex-shrink: 0; transition: transform .16s var(--ease-spring); }
+
+/* ── Nav group (expandable, ex: "Chamados") ── */
+.navGroupHeader {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border-radius: 7px; border: none; background: transparent;
+  color: var(--muted); font-weight: 500; font-size: 13px; text-align: left;
+  cursor: pointer; transition: all .12s; white-space: nowrap; position: relative;
+}
+.navGroupHeader:hover { background: var(--border2); color: var(--white); }
+.navGroupHeader.active { color: var(--blue); font-weight: 600; }
+.navCount {
+  margin-left: auto;
+  background: var(--border2); color: var(--muted);
+  min-width: 17px; height: 17px; border-radius: 50px;
+  padding: 0 5px;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.navGroupHeader.active .navCount { background: var(--glow); color: var(--blue); }
+.navGroupChevron { margin-left: 4px; display: flex; flex-shrink: 0; transition: transform .18s; }
+.navGroupChevron.open { transform: rotate(90deg); }
+.navSubList { display: flex; flex-direction: column; gap: 1px; padding-left: 26px; }
+.navSubItem {
+  display: flex; align-items: center; padding: 7px 10px; border-radius: 7px;
+  color: var(--muted); font-weight: 500; font-size: 12.5px;
+  transition: all .16s var(--ease); white-space: nowrap; position: relative;
+}
+.navSubItem:hover { background: var(--border2); color: var(--white); transform: translateX(2px); }
+.navSubItem.active { background: var(--glow); color: var(--blue); font-weight: 600; }
+
+/* ── Cascata de 2º nível (ex: Solicitação de Compra > meses) ── */
+.navSubGroup { display: flex; flex-direction: column; gap: 1px; }
+.navSubGroupHeader {
+  display: flex; align-items: center; width: 100%; padding: 7px 10px; border-radius: 7px;
+  border: none; background: transparent; color: var(--muted); font-weight: 500; font-size: 12.5px;
+  text-align: left; cursor: pointer; transition: all .16s var(--ease); white-space: nowrap; position: relative;
+}
+.navSubGroupHeader:hover { background: var(--border2); color: var(--white); }
+.navSubGroupHeader.active { color: var(--blue); font-weight: 600; }
+.navSubSubList { display: flex; flex-direction: column; gap: 1px; padding-left: 14px; }
 
 /* ── Pipes section ── */
 .section { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding: 4px 8px 8px; }
@@ -51,6 +95,13 @@
   font-size: 10px; font-weight: 700; color: var(--muted);
   text-transform: uppercase; letter-spacing: .08em;
 }
+.sectionToggle {
+  display: flex; align-items: center; gap: 4px;
+  border: none; background: transparent; padding: 0;
+  font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit;
+  cursor: pointer; transition: color .12s;
+}
+.sectionToggle:hover { color: var(--white); }
 .addBtn {
   width: 22px; height: 22px; border-radius: 5px;
   border: none; background: transparent; color: var(--muted);
@@ -60,16 +111,43 @@
 .addBtn:hover { background: var(--border2); color: var(--white); }
 
 .pipeList { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+.pipeRow { display: flex; align-items: center; gap: 2px; }
 .pipeItem {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
   padding: 7px 10px; border-radius: 7px;
   color: var(--light); font-size: 13px; font-weight: 400;
-  transition: all .12s; overflow: hidden;
+  transition: all .16s var(--ease); overflow: hidden;
 }
-.pipeItem:hover { background: var(--border2); color: var(--white); }
+.pipeItem:hover { background: var(--border2); color: var(--white); transform: translateX(2px); }
+.pipeItem:hover .pipeColor { transform: scale(1.3); }
+.pipeColor { transition: transform .16s var(--ease-spring); }
 .pipeActive { background: var(--glow) !important; color: var(--blue) !important; font-weight: 500; }
 .pipeColor { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .pipeName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Menu "..." de cada quadro (arquivar, etc.) ── */
+.pipeMenuWrap { position: relative; flex-shrink: 0; }
+.pipeMenuBtn {
+  width: 22px; height: 22px; border-radius: 5px;
+  border: none; background: transparent; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background .12s, color .12s;
+}
+.pipeMenuBtn:hover { background: var(--border2); color: var(--white); }
+.pipeMenu {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 20;
+  min-width: 150px; background: var(--sidebar-bg);
+  border: 1px solid var(--border2); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 4px;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.pipeMenuItem {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 9px; border-radius: 6px; border: none; background: transparent;
+  color: var(--light); font-size: 12.5px; text-align: left; cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.pipeMenuItem:hover { background: var(--border2); color: var(--white); }
 
 .createFirst {
   background: none; border: 1px dashed var(--border2); color: var(--muted);
@@ -77,6 +155,13 @@
   font-size: 12px; cursor: pointer; transition: all .12s; margin-top: 4px;
 }
 .createFirst:hover { border-color: var(--blue); color: var(--blue); }
+
+.showMoreBtn {
+  background: none; border: none; color: var(--muted);
+  border-radius: 7px; padding: 6px 9px; width: 100%; text-align: left;
+  font-size: 11.5px; font-weight: 600; cursor: pointer; transition: all .12s; margin-top: 2px;
+}
+.showMoreBtn:hover { background: var(--border2); color: var(--white); }
 
 /* ── Footer ── */
 .footer {

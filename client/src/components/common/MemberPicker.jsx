@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../../services/api'
-import { avatarColor } from '../../utils/avatarColor'
+import Avatar from './Avatar'
 import s from './MemberPicker.module.css'
 
 /**
@@ -20,15 +20,19 @@ export default function MemberPicker({ existingIds = [], onPick, onClose, align 
     return () => document.removeEventListener('mousedown', handler)
   }, [onClose])
 
+  // Busca também com o campo vazio (sem debounce nesse caso, já que abre
+  // junto com o picker) — assim aparecem sugestões de quem ainda não foi
+  // incluído antes mesmo da pessoa digitar. Com texto, mantém o debounce.
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return }
     setLoading(true)
-    const t = setTimeout(() => {
-      api.get('/users/search', { params: { q: query.trim() } })
+    const fetchUsers = () => {
+      api.get('/users/search', { params: { q: query.trim(), exclude: existingIds.join(',') } })
         .then(r => setResults(r.data || []))
         .catch(() => setResults([]))
         .finally(() => setLoading(false))
-    }, 300)
+    }
+    if (!query.trim()) { fetchUsers(); return }
+    const t = setTimeout(fetchUsers, 300)
     return () => clearTimeout(t)
   }, [query])
 
@@ -43,8 +47,8 @@ export default function MemberPicker({ existingIds = [], onPick, onClose, align 
       />
       <div className={s.list}>
         {loading && <div className={s.empty}>Buscando...</div>}
-        {!loading && query.trim() && results.length === 0 && (
-          <div className={s.empty}>Nenhum usuário encontrado.</div>
+        {!loading && results.length === 0 && (
+          <div className={s.empty}>{query.trim() ? 'Nenhum usuário encontrado.' : 'Ninguém disponível pra adicionar.'}</div>
         )}
         {!loading && results.map(u => {
           const already = existingIds.includes(u.id)
@@ -56,9 +60,7 @@ export default function MemberPicker({ existingIds = [], onPick, onClose, align 
               disabled={already}
               onClick={() => !already && onPick(u)}
             >
-              <div className="avatar" style={{ width: 24, height: 24, fontSize: 10, background: avatarColor(u.id) }}>
-                {u.name?.charAt(0).toUpperCase()}
-              </div>
+              <Avatar id={u.id} name={u.name} photo={u.avatar} size={24} />
               <span className={s.itemName}>{u.name}</span>
               <span className={s.itemEmail}>{already ? 'já é membro' : ''}</span>
             </button>

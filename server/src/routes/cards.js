@@ -2,22 +2,27 @@ import { Hono } from 'hono'
 import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
 import { createNotification } from './notifications.js'
+import { resolveBoardRole } from '../lib/boardAccess.js'
 
 const app = new Hono()
 app.use('*', auth)
+
+// Status do cartão no estilo Planner — independente da coluna (bucket) em
+// que ele está. Usado pelo card em si e pelas métricas de conclusão.
+const PROGRESS_VALUES = ['not_started', 'in_progress', 'completed']
+const PROGRESS_LABELS = { not_started: 'Não iniciado', in_progress: 'Em andamento', completed: 'Concluído' }
 
 async function logActivity(db, cardId, userId, action, details) {
   await db.prepare('INSERT INTO card_activities (id, card_id, user_id, action, details) VALUES (?, ?, ?, ?, ?)')
     .run(uuid(), cardId, userId, action, details)
 }
 
-// Confirma que o usuário é owner ou membro do quadro (montado sob /api/boards/:boardId/cards)
+// Confirma acesso ao quadro (montado sob /api/boards/:boardId/cards) — ver lib/boardAccess.js
 async function checkBoardAccess(db, boardId, userId) {
   const board = await db.prepare('SELECT * FROM boards WHERE id = ?').get(boardId)
   if (!board) return { board: null, allowed: false }
-  if (board.owner_id === userId) return { board, allowed: true }
-  const member = await db.prepare('SELECT 1 FROM board_members WHERE board_id = ? AND user_id = ?').get(boardId, userId)
-  return { board, allowed: !!member }
+  const role = await resolveBoardRole(db, board, userId)
+  return { board, allowed: !!role }
 }
 
 async function getCardMembers(db, cardId) {
@@ -44,7 +49,7 @@ app.get('/', async c => {
   const cards = await db.prepare(`
     SELECT cd.*, col.name as column_name
     FROM cards cd JOIN columns col ON col.id = cd.column_id
-    WHERE cd.board_id = ? AND cd.archived = ?
+    WHERE cd.board_id = ? AND cd.archived = ? AND col.deleted_at IS NULL
     ORDER BY cd.column_id, cd.order_index
   `).all(boardId, archived)
 
@@ -61,9 +66,10 @@ app.post('/', async c => {
   if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
   if (!allowed) return c.json({ error: 'Sem acesso a este quadro' }, 403)
 
-  const { title, description, column_id, due_date, priority } = await c.req.json()
+  const { title, description, column_id, due_date, priority, progress } = await c.req.json()
   if (!title) return c.json({ error: 'Título é obrigatório' }, 400)
   if (!column_id) return c.json({ error: 'column_id é obrigatório' }, 400)
+  if (progress !== undefined && !PROGRESS_VALUES.includes(progress)) return c.json({ error: 'progress inválido' }, 400)
 
   const column = await db.prepare('SELECT * FROM columns WHERE id = ? AND board_id = ?').get(column_id, boardId)
   if (!column) return c.json({ error: 'Coluna não encontrada neste quadro' }, 400)
@@ -73,9 +79,9 @@ app.post('/', async c => {
 
   const id = uuid()
   await db.prepare(`
-    INSERT INTO cards (id, board_id, column_id, title, description, due_date, priority, order_index, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, boardId, column_id, title, description || null, due_date || null, priority || null, orderIndex, user.id)
+    INSERT INTO cards (id, board_id, column_id, title, description, due_date, priority, progress, order_index, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, boardId, column_id, title, description || null, due_date || null, priority || null, progress || 'not_started', orderIndex, user.id)
 
   await logActivity(db, id, user.id, 'created', 'Cartão criado')
 
@@ -114,7 +120,7 @@ app.get('/:id', async c => {
     WHERE ca.card_id = ? ORDER BY ca.created_at DESC LIMIT 50
   `).all(id)
   card.time_entries = await db.prepare(`
-    SELECT te.*, u.name as user_name
+    SELECT te.*, u.name as user_name, u.avatar
     FROM time_entries te JOIN users u ON u.id = te.user_id
     WHERE te.card_id = ? ORDER BY te.created_at DESC
   `).all(id)
@@ -141,17 +147,30 @@ app.put('/:id', async c => {
   if (!card) return c.json({ error: 'Cartão não encontrado' }, 404)
 
   const body = await c.req.json()
-  const { title, description, due_date, priority } = body
+  const { title, description, due_date, priority, progress } = body
+  if (progress !== undefined && !PROGRESS_VALUES.includes(progress)) return c.json({ error: 'progress inválido' }, 400)
 
   const newTitle = title ?? card.title
   const newDescription = description !== undefined ? description : card.description
   const newDueDate = due_date !== undefined ? due_date : card.due_date
   const newPriority = priority !== undefined ? priority : card.priority
+  const newProgress = progress !== undefined ? progress : card.progress
+
+  // completed_at só fica preenchido enquanto o status for 'completed' — vira
+  // a base das métricas de "quando foi concluído"; se voltar atrás, limpa.
+  const completingNow = newProgress === 'completed' && card.progress !== 'completed'
+  const uncompletingNow = newProgress !== 'completed' && card.progress === 'completed'
 
   await db.prepare(`
-    UPDATE cards SET title = ?, description = ?, due_date = ?, priority = ?, updated_at = datetime('now')
+    UPDATE cards SET title = ?, description = ?, due_date = ?, priority = ?, progress = ?,
+      completed_at = CASE WHEN ? = 1 THEN datetime('now') WHEN ? = 1 THEN NULL ELSE completed_at END,
+      updated_at = datetime('now')
     WHERE id = ?
-  `).run(newTitle, newDescription, newDueDate, newPriority, id)
+  `).run(newTitle, newDescription, newDueDate, newPriority, newProgress, completingNow ? 1 : 0, uncompletingNow ? 1 : 0, id)
+
+  if (progress !== undefined && progress !== card.progress) {
+    await logActivity(db, id, user.id, 'progress', PROGRESS_LABELS[newProgress] || newProgress)
+  }
 
   return c.json(await db.prepare('SELECT * FROM cards WHERE id = ?').get(id))
 })

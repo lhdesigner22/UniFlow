@@ -1,0 +1,61 @@
+.page { padding: 36px 32px; display: flex; flex-direction: column; gap: 24px; }
+
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; }
+.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+.filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.filters select { width: auto; min-width: 180px; }
+.filters input[type="date"] { width: auto; }
+.rangeSep { font-size: 13px; color: var(--text-muted); }
+
+.statsRow { display: flex; flex-wrap: wrap; gap: 14px; }
+.statTile {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 18px 22px;
+  display: flex; flex-direction: column; gap: 4px; box-shadow: var(--shadow-sm);
+  min-width: 140px;
+  transition: transform .18s var(--ease), box-shadow .18s var(--ease);
+  animation: fadeIn .3s var(--ease) both;
+}
+.statTile:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.statsRow > *:nth-child(1) { animation-delay: .02s; }
+.statsRow > *:nth-child(2) { animation-delay: .06s; }
+.statsRow > *:nth-child(3) { animation-delay: .10s; }
+.statsRow > *:nth-child(4) { animation-delay: .14s; }
+.statsRow > *:nth-child(5) { animation-delay: .18s; }
+.statsRow > *:nth-child(n+6) { animation-delay: .22s; }
+.statNumber { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--text); }
+.statNumber.green { color: #22c55e; }
+.statNumber.amber { color: #f59e0b; }
+.statNumber.red { color: var(--danger, #ef4444); }
+.statLabel { font-size: 12px; color: var(--text-muted); }
+
+.chartsGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.chartCard {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm);
+  transition: box-shadow .2s var(--ease);
+  /* Entrada é o <Reveal> (componente) que cuida, ao rolar até aqui — não
+     um fadeIn de CSS que já teria acabado antes da pessoa rolar a página. */
+}
+.chartCard:hover { box-shadow: var(--shadow-md); }
+.chartCard h4 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+.chartEmpty { font-size: 12px; color: var(--text-muted); padding: 40px 0; text-align: center; }
+.tooltip {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 8px 12px; font-size: 12px; box-shadow: var(--shadow-md);
+}
+
+.empty { padding: 60px 0; text-align: center; color: var(--text-muted); }
+.skeleton {
+  height: 220px; border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+  background-size: 400% 100%; animation: shimmer 1.8s infinite;
+}
+
+@media (max-width: 768px) {
+  .page { padding: 20px 16px; }
+  .header { flex-direction: column; }
+  .chartsGrid { grid-template-columns: 1fr; }
+}

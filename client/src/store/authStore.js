@@ -6,20 +6,8 @@ export const useAuthStore = create((set) => ({
   token: localStorage.getItem('token'),
   loading: true,
 
-  login: async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password })
-    localStorage.setItem('token', data.token)
-    set({ user: data.user, token: data.token })
-  },
-
   loginWithGoogle: async (credential) => {
     const { data } = await api.post('/auth/google', { credential })
-    localStorage.setItem('token', data.token)
-    set({ user: data.user, token: data.token })
-  },
-
-  register: async (name, email, password) => {
-    const { data } = await api.post('/auth/register', { name, email, password })
     localStorage.setItem('token', data.token)
     set({ user: data.user, token: data.token })
   },

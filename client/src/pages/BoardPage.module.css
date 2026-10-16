@@ -26,6 +26,17 @@
   padding: 4px 24px 20px; overflow-x: auto; overflow-y: hidden;
 }
 
+.columnPreview {
+  width: 272px; padding: 10px 14px; border-radius: var(--radius);
+  background: var(--surface-2); border: 1px solid var(--border2); box-shadow: var(--shadow-md);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-weight: 600; font-size: 13px; color: var(--text); cursor: grabbing;
+}
+.columnPreviewCount {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  background: var(--border2); border-radius: 20px; padding: 1px 8px;
+}
+
 .newColumn { width: 240px; min-width: 240px; flex-shrink: 0; }
 .newColumnBtn {
   width: 100%; text-align: left; background: rgba(255,255,255,.35);
@@ -38,5 +49,16 @@
 /* ── Mobile ── */
 @media (max-width: 768px) {
   .header { padding: 12px 16px; }
-  .board { padding: 4px 16px 16px; }
+  /* Colunas empilhadas verticalmente em vez de lado a lado — rolar de lado
+     pra ver as outras colunas não é um gesto óbvio no celular; rolar a
+     página pra baixo é. Cada coluna vira uma seção com altura própria
+     (ver Column.module.css), então dá pra ver o começo de várias de uma vez. */
+  .board {
+    padding: 4px 16px 16px;
+    flex-direction: column;
+    align-items: stretch;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .newColumn { width: 100%; min-width: 0; }
 }

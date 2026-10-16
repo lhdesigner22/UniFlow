@@ -3,14 +3,36 @@ import api from '../../services/api'
 import Modal from '../common/Modal'
 import MemberPicker from '../common/MemberPicker'
 import { avatarColor } from '../../utils/avatarColor'
-import { formatDuration, hhmmToSeconds, secondsToHHMM, parseDbTimestamp } from '../../utils/formatDuration'
+import { formatDuration, hhmmToSeconds, secondsToHHMM, parseDbTimestamp, todayLocalISO } from '../../utils/formatDuration'
 import s from './CardModal.module.css'
+
+// Foto dentro de um "chip" (membro/lançamento de tempo/comentário) — cai
+// pra inicial se a imagem falhar ao carregar (bloqueio de extensão,
+// link expirado etc.) em vez de deixar um ícone de imagem quebrada.
+function ChipAvatar({ id, name, photo, style }) {
+  const [failed, setFailed] = useState(false)
+  return (
+    <span className={s.chipDot} style={{ background: avatarColor(id), ...style }}>
+      {photo && !failed
+        ? <img src={photo} alt={name} referrerPolicy="no-referrer" onError={() => setFailed(true)} className={s.chipPhoto} />
+        : name?.charAt(0).toUpperCase()}
+    </span>
+  )
+}
 
 const PRIORITIES = [
   { value: '', label: 'Sem prioridade' },
   { value: 'baixa', label: 'Baixa' },
   { value: 'media', label: 'Média' },
   { value: 'alta', label: 'Alta' },
+]
+
+// Status do cartão, no estilo Planner — independente da coluna/quadro em
+// que ele está (a coluna já é escolhida acima, no seletor "Coluna").
+const PROGRESS_OPTIONS = [
+  { value: 'not_started', label: '⚪ Não iniciado' },
+  { value: 'in_progress', label: '🟡 Em andamento' },
+  { value: 'completed', label: '🟢 Concluído' },
 ]
 
 function fmtDateTime(v) {
@@ -29,7 +51,7 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
   const [showMemberPicker, setShowMemberPicker] = useState(false)
   const [newChecklistTitle, setNewChecklistTitle] = useState('')
   const [newComment, setNewComment] = useState('')
-  const [manualTime, setManualTime] = useState({ duration: '', note: '', date: new Date().toISOString().slice(0, 10) })
+  const [manualTime, setManualTime] = useState({ duration: '', note: '', date: todayLocalISO() })
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [starting, setStarting] = useState(false)
 
@@ -86,6 +108,13 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
   const updateField = async (field, value) => {
     const { data } = await api.put(`/boards/${boardId}/cards/${cardId}`, { [field]: value || null })
     patch(prev => ({ ...prev, ...data }))
+  }
+
+  // ── Coluna (mesma rota usada pelo drag-and-drop do board) ─────
+  const moveToColumn = async (columnId) => {
+    if (!columnId || columnId === card.column_id) return
+    await api.post(`/boards/${boardId}/cards/${cardId}/move`, { column_id: columnId })
+    patch(prev => ({ ...prev, column_id: columnId }))
   }
 
   // ── Labels ────────────────────────────────────────────────────
@@ -154,7 +183,7 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
       time_entries: [data, ...(prev.time_entries || [])],
       total_seconds: (prev.total_seconds || 0) + seconds,
     }))
-    setManualTime({ duration: '', note: '', date: new Date().toISOString().slice(0, 10) })
+    setManualTime({ duration: '', note: '', date: todayLocalISO() })
   }
   const deleteTimeEntry = async (entry) => {
     await api.delete(`/time/${entry.id}`)
@@ -195,15 +224,23 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
       <div className={s.wrap}>
         {/* ── Title ── */}
         <input
-          className={s.titleInput}
+          className={`${s.titleInput} ${card.progress === 'completed' ? s.titleCompleted : ''}`}
           value={titleDraft}
           onChange={e => setTitleDraft(e.target.value)}
           onBlur={saveTitle}
           onKeyDown={e => e.key === 'Enter' && e.target.blur()}
         />
 
-        {/* ── Meta row: due date, priority, members, labels ── */}
+        {/* ── Meta row: coluna, due date, priority ── */}
         <div className={s.metaGrid}>
+          <div className={s.metaField}>
+            <span className="label">Coluna</span>
+            <select value={card.column_id || ''} onChange={e => moveToColumn(e.target.value)}>
+              {(board.columns || []).slice().sort((a, b) => a.order_index - b.order_index).map(col => (
+                <option key={col.id} value={col.id}>{col.name}</option>
+              ))}
+            </select>
+          </div>
           <div className={s.metaField}>
             <span className="label">Prazo</span>
             <input type="date" value={card.due_date ? card.due_date.slice(0, 10) : ''} onChange={e => updateField('due_date', e.target.value)} />
@@ -214,6 +251,12 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
               {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
+          <div className={s.metaField}>
+            <span className="label">Status</span>
+            <select value={card.progress || 'not_started'} onChange={e => updateField('progress', e.target.value)}>
+              {PROGRESS_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+          </div>
         </div>
 
         <div className={s.metaField}>
@@ -221,7 +264,7 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
           <div className={s.chipsRow}>
             {(card.members || []).map(m => (
               <span key={m.id} className={s.chip}>
-                <span className={s.chipDot} style={{ background: avatarColor(m.id) }}>{m.name?.charAt(0).toUpperCase()}</span>
+                <ChipAvatar id={m.id} name={m.name} photo={m.avatar} />
                 {m.name}
                 <button className={s.chipRemove} onClick={() => removeMember(m.id)}>×</button>
               </span>
@@ -328,7 +371,7 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
           <div className={s.timeList}>
             {(card.time_entries || []).map(e => (
               <div key={e.id} className={s.timeRow}>
-                <span className={s.chipDot} style={{ background: avatarColor(e.user_id), width: 20, height: 20, fontSize: 10 }}>{e.user_name?.charAt(0).toUpperCase()}</span>
+                <ChipAvatar id={e.user_id} name={e.user_name} photo={e.avatar} style={{ width: 20, height: 20, fontSize: 10 }} />
                 <span className={s.timeUser}>{e.user_name}</span>
                 <span className={s.timeDuration}>{formatDuration(e.duration_seconds)}</span>
                 {e.note && <span className={s.timeNote}>{e.note}</span>}
@@ -351,7 +394,7 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
           <div className={s.commentList}>
             {(card.comments || []).map(c => (
               <div key={c.id} className={s.commentRow}>
-                <span className={s.chipDot} style={{ background: avatarColor(c.user_id || c.id), width: 22, height: 22, fontSize: 10 }}>{c.user_name?.charAt(0).toUpperCase()}</span>
+                <ChipAvatar id={c.user_id || c.id} name={c.user_name} photo={c.avatar} style={{ width: 22, height: 22, fontSize: 10 }} />
                 <div className={s.commentBody}>
                   <div className={s.commentMeta}><strong>{c.user_name}</strong> <span>{fmtDateTime(c.created_at)}</span></div>
                   <div>{c.content}</div>

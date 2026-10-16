@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import s from './Auth.module.css'
 
@@ -30,12 +30,12 @@ const FEATURES = [
   'Colaboração com controle de acesso',
 ]
 
+// Login exclusivamente via Google — sem cadastro/senha própria (decisão do
+// time: entrar só com a conta Google corporativa, sem outra porta de entrada).
 export default function LoginPage() {
-  const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const { login, loginWithGoogle } = useAuthStore()
+  const { loginWithGoogle } = useAuthStore()
   const navigate = useNavigate()
   const actionRef = useRef(null)
   actionRef.current = { loginWithGoogle, navigate }
@@ -76,14 +76,6 @@ export default function LoginPage() {
     if (!popup) setError('Popup bloqueado pelo navegador. Permita popups para este site e tente novamente.')
   }
 
-  const submit = async e => {
-    e.preventDefault()
-    setError(''); setLoading(true)
-    try { await login(form.email, form.password); navigate('/') }
-    catch (err) { setError(err.response?.data?.error || 'E-mail ou senha incorretos') }
-    finally { setLoading(false) }
-  }
-
   return (
     <div className={s.page}>
       {/* ── Brand panel ── */}
@@ -117,66 +109,43 @@ export default function LoginPage() {
         <div className={s.formBox}>
           <div className={s.formHeader}>
             <h1 className={s.formTitle}>Bem-vindo de volta</h1>
-            <p className={s.formSub}>Entre na sua conta para continuar</p>
+            <p className={s.formSub}>Entre com sua conta Google corporativa pra continuar</p>
           </div>
 
-          {googleEnabled && (
-            <div className={s.googleSection}>
-              <button
-                type="button"
-                className={s.googleButton}
-                onClick={handleGoogleClick}
-                disabled={googleLoading}
-              >
-                {googleLoading ? (
-                  <span className={s.googleSpinner} />
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
-                    <path fill="#4285F4" d="M46.145 24.503c0-1.636-.146-3.21-.418-4.724H24v8.937h12.434c-.536 2.886-2.165 5.33-4.613 6.973v5.797h7.474c4.374-4.027 6.85-9.959 6.85-16.983z"/>
-                    <path fill="#34A853" d="M24 47c6.24 0 11.47-2.069 15.294-5.614l-7.474-5.797c-2.07 1.386-4.716 2.203-7.82 2.203-6.015 0-11.107-4.062-12.928-9.525H3.338v5.985C7.142 41.862 14.978 47 24 47z"/>
-                    <path fill="#FBBC05" d="M11.072 28.267A13.984 13.984 0 0 1 10.5 24c0-1.493.256-2.944.572-4.267V13.748H3.338A23.01 23.01 0 0 0 1 24c0 3.715.887 7.228 2.338 10.252l7.734-5.985z"/>
-                    <path fill="#EA4335" d="M24 10.208c3.39 0 6.43 1.165 8.822 3.455l6.614-6.614C35.465 3.41 30.235 1 24 1 14.978 1 7.142 6.138 3.338 13.748l7.734 5.985C12.893 14.27 17.985 10.208 24 10.208z"/>
-                  </svg>
-                )}
-                {googleLoading ? 'Autenticando...' : 'Continuar com Google'}
-              </button>
-              <div className={s.divider}><span>ou</span></div>
-            </div>
+          {error && <div className={s.error}>{error}</div>}
+
+          {googleEnabled ? (
+            <button
+              type="button"
+              className={s.googleButton}
+              onClick={handleGoogleClick}
+              disabled={googleLoading}
+            >
+              {googleLoading ? (
+                <span className={s.googleSpinner} />
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
+                  <path fill="#4285F4" d="M46.145 24.503c0-1.636-.146-3.21-.418-4.724H24v8.937h12.434c-.536 2.886-2.165 5.33-4.613 6.973v5.797h7.474c4.374-4.027 6.85-9.959 6.85-16.983z"/>
+                  <path fill="#34A853" d="M24 47c6.24 0 11.47-2.069 15.294-5.614l-7.474-5.797c-2.07 1.386-4.716 2.203-7.82 2.203-6.015 0-11.107-4.062-12.928-9.525H3.338v5.985C7.142 41.862 14.978 47 24 47z"/>
+                  <path fill="#FBBC05" d="M11.072 28.267A13.984 13.984 0 0 1 10.5 24c0-1.493.256-2.944.572-4.267V13.748H3.338A23.01 23.01 0 0 0 1 24c0 3.715.887 7.228 2.338 10.252l7.734-5.985z"/>
+                  <path fill="#EA4335" d="M24 10.208c3.39 0 6.43 1.165 8.822 3.455l6.614-6.614C35.465 3.41 30.235 1 24 1 14.978 1 7.142 6.138 3.338 13.748l7.734 5.985C12.893 14.27 17.985 10.208 24 10.208z"/>
+                </svg>
+              )}
+              {googleLoading ? 'Autenticando...' : 'Continuar com Google'}
+            </button>
+          ) : (
+            <p className={s.error}>Login com Google não está configurado. Contate o administrador.</p>
           )}
 
-          <form onSubmit={submit} className={s.form}>
-            {error && <div className={s.error}>{error}</div>}
-
-            <div className="form-group">
-              <label className="label">E-mail corporativo</label>
-              <input
-                type="email" autoComplete="email" autoFocus
-                value={form.email}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="voce@empresa.com"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="label">Senha</label>
-              <input
-                type="password" autoComplete="current-password"
-                value={form.password}
-                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <button className={`btn btn-primary ${s.submitBtn}`} disabled={loading}>
-              {loading ? 'Entrando...' : 'Entrar na plataforma'}
-            </button>
-          </form>
-
-          <p className={s.foot}>
-            Não tem uma conta? <Link to="/register">Criar conta</Link>
-          </p>
+          {googleEnabled && (
+            <p className={s.googleHint}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="10" width="16" height="10" rx="2"/>
+                <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+              </svg>
+              Você será redirecionado pro login da sua conta Google corporativa.
+            </p>
+          )}
         </div>
       </main>
     </div>

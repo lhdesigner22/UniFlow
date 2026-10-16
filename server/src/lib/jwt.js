@@ -8,7 +8,10 @@ function key(secret) {
   return new TextEncoder().encode(secret)
 }
 
-export async function signJwt(payload, secret, expiresIn = '7d') {
+// 48h (não mais 7 dias) — sessão mais curta força reautenticação com mais
+// frequência, o que também mantém nome/foto sincronizados com o Google
+// sem precisar de "forçar novo login" manual (ver admin.js).
+export async function signJwt(payload, secret, expiresIn = '48h') {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()

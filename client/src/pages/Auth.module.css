@@ -4,10 +4,6 @@
   display: grid;
   grid-template-columns: 480px 1fr;
 }
-@media (max-width: 860px) {
-  .page { grid-template-columns: 1fr; }
-  .brand { display: none; }
-}
 
 /* ── Left brand panel ─────────────────────────────────────────── */
 .brand {
@@ -67,7 +63,13 @@
 }
 .brandFeature {
   display: flex; align-items: center; gap: 12px;
+  animation: featureIn .4s var(--ease, cubic-bezier(.4,0,.2,1)) both;
 }
+.brandFeature:nth-child(1) { animation-delay: .15s; }
+.brandFeature:nth-child(2) { animation-delay: .25s; }
+.brandFeature:nth-child(3) { animation-delay: .35s; }
+.brandFeature:nth-child(4) { animation-delay: .45s; }
+@keyframes featureIn { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:none; } }
 .featureDot {
   width: 20px; height: 20px; border-radius: 50%;
   background: rgba(59,126,255,.15);
@@ -86,8 +88,17 @@
 }
 
 /* ── Right form panel ─────────────────────────────────────────── */
+/* Só o botão do Google ocupa pouco espaço vertical — sem o painel de
+   marca (que tem gradiente/grade própria) esse lado ficava um vazio liso
+   demais. background-image redesenha uma versão mais discreta da mesma
+   decoração do .brand, pra não parecer que "faltou algo" no layout. */
 .formSide {
   background: var(--navy2);
+  background-image:
+    radial-gradient(ellipse 60% 50% at 85% 15%, rgba(59,126,255,.06) 0%, transparent 60%),
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
   display: flex; align-items: center; justify-content: center;
   padding: 48px 40px;
 }
@@ -165,6 +176,22 @@
 }
 .foot a { color: var(--blue); font-weight: 500; }
 .foot a:hover { text-decoration: underline; }
+
+.googleHint {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 18px; font-size: 12.5px; color: var(--muted);
+}
+.googleHint svg { flex-shrink: 0; opacity: .7; }
+
+/* ── Mobile: esconde o painel de marca, formulário ocupa a tela toda ──
+   Importante: essa regra precisa vir DEPOIS da declaração base de `.brand`
+   (lá em cima) — como as duas têm a mesma especificidade, a que aparece
+   por último no arquivo é que vale, então colocar isso antes da base fazia
+   o `display:none` nunca ter efeito, não importa o tamanho da tela. ── */
+@media (max-width: 860px) {
+  .page { grid-template-columns: 1fr; }
+  .brand { display: none; }
+}
 
 /* ── Mobile form panel ────────────────────────────────────────── */
 @media (max-width: 480px) {

@@ -2,20 +2,18 @@ import { Hono } from 'hono'
 import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
 import { createNotification } from './notifications.js'
+import { resolveBoardRole, getVisibleBoardIds, isSuperAdmin } from '../lib/boardAccess.js'
 
 const app = new Hono()
 app.use('*', auth)
 
 const DEFAULT_COLUMNS = ['A Fazer', 'Em Andamento', 'Concluído']
 
-// Resolve o board + o papel do usuário requisitante nele.
-// role: 'owner' | 'admin' | 'member' | null (null = sem acesso)
+// Resolve o board + o papel do usuário requisitante nele (ver lib/boardAccess.js).
 async function getBoardAccess(db, boardId, userId) {
   const board = await db.prepare('SELECT * FROM boards WHERE id = ?').get(boardId)
   if (!board) return { board: null, role: null }
-  if (board.owner_id === userId) return { board, role: 'owner' }
-  const member = await db.prepare('SELECT role FROM board_members WHERE board_id = ? AND user_id = ?').get(boardId, userId)
-  return { board, role: member ? member.role : null }
+  return { board, role: await resolveBoardRole(db, board, userId) }
 }
 
 async function getMembers(db, boardId) {
@@ -27,21 +25,39 @@ async function getMembers(db, boardId) {
   `).all(boardId)
 }
 
-// GET / — quadros onde sou owner ou membro
+// GET / — quadros onde sou owner ou membro, MAIS (se eu for Super Admin com
+// departamento definido) os quadros de qualquer dono do meu departamento —
+// visão de controle por área (ver lib/boardAccess.js). Por padrão só os
+// ativos (não arquivados); `?archived=1` traz só os arquivados (usado pela
+// tela de "Quadros arquivados", pra restaurar).
 app.get('/', async c => {
   const db = c.get('db')
   const userId = c.get('user').id
+  const wantArchived = c.req.query('archived') === '1' ? 1 : 0
 
+  const visibleIds = await getVisibleBoardIds(db, userId)
+  if (visibleIds.length === 0) return c.json([])
+
+  const placeholders = visibleIds.map(() => '?').join(',')
   const boards = await db.prepare(`
     SELECT b.*,
       (SELECT COUNT(*) FROM board_members WHERE board_id = b.id) as member_count
     FROM boards b
-    WHERE b.owner_id = ? OR b.id IN (SELECT board_id FROM board_members WHERE user_id = ?)
+    WHERE b.id IN (${placeholders}) AND COALESCE(b.archived, 0) = ?
     ORDER BY b.created_at DESC
-  `).all(userId, userId)
+  `).all(...visibleIds, wantArchived)
+
+  // Auditor vê tudo por um motivo diferente (perfil de leitura total, não
+  // "mesmo departamento") — não rotula os quadros dele como "visão de
+  // departamento", que seria enganoso.
+  const isAuditor = (await db.prepare('SELECT system_role FROM users WHERE id = ?').get(userId))?.system_role === 'auditor'
 
   for (const board of boards) {
     board.members = await getMembers(db, board.id)
+    // Sinaliza pro frontend que este quadro apareceu por "visão de
+    // departamento" (não porque o usuário é dono/membro de fato) — pra UI
+    // poder deixar isso claro em vez de confundir com um convite normal.
+    board.is_dept_view = !isAuditor && board.owner_id !== userId && !board.members.some(m => m.id === userId)
   }
 
   return c.json(boards)
@@ -80,7 +96,7 @@ app.get('/:id', async c => {
   if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
   if (!role) return c.json({ error: 'Sem acesso a este quadro' }, 403)
 
-  board.columns = await db.prepare('SELECT * FROM columns WHERE board_id = ? ORDER BY order_index').all(id)
+  board.columns = await db.prepare('SELECT * FROM columns WHERE board_id = ? AND deleted_at IS NULL ORDER BY order_index').all(id)
   board.members = await getMembers(db, id)
   board.labels = await db.prepare('SELECT * FROM board_labels WHERE board_id = ?').all(id)
   board.my_role = role
@@ -103,6 +119,43 @@ app.put('/:id', async c => {
     .run(name ?? board.name, description !== undefined ? description : board.description, color ?? board.color, id)
 
   return c.json(await db.prepare('SELECT * FROM boards WHERE id = ?').get(id))
+})
+
+// POST /:id/archive — owner, admin, OU qualquer Super Admin com acesso ao
+// quadro (dono, membro comum, ou só por visão de departamento — qualquer
+// papel não-nulo). Some da lista principal sem apagar nada (colunas/cards/
+// histórico/lançamentos de tempo continuam intactos).
+app.post('/:id/archive', async c => {
+  const db = c.get('db')
+  const user = c.get('user')
+  const id = c.req.param('id')
+
+  const { board, role } = await getBoardAccess(db, id, user.id)
+  if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
+  if (!role) return c.json({ error: 'Sem acesso a este quadro' }, 403)
+  if (role !== 'owner' && role !== 'admin' && !(await isSuperAdmin(db, user.id))) {
+    return c.json({ error: 'Sem permissão' }, 403)
+  }
+
+  await db.prepare('UPDATE boards SET archived = 1 WHERE id = ?').run(id)
+  return c.json({ ok: true })
+})
+
+// POST /:id/unarchive — mesma regra do archive acima
+app.post('/:id/unarchive', async c => {
+  const db = c.get('db')
+  const user = c.get('user')
+  const id = c.req.param('id')
+
+  const { board, role } = await getBoardAccess(db, id, user.id)
+  if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
+  if (!role) return c.json({ error: 'Sem acesso a este quadro' }, 403)
+  if (role !== 'owner' && role !== 'admin' && !(await isSuperAdmin(db, user.id))) {
+    return c.json({ error: 'Sem permissão' }, 403)
+  }
+
+  await db.prepare('UPDATE boards SET archived = 0 WHERE id = ?').run(id)
+  return c.json({ ok: true })
 })
 
 // DELETE /:id — owner apenas. Cascade completo.

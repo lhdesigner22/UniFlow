@@ -1,16 +1,20 @@
+import RolesTab from '../components/admin/RolesTab'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import MemberPicker from '../components/common/MemberPicker'
-import { confirmDialog } from '../store/dialogStore'
+import { confirmDialog, alertDialog } from '../store/dialogStore'
 import { avatarColor } from '../utils/avatarColor'
+import { parseDbTimestamp } from '../utils/formatDuration'
+import Reveal from '../components/common/Reveal'
 import s from './AdminPage.module.css'
 
 const COLORS = ['#4a7cf7','#22c55e','#f59e0b','#ef4444','#8b5cf6','#14b8a6','#ec4899','#f97316','#64748b']
 
 const ROLE_LABELS = {
   super_admin: { label: '⭐ Super Admin', color: '#f59e0b' },
+  auditor:     { label: '👁️ Auditor',     color: '#8b5cf6' },
   user:        { label: '👤 Usuário',     color: '#64748b' },
 }
 
@@ -84,16 +88,12 @@ export default function AdminPage() {
   const [tab, setTab] = useState('users')
   const [users, setUsers] = useState([])
   const [departments, setDepartments] = useState([])
+  const [roles, setRoles] = useState([])       // cargos (perfis de acesso)
+  const [modules, setModules] = useState([])   // módulos do sistema (linhas da matriz de permissões)
+  const [glpiEntities, setGlpiEntities] = useState([]) // entidades vistas no GLPI (lista de escolha de cada departamento)
   const [newDept, setNewDept] = useState({ name: '', color: '#4a7cf7' })
   const [deptMsg, setDeptMsg] = useState(null)
   const [loading, setLoading] = useState(true)
-
-  // ── SLA ───────────────────────────────────────────────────
-  const [boards, setBoards] = useState([])
-  const [slaRules, setSlaRules] = useState([])
-  const [newRule, setNewRule] = useState({ name: '', board_id: '', threshold_hours: 24 })
-  const [ruleMsg, setRuleMsg] = useState(null)
-  const [creatingRule, setCreatingRule] = useState(false)
 
   // ── Notificações (digests + outbox) ──────────────────────
   const [settings, setSettings] = useState({})
@@ -102,40 +102,70 @@ export default function AdminPage() {
   const [outbox, setOutbox] = useState({ rows: [], pendingCount: 0 })
   const [settingsMsg, setSettingsMsg] = useState(null)
 
+  const isAuditor = me?.system_role === 'auditor'
+
   useEffect(() => {
-    if (me && me.system_role !== 'super_admin') { navigate('/'); return }
+    if (me && me.system_role !== 'super_admin' && me.system_role !== 'auditor') { navigate('/'); return }
     Promise.all([
       api.get('/admin/users'),
       api.get('/admin/departments'),
-      api.get('/boards').catch(() => ({ data: [] })),
-      api.get('/admin/sla-rules').catch(() => ({ data: [] })),
       api.get('/admin/settings').catch(() => ({ data: {} })),
       api.get('/admin/settings/digest-recipients', { params: { type: 'weekly' } }).catch(() => ({ data: [] })),
       api.get('/admin/settings/digest-recipients', { params: { type: 'daily' } }).catch(() => ({ data: [] })),
       api.get('/admin/settings/email-outbox').catch(() => ({ data: { rows: [], pendingCount: 0 } })),
-    ]).then(([u, d, b, rules, set, weekly, daily, ob]) => {
+      api.get('/admin/glpi/unparsed').catch(() => ({ data: [] })),
+      api.get('/admin/roles').catch(() => ({ data: { roles: [], modules: [] } })),
+      api.get('/admin/glpi/entities').catch(() => ({ data: [] })),
+    ]).then(([u, d, set, weekly, daily, ob, glpiUnparsed, rl, ent]) => {
+      setGlpiEntities(ent.data || [])
       setUsers(u.data)
       setDepartments(d.data)
-      setBoards(b.data || [])
-      setSlaRules(rules.data || [])
+      setRoles(rl.data?.roles || [])
+      setModules(rl.data?.modules || [])
       setSettings(set.data || {})
       setWeeklyRecipients(weekly.data || [])
       setDailyRecipients(daily.data || [])
       setOutbox(ob.data || { rows: [], pendingCount: 0 })
+      setUnparsedTickets(glpiUnparsed.data || [])
       setLoading(false)
     })
   }, [me])
 
   // ── Usuários ──────────────────────────────────────────────
   const updateUser = async (userId, patch) => {
-    const { data } = await api.put(`/admin/users/${userId}`, patch)
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...data } : u))
+    try {
+      const { data } = await api.put(`/admin/users/${userId}`, patch)
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...data } : u))
+      if (patch.role_id !== undefined) {
+        // recontagem das pessoas por cargo (a lista de cargos mostra "N pessoas")
+        const before = users.find(u => u.id === userId)?.role_id
+        setRoles(prev => prev.map(r => r.id === before ? { ...r, user_count: Math.max(0, r.user_count - 1) } : r.id === data.role_id ? { ...r, user_count: r.user_count + 1 } : r))
+      }
+    } catch (e) {
+      await alertDialog(e.response?.data?.error || 'Erro ao salvar.', { title: 'Erro', danger: true })
+    }
   }
 
   const deleteUser = async (userId) => {
     if (!(await confirmDialog('Excluir este usuário? Isso não pode ser desfeito.'))) return
     await api.delete(`/admin/users/${userId}`)
     setUsers(prev => prev.filter(u => u.id !== userId))
+  }
+
+  // Derruba a sessão atual da pessoa (token_version) — ela precisa entrar
+  // de novo com o Google, o que já sincroniza a foto/nome na hora.
+  const forceRelogin = async (u) => {
+    const ok = await confirmDialog(
+      `Forçar novo login de "${u.name}"? A sessão atual dela é encerrada — na próxima ação ela cai pra tela de login e precisa entrar de novo com o Google.`,
+      { title: 'Forçar novo login' }
+    )
+    if (!ok) return
+    try {
+      await api.post(`/admin/users/${u.id}/force-relogin`)
+      await alertDialog(`Pronto — a sessão de "${u.name}" foi encerrada. Assim que ela entrar de novo, a foto/nome sincronizam com o Google.`, { title: 'Feito' })
+    } catch (e) {
+      await alertDialog(e.response?.data?.error || 'Erro ao forçar o novo login.', { title: 'Erro', danger: true })
+    }
   }
 
   // ── Departamentos ─────────────────────────────────────────
@@ -151,62 +181,23 @@ export default function AdminPage() {
     }
   }
 
+  // Entidade do GLPI do departamento: define quais chamados (Backlog/Total) a equipe dele vê
+  const saveDeptEntity = async (dept, value) => {
+    const next = value.trim()
+    if (next === (dept.glpi_entity_name || '')) return
+    try {
+      const { data } = await api.put(`/admin/departments/${dept.id}`, { glpi_entity_name: next })
+      setDepartments(prev => prev.map(d => d.id === dept.id ? { ...d, glpi_entity_name: data.glpi_entity_name } : d))
+    } catch (e) {
+      await alertDialog(e.response?.data?.error || 'Erro ao salvar a entidade.', { title: 'Erro', danger: true })
+    }
+  }
+
   const deleteDept = async (id) => {
     if (!(await confirmDialog('Excluir departamento? Os usuários associados perderão o vínculo.'))) return
     await api.delete(`/admin/departments/${id}`)
     setDepartments(prev => prev.filter(d => d.id !== id))
     setUsers(prev => prev.map(u => u.department_id === id ? { ...u, department_id: null, department_name: null } : u))
-  }
-
-  // ── SLA ───────────────────────────────────────────────────
-  const createRule = async () => {
-    if (!newRule.name.trim() || !newRule.threshold_hours) return
-    setCreatingRule(true)
-    setRuleMsg(null)
-    try {
-      const { data } = await api.post('/admin/sla-rules', {
-        name: newRule.name.trim(),
-        board_id: newRule.board_id || null,
-        threshold_hours: Number(newRule.threshold_hours),
-      })
-      setSlaRules(prev => [...prev, { ...data, recipients: data.recipients || [] }])
-      setNewRule({ name: '', board_id: '', threshold_hours: 24 })
-    } catch (e) {
-      setRuleMsg({ type: 'error', text: e.response?.data?.error || 'Erro ao criar regra' })
-    } finally {
-      setCreatingRule(false)
-    }
-  }
-
-  const toggleRuleActive = async (rule) => {
-    const nextActive = rule.active ? 0 : 1
-    setSlaRules(prev => prev.map(r => r.id === rule.id ? { ...r, active: nextActive } : r))
-    try {
-      await api.put(`/admin/sla-rules/${rule.id}`, { active: nextActive })
-    } catch {
-      setSlaRules(prev => prev.map(r => r.id === rule.id ? { ...r, active: rule.active } : r))
-    }
-  }
-
-  const deleteRule = async (id) => {
-    if (!(await confirmDialog('Excluir esta regra de SLA?'))) return
-    await api.delete(`/admin/sla-rules/${id}`)
-    setSlaRules(prev => prev.filter(r => r.id !== id))
-  }
-
-  const addRuleRecipientUser = async (ruleId, user) => {
-    const { data } = await api.post(`/admin/sla-rules/${ruleId}/recipients`, { user_id: user.id })
-    setSlaRules(prev => prev.map(r => r.id === ruleId ? { ...r, recipients: [...(r.recipients || []), data] } : r))
-  }
-
-  const addRuleRecipientEmail = async (ruleId, email) => {
-    const { data } = await api.post(`/admin/sla-rules/${ruleId}/recipients`, { email })
-    setSlaRules(prev => prev.map(r => r.id === ruleId ? { ...r, recipients: [...(r.recipients || []), data] } : r))
-  }
-
-  const removeRuleRecipient = async (ruleId, recipientId) => {
-    await api.delete(`/admin/sla-rules/${ruleId}/recipients/${recipientId}`)
-    setSlaRules(prev => prev.map(r => r.id === ruleId ? { ...r, recipients: (r.recipients || []).filter(x => x.id !== recipientId) } : r))
   }
 
   // ── Notificações ──────────────────────────────────────────
@@ -236,6 +227,125 @@ export default function AdminPage() {
     await api.delete(`/admin/settings/digest-recipients/${id}`)
     if (type === 'weekly') setWeeklyRecipients(prev => prev.filter(r => r.id !== id))
     else setDailyRecipients(prev => prev.filter(r => r.id !== id))
+  }
+
+  // ── GLPI → Agenda ─────────────────────────────────────────
+  const [unparsedTickets, setUnparsedTickets] = useState([])
+  const [glpiSyncStatus, setGlpiSyncStatus] = useState(null)
+  const [syncingGlpi, setSyncingGlpi] = useState(false)
+
+  const syncGlpiNow = async () => {
+    setSyncingGlpi(true)
+    setGlpiSyncStatus({ type: 'loading', text: 'Sincronizando...' })
+    try {
+      const { data } = await api.post('/admin/glpi/sync-now')
+      if (data.skipped) {
+        setGlpiSyncStatus({ type: 'error', text: data.reason || 'Sincronização desativada.' })
+      } else {
+        setGlpiSyncStatus({
+          type: 'success',
+          text: `${data.totalMatched} chamado(s) na fila · ${data.created} evento(s) criado(s) · ${data.unparsed} não reconhecido(s) · ${data.skipped} já processado(s) antes${data.duplicates ? ` · ${data.duplicates} repetido(s) não entraram na Agenda` : ''}${data.remaining ? ` · ainda faltam ${data.remaining} chamado(s) novos — continuam entrando sozinhos, um lote por minuto` : ''}.`,
+        })
+      }
+      const up = await api.get('/admin/glpi/unparsed')
+      setUnparsedTickets(up.data || [])
+    } catch (e) {
+      setGlpiSyncStatus({ type: 'error', text: e.response?.data?.error || 'Erro ao sincronizar.' })
+    } finally {
+      setSyncingGlpi(false)
+    }
+  }
+
+  // Resolução retroativa: prévia (só lê) → confirma → marca Solucionado no GLPI
+  const [retroList, setRetroList] = useState(null)
+  const [retroStatus, setRetroStatus] = useState(null)
+  const [retroBusy, setRetroBusy] = useState(false)
+
+  const loadRetro = async () => {
+    setRetroBusy(true)
+    setRetroStatus(null)
+    try {
+      const { data } = await api.get('/admin/glpi/retroactive')
+      setRetroList(data)
+    } catch (e) {
+      setRetroStatus({ type: 'error', text: e.response?.data?.error || 'Erro ao buscar chamados retroativos.' })
+    } finally {
+      setRetroBusy(false)
+    }
+  }
+
+  const resolveRetro = async () => {
+    if (!retroList?.length) return
+    if (!window.confirm(`Marcar ${retroList.length} chamado(s) como Solucionado no GLPI? Isso altera os chamados no GLPI.`)) return
+    setRetroBusy(true)
+    setRetroStatus({ type: 'loading', text: 'Solucionando no GLPI...' })
+    try {
+      const { data } = await api.post('/admin/glpi/resolve-retroactive')
+      const err = data.errors?.length ? ` · ${data.errors.length} erro(s): ${data.errors[0].message}` : ''
+      const rest = data.remaining > 0 ? ` · restam ${data.remaining} (clique de novo)` : ''
+      setRetroStatus({
+        type: data.errors?.length ? 'error' : 'success',
+        text: `${data.solved} solucionado(s) · ${data.skipped} pulado(s) (status já tinha mudado)${data.notFound ? ` · ${data.notFound} não encontrado(s) no GLPI (apagado ou sem acesso)` : ''}${rest}${err}`,
+      })
+      const next = await api.get('/admin/glpi/retroactive')
+      setRetroList(next.data)
+    } catch (e) {
+      setRetroStatus({ type: 'error', text: e.response?.data?.error || 'Erro ao solucionar.' })
+    } finally {
+      setRetroBusy(false)
+    }
+  }
+
+  // Duplicatas: mesmo evento em vários chamados → fica o mais antigo, os outros
+  // são solucionados no GLPI e saem da Agenda
+  const [dupList, setDupList] = useState(null)
+  const [dupStatus, setDupStatus] = useState(null)
+  const [dupBusy, setDupBusy] = useState(false)
+  // dupList = { items, to_solve (a solucionar no GLPI), to_clean (já tratados no GLPI, só saem da Agenda) }
+  const dupCount = dupList?.to_solve || 0
+  const cleanCount = dupList?.to_clean || 0
+
+  const loadDups = async () => {
+    setDupBusy(true)
+    setDupStatus(null)
+    try {
+      const { data } = await api.get('/admin/glpi/duplicates')
+      setDupList(data)
+    } catch (e) {
+      setDupStatus({ type: 'error', text: e.response?.data?.error || 'Erro ao buscar duplicatas.' })
+    } finally {
+      setDupBusy(false)
+    }
+  }
+
+  const resolveDups = async () => {
+    if (!dupCount && !cleanCount) return
+    const parts = []
+    if (dupCount) parts.push(`solucionar ${dupCount} chamado(s) duplicado(s) no GLPI (um lote por minuto, em segundo plano)`)
+    if (cleanCount) parts.push(`tirar ${cleanCount} evento(s) repetido(s) já tratado(s) da Agenda`)
+    if (!window.confirm(`Vou ${parts.join(' e ')}, e remover os eventos repetidos da Agenda. Fica só o chamado mais antigo de cada grupo. Confirmar?`)) return
+    setDupBusy(true)
+    setDupStatus({ type: 'loading', text: 'Limpando duplicatas...' })
+    try {
+      const { data } = await api.post('/admin/glpi/resolve-duplicates')
+      const err = data.errors?.length ? ` · ${data.errors.length} erro(s): ${data.errors[0].message}` : ''
+      const rest = data.remaining > 0 ? ` · restam ${data.remaining}, continuam sendo solucionados em segundo plano (um lote por minuto, não precisa clicar de novo)` : (data.background ? ' · ainda entrando chamados novos; os repetidos deles serão solucionados em seguida' : '')
+      setDupStatus({
+        type: data.errors?.length ? 'error' : 'success',
+        text: `${data.cleaned ? `${data.cleaned} saíram da Agenda · ` : ''}${data.solved} solucionado(s)${data.skipped ? ` · ${data.skipped} já estavam em outro status` : ''}${data.notFound ? ` · ${data.notFound} não encontrado(s) no GLPI` : ''}${rest}${err}`,
+      })
+      const next = await api.get('/admin/glpi/duplicates')
+      setDupList(next.data)
+    } catch (e) {
+      setDupStatus({ type: 'error', text: e.response?.data?.error || 'Erro ao solucionar duplicatas.' })
+    } finally {
+      setDupBusy(false)
+    }
+  }
+
+  const dismissUnparsed = async (id) => {
+    await api.post(`/admin/glpi/unparsed/${id}/dismiss`)
+    setUnparsedTickets(prev => prev.filter(t => t.id !== id))
   }
 
   const [testEmail, setTestEmail] = useState('')
@@ -268,8 +378,12 @@ export default function AdminPage() {
     <div className={s.page}>
       <div className={s.header}>
         <div>
-          <h1 className={s.title}>⭐ Painel do Super Admin</h1>
-          <p className={s.sub}>Gerencie usuários, departamentos e permissões do sistema.</p>
+          <h1 className={s.title}>{isAuditor ? '👁️ Painel do Super Admin (somente leitura)' : '⭐ Painel do Super Admin'}</h1>
+          <p className={s.sub}>
+            {isAuditor
+              ? 'Você enxerga tudo aqui, mas não pode alterar nada nesta tela — seu perfil só edita a Base de Conhecimento.'
+              : 'Gerencie usuários, departamentos e permissões do sistema.'}
+          </p>
         </div>
         <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>← Voltar</button>
       </div>
@@ -279,28 +393,31 @@ export default function AdminPage() {
         <button className={`${s.tab} ${tab === 'users' ? s.active : ''}`} onClick={() => setTab('users')}>
           👥 Usuários <span className={s.badge}>{users.length}</span>
         </button>
+        <button className={`${s.tab} ${tab === 'roles' ? s.active : ''}`} onClick={() => setTab('roles')}>
+          🔑 Cargos <span className={s.badge}>{roles.length}</span>
+        </button>
         <button className={`${s.tab} ${tab === 'departments' ? s.active : ''}`} onClick={() => setTab('departments')}>
           🏢 Departamentos <span className={s.badge}>{departments.length}</span>
         </button>
-        <button className={`${s.tab} ${tab === 'sla' ? s.active : ''}`} onClick={() => setTab('sla')}>
-          ⏱️ SLA <span className={s.badge}>{slaRules.length}</span>
-        </button>
         <button className={`${s.tab} ${tab === 'notifications' ? s.active : ''}`} onClick={() => setTab('notifications')}>
           📧 Notificações
+        </button>
+        <button className={`${s.tab} ${tab === 'glpi' ? s.active : ''}`} onClick={() => setTab('glpi')}>
+          🖥️ GLPI {unparsedTickets.length > 0 && <span className={s.badge}>{unparsedTickets.length}</span>}
         </button>
       </div>
 
       {/* ── Tab: Usuários ── */}
       {tab === 'users' && (
-        <div className={s.section}>
+        <Reveal as="div" className={s.section}>
           <div className={s.info}>
-            <strong>🔐 Como funciona:</strong> Defina o <em>departamento</em> de cada usuário para organizar a equipe por setor. Promova a <em>Super Admin</em> quem deve ter acesso irrestrito ao sistema.
+            <strong>🔐 Como funciona:</strong> Defina o <em>departamento</em> de cada pessoa (ela só vê o conteúdo do seu) e o <em>cargo</em> (o que ela pode ver e editar em cada área). Os cargos são configurados na aba <em>Cargos</em>.
           </div>
           <div className={s.table}>
             <div className={s.tableHead}>
               <span>Usuário</span>
               <span>Departamento</span>
-              <span>Papel no sistema</span>
+              <span>Cargo</span>
               <span></span>
             </div>
             {users.map(u => (
@@ -330,35 +447,57 @@ export default function AdminPage() {
                 </select>
 
                 <select
-                  value={u.system_role || 'user'}
-                  onChange={e => updateUser(u.id, { system_role: e.target.value })}
+                  value={u.role_id || 'role-colaborador'}
+                  onChange={e => updateUser(u.id, { role_id: e.target.value })}
                   className={s.select}
                   disabled={u.id === me?.id}
+                  title={u.id === me?.id ? 'Você não pode alterar o próprio cargo' : undefined}
                 >
-                  <option value="user">👤 Usuário</option>
-                  <option value="super_admin">⭐ Super Admin</option>
+                  {roles.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.system_role === 'super_admin' ? '⭐ ' : r.system_role === 'auditor' ? '👁️ ' : ''}{r.name}
+                    </option>
+                  ))}
                 </select>
 
-                <button
-                  className="btn btn-icon btn-sm"
-                  style={{ color:'var(--red)' }}
-                  onClick={() => deleteUser(u.id)}
-                  disabled={u.id === me?.id}
-                  title={u.id === me?.id ? 'Não é possível excluir a si mesmo' : 'Excluir usuário'}
-                >🗑️</button>
+                <div className={s.rowActions}>
+                  <button
+                    className="btn btn-icon btn-sm"
+                    onClick={() => forceRelogin(u)}
+                    disabled={u.id === me?.id}
+                    title={u.id === me?.id ? 'Não dá pra forçar a própria sessão' : 'Forçar novo login (derruba a sessão atual dela — útil pra puxar a foto do Google na hora, por exemplo)'}
+                  >🔄</button>
+                  <button
+                    className="btn btn-icon btn-sm"
+                    style={{ color:'var(--red)' }}
+                    onClick={() => deleteUser(u.id)}
+                    disabled={u.id === me?.id}
+                    title={u.id === me?.id ? 'Não é possível excluir a si mesmo' : 'Excluir usuário'}
+                  >🗑️</button>
+                </div>
               </div>
             ))}
           </div>
-        </div>
+        </Reveal>
+      )}
+
+      {/* ── Tab: Cargos ── */}
+      {tab === 'roles' && (
+        <Reveal as="div" className={s.section}>
+          <RolesTab roles={roles} modules={modules} setRoles={setRoles} />
+        </Reveal>
       )}
 
       {/* ── Tab: Departamentos ── */}
       {tab === 'departments' && (
-        <div className={s.section}>
+        <Reveal as="div" className={s.section}>
           <div className={s.info}>
-            <strong>🏢 Departamentos</strong> agrupam usuários por equipe dentro da organização.
+            <strong>🏢 Departamentos</strong> agrupam usuários por equipe e separam o conteúdo do sistema. Em cada um, escolha a <em>entidade do GLPI</em>: é ela que define quais chamados a equipe vê em Chamados (Backlog e Total). Sem entidade, o departamento não vê chamados.
           </div>
 
+          <datalist id="glpi-entities">
+            {glpiEntities.map(e => <option key={e} value={e} />)}
+          </datalist>
           <div className={s.deptGrid}>
             {departments.map(d => (
               <div key={d.id} className={s.deptCard} style={{ borderColor: d.color + '60' }}>
@@ -366,6 +505,16 @@ export default function AdminPage() {
                 <div className={s.deptInfo}>
                   <span className={s.deptName}>{d.name}</span>
                   <span className={s.deptCount}>{d.member_count} {d.member_count === 1 ? 'membro' : 'membros'}</span>
+                  <input
+                    list="glpi-entities"
+                    defaultValue={d.glpi_entity_name || ''}
+                    key={`${d.id}-${d.glpi_entity_name || ''}`}
+                    placeholder="Entidade do GLPI (Chamados)"
+                    title="Entidade do GLPI cujos chamados este departamento vê no Backlog e no Total de Chamados. Escolha da lista (vem do GLPI) ou digite o nome."
+                    onBlur={e => saveDeptEntity(d, e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+                    style={{ marginTop: 6, fontSize: 12, padding: '4px 8px', width: '100%', minWidth: 190 }}
+                  />
                 </div>
                 <button className="btn btn-icon btn-sm" style={{ color:'var(--red)', marginLeft:'auto' }}
                   onClick={() => deleteDept(d.id)}>🗑️</button>
@@ -403,82 +552,12 @@ export default function AdminPage() {
               </p>
             )}
           </div>
-        </div>
-      )}
-
-      {/* ── Tab: SLA ── */}
-      {tab === 'sla' && (
-        <div className={s.section}>
-          <div className={s.info}>
-            <strong>⏱️ Como funciona:</strong> Crie regras que avisam destinatários quando um card fica <em>parado</em> (sem atividade) por tempo demais. Aplique a um quadro específico ou a todos.
-          </div>
-
-          <div className={s.ruleList}>
-            {slaRules.map(rule => (
-              <div key={rule.id} className={s.ruleCard}>
-                <div className={s.ruleHeader}>
-                  <div>
-                    <div className={s.ruleName}>{rule.name}</div>
-                    <div className={s.ruleMeta}>
-                      {rule.board_name || 'Todos os quadros'} · limite de {rule.threshold_hours}h sem atividade
-                    </div>
-                  </div>
-                  <div className={s.ruleActions}>
-                    <label className={s.switch} title={rule.active ? 'Ativa' : 'Inativa'}>
-                      <input type="checkbox" checked={!!rule.active} onChange={() => toggleRuleActive(rule)} />
-                      <span className={s.switchTrack} />
-                    </label>
-                    <button className="btn btn-icon btn-sm" style={{ color:'var(--red)' }} onClick={() => deleteRule(rule.id)} title="Excluir regra">🗑️</button>
-                  </div>
-                </div>
-                <RecipientChips
-                  recipients={rule.recipients || []}
-                  onAddUser={u => addRuleRecipientUser(rule.id, u)}
-                  onAddEmail={email => addRuleRecipientEmail(rule.id, email)}
-                  onRemove={recipientId => removeRuleRecipient(rule.id, recipientId)}
-                />
-              </div>
-            ))}
-            {slaRules.length === 0 && (
-              <p style={{ color:'var(--muted)', fontSize:13 }}>Nenhuma regra de SLA criada ainda.</p>
-            )}
-          </div>
-
-          <div className={s.addDeptForm}>
-            <p style={{ fontSize:13, fontWeight:600, margin:'0 0 10px', color:'var(--white)' }}>+ Criar regra de SLA</p>
-            <div className={s.ruleFormGrid}>
-              <input
-                placeholder="Nome da regra"
-                value={newRule.name}
-                onChange={e => { setNewRule(r => ({ ...r, name: e.target.value })); setRuleMsg(null) }}
-              />
-              <select value={newRule.board_id} onChange={e => setNewRule(r => ({ ...r, board_id: e.target.value }))}>
-                <option value="">Todos os quadros</option>
-                {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-              <input
-                type="number"
-                min={1}
-                placeholder="Horas sem atividade"
-                value={newRule.threshold_hours}
-                onChange={e => setNewRule(r => ({ ...r, threshold_hours: e.target.value }))}
-              />
-              <button className="btn btn-primary btn-sm" onClick={createRule} disabled={!newRule.name.trim() || !newRule.threshold_hours || creatingRule}>
-                {creatingRule ? 'Criando...' : '+ Criar'}
-              </button>
-            </div>
-            {ruleMsg && (
-              <p style={{ fontSize:12, color: ruleMsg.type === 'error' ? 'var(--red)' : 'var(--green)', marginTop:6 }}>
-                {ruleMsg.text}
-              </p>
-            )}
-          </div>
-        </div>
+        </Reveal>
       )}
 
       {/* ── Tab: Notificações ── */}
       {tab === 'notifications' && (
-        <div className={s.section}>
+        <Reveal as="div" className={s.section}>
           <div className={s.info}>
             <strong>📧 Como funciona:</strong> Configure o resumo semanal e o alerta diário por e-mail. Destinatários que são usuários do sistema também recebem uma notificação dentro do app.
           </div>
@@ -494,7 +573,19 @@ export default function AdminPage() {
                 <input
                   type="checkbox"
                   checked={settings.weekly_digest_enabled === 'true'}
-                  onChange={e => updateSetting('weekly_digest_enabled', e.target.checked ? 'true' : 'false')}
+                  onChange={e => {
+                    const enabled = e.target.checked
+                    updateSetting('weekly_digest_enabled', enabled ? 'true' : 'false')
+                    // Ao ativar, grava já os valores mostrados na UI (mesmo que o
+                    // admin não mexa no dia/horário) — sem isso, o backend ficava
+                    // sem essa configuração salva e caía no próprio default dele
+                    // (18h), diferente do que a tela mostrava (8h), entregando o
+                    // resumo numa hora diferente da esperada.
+                    if (enabled) {
+                      updateSetting('weekly_digest_weekday', settings.weekly_digest_weekday ?? '0')
+                      updateSetting('weekly_digest_hour', settings.weekly_digest_hour ?? '18')
+                    }
+                  }}
                 />
                 <span className={s.switchTrack} />
               </label>
@@ -514,7 +605,7 @@ export default function AdminPage() {
                 <label className={s.smallLabel}>
                   Horário
                   <select
-                    value={settings.weekly_digest_hour ?? '8'}
+                    value={settings.weekly_digest_hour ?? '18'}
                     onChange={e => updateSetting('weekly_digest_hour', e.target.value)}
                   >
                     {HOURS.map(h => <option key={h} value={h}>{h}:00</option>)}
@@ -536,13 +627,17 @@ export default function AdminPage() {
             <div className={s.digestHeader}>
               <div>
                 <h3 className={s.digestTitle}>Alerta diário</h3>
-                <p className={s.digestSub}>Envia um aviso diário com os eventos do dia seguinte.</p>
+                <p className={s.digestSub}>Envia um aviso diário com os eventos do próprio dia, no horário configurado.</p>
               </div>
               <label className={s.switch}>
                 <input
                   type="checkbox"
                   checked={settings.daily_digest_enabled === 'true'}
-                  onChange={e => updateSetting('daily_digest_enabled', e.target.checked ? 'true' : 'false')}
+                  onChange={e => {
+                    const enabled = e.target.checked
+                    updateSetting('daily_digest_enabled', enabled ? 'true' : 'false')
+                    if (enabled) updateSetting('daily_digest_hour', settings.daily_digest_hour ?? '22')
+                  }}
                 />
                 <span className={s.switchTrack} />
               </label>
@@ -596,9 +691,11 @@ export default function AdminPage() {
               </p>
             )}
 
-            <p className={s.outboxNote}>
-              <strong>{pendingOutboxCount} {pendingOutboxCount === 1 ? 'e-mail' : 'e-mails'}</strong> aguardando o domínio de envio ser configurado. Isso é esperado por enquanto — os e-mails ficam guardados e serão enviados automaticamente assim que o domínio for configurado.
-            </p>
+            {pendingOutboxCount > 0 && (
+              <p className={s.outboxNote}>
+                <strong>{pendingOutboxCount} {pendingOutboxCount === 1 ? 'e-mail' : 'e-mails'}</strong> na fila aguardando o próximo despacho (o cron roda a cada 15 min).
+              </p>
+            )}
             {outboxRows.length > 0 && (
               <div className={s.outboxTable}>
                 <div className={s.outboxHead}>
@@ -611,13 +708,207 @@ export default function AdminPage() {
                     <span className={`badge ${o.status === 'sent' ? 'badge-green' : o.status === 'failed' ? 'badge-red' : 'badge-amber'}`}>
                       {o.status}
                     </span>
-                    <span>{o.created_at ? new Date(o.created_at).toLocaleString('pt-BR') : '—'}</span>
+                    <span>{o.created_at ? parseDbTimestamp(o.created_at).toLocaleString('pt-BR') : '—'}</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
-        </div>
+        </Reveal>
+      )}
+
+      {/* ── Tab: GLPI ── */}
+      {tab === 'glpi' && (
+        <Reveal as="div" className={s.section}>
+          <div className={s.info}>
+            <strong>🖥️ Como funciona:</strong> A cada 15 min, o sistema busca no GLPI os chamados da fila "Eventos" (status configurado) da entidade configurada, extrai data/hora da descrição (formato do sistema de reservas de sala) e cria automaticamente um evento na Agenda. Chamados cuja descrição não segue o formato esperado ficam na lista abaixo pra você criar o evento manualmente.
+          </div>
+
+          <div className={s.outboxCard}>
+            <h3 className={s.digestTitle}>Configuração</h3>
+            <div className={s.formRow} style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                <input
+                  type="checkbox"
+                  checked={settings.glpi_enabled === 'true'}
+                  onChange={e => updateSetting('glpi_enabled', e.target.checked ? 'true' : 'false')}
+                />
+                Sincronização ativa
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                Status do GLPI:
+                <input
+                  type="number"
+                  style={{ width: 70 }}
+                  value={settings.glpi_status_id ?? '17'}
+                  onChange={e => updateSetting('glpi_status_id', e.target.value)}
+                />
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                Entidade (ID):
+                <input
+                  type="number"
+                  style={{ width: 70 }}
+                  value={settings.glpi_entity_id ?? '4'}
+                  onChange={e => updateSetting('glpi_entity_id', e.target.value)}
+                />
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                Departamento dos eventos:
+                <select
+                  style={{ width: 'auto' }}
+                  value={settings.glpi_department_id ?? ''}
+                  onChange={e => updateSetting('glpi_department_id', e.target.value)}
+                  title="Em qual departamento os eventos que vêm do GLPI aparecem na Agenda"
+                >
+                  <option value="">Geral (todos)</option>
+                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </label>
+              <button type="button" className="btn btn-primary btn-sm" onClick={syncGlpiNow} disabled={syncingGlpi}>
+                🔄 Sincronizar agora
+              </button>
+            </div>
+            {glpiSyncStatus && (
+              <p style={{ fontSize: 12, marginBottom: 4, color: glpiSyncStatus.type === 'success' ? 'var(--green)' : glpiSyncStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
+                {glpiSyncStatus.text}
+              </p>
+            )}
+          </div>
+
+          <div className={s.outboxCard}>
+            <h3 className={s.digestTitle}>Solucionar chamados retroativos</h3>
+            <p className={s.emptyHint} style={{ marginBottom: 10 }}>
+              Chamados da Agenda cujo evento já terminou. Veja a lista e confirme para marcá-los como Solucionado no GLPI (até 20 por clique).
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={loadRetro} disabled={retroBusy}>
+                🔎 Ver chamados retroativos
+              </button>
+              {retroList?.length > 0 && (
+                <button type="button" className="btn btn-primary btn-sm" onClick={resolveRetro} disabled={retroBusy}>
+                  ✅ Solucionar {Math.min(retroList.length, 20)} no GLPI
+                </button>
+              )}
+            </div>
+            {retroStatus && (
+              <p style={{ fontSize: 12, marginBottom: 8, color: retroStatus.type === 'success' ? 'var(--green)' : retroStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
+                {retroStatus.text}
+              </p>
+            )}
+            {retroList && (retroList.length === 0 ? (
+              <p className={s.emptyHint}>Nenhum chamado retroativo pendente.</p>
+            ) : (
+              <div style={{ maxHeight: 260, overflowY: 'auto', fontSize: 13 }}>
+                <p style={{ marginBottom: 6, color: 'var(--muted)' }}>{retroList.length} chamado(s) pendente(s):</p>
+                {retroList.map(t => (
+                  <div key={t.event_id} style={{ padding: '4px 0', borderBottom: '1px solid var(--border2)' }}>
+                    <a href={`https://glpi.inventario.unifecaf.edu.br/front/ticket.form.php?id=${t.glpi_ticket_id}`} target="_blank" rel="noreferrer">
+                      #{t.glpi_ticket_id}
+                    </a>{' '}— {t.title} <span style={{ color: 'var(--muted)' }}>(terminou {t.ended_at})</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <div className={s.outboxCard}>
+            <h3 className={s.digestTitle}>Chamados duplicados na Agenda</h3>
+            <p className={s.emptyHint} style={{ marginBottom: 10 }}>
+              Vários chamados do mesmo evento (mesmo título, data e hora, em qualquer sala — ex: um feriado com um chamado por sala). Fica o chamado mais antigo, com as salas somadas na descrição; os outros são solucionados no GLPI (apontando pro original) e o evento repetido sai da Agenda. Os lotes continuam sozinhos em segundo plano, um por minuto.
+            </p>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 10 }}>
+              <input
+                type="checkbox"
+                style={{ width: 'auto', flexShrink: 0 }}
+                checked={settings.glpi_dup_auto === 'true'}
+                onChange={e => updateSetting('glpi_dup_auto', e.target.checked ? 'true' : 'false')}
+              />
+              Solucionar duplicatas automaticamente no GLPI (a cada minuto, sem precisar clicar)
+            </label>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={loadDups} disabled={dupBusy}>
+                🔎 Ver duplicatas
+              </button>
+              {(dupCount > 0 || cleanCount > 0) && (
+                <button type="button" className="btn btn-primary btn-sm" onClick={resolveDups} disabled={dupBusy}>
+                  ✅ Limpar duplicatas{dupCount > 0 ? ` · solucionar ${dupCount} no GLPI` : ''}
+                </button>
+              )}
+            </div>
+            {dupStatus && (
+              <p style={{ fontSize: 12, marginBottom: 8, color: dupStatus.type === 'success' ? 'var(--green)' : dupStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
+                {dupStatus.text}
+              </p>
+            )}
+            {dupList && (dupList.items.length === 0 ? (
+              <p className={s.emptyHint}>Nenhuma duplicata encontrada.</p>
+            ) : (
+              <div style={{ maxHeight: 260, overflowY: 'auto', fontSize: 13 }}>
+                <p style={{ marginBottom: 6, color: 'var(--muted)' }}>
+                  {dupList.importing ? '⏳ importando chamados novos para a Agenda… · ' : ''}{dupList.background ? '⚙️ solucionando em segundo plano… · ' : ''}{dupCount} a solucionar no GLPI{cleanCount > 0 ? ` · ${cleanCount} já tratado(s) no GLPI, só saem da Agenda` : ''} · {dupList.items.length} evento(s):
+                </p>
+                {dupList.items.map(g => (
+                  <div key={g.keep_ticket_id} style={{ padding: '4px 0', borderBottom: '1px solid var(--border2)' }}>
+                    {g.title} <span style={{ color: 'var(--muted)' }}>({g.event_date}{g.event_time ? ` ${g.event_time}` : ''})</span>
+                    <br />
+                    <span style={{ color: 'var(--muted)' }}>fica </span>
+                    <a href={`https://glpi.inventario.unifecaf.edu.br/front/ticket.form.php?id=${g.keep_ticket_id}`} target="_blank" rel="noreferrer">#{g.keep_ticket_id}</a>
+                    {g.duplicate_ticket_ids.length > 0 && <span style={{ color: 'var(--muted)' }}> · solucionar </span>}
+                    {g.duplicate_ticket_ids.map((id, i) => (
+                      <span key={id}>
+                        {i > 0 && ', '}
+                        <a href={`https://glpi.inventario.unifecaf.edu.br/front/ticket.form.php?id=${id}`} target="_blank" rel="noreferrer">#{id}</a>
+                      </span>
+                    ))}
+                    {(g.cleanup_ticket_ids || []).length > 0 && <span style={{ color: 'var(--muted)' }}> · só sai da Agenda: </span>}
+                    {(g.cleanup_ticket_ids || []).map((id, i) => (
+                      <span key={id}>
+                        {i > 0 && ', '}
+                        <a href={`https://glpi.inventario.unifecaf.edu.br/front/ticket.form.php?id=${id}`} target="_blank" rel="noreferrer">#{id}</a>
+                      </span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <div className={s.outboxCard}>
+            <h3 className={s.digestTitle}>Chamados não reconhecidos {unparsedTickets.length > 0 && `(${unparsedTickets.length})`}</h3>
+            {unparsedTickets.length === 0 ? (
+              <p className={s.emptyHint}>Nenhum chamado pendente de revisão.</p>
+            ) : (
+              <div className={s.outboxTable}>
+                <div className={s.outboxHead}>
+                  <span>Chamado</span><span>Motivo</span><span></span>
+                </div>
+                {unparsedTickets.map(t => (
+                  <div key={t.id} style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--border2)', padding: '10px 0' }}>
+                    <div className={s.outboxRow} style={{ borderBottom: 'none', padding: 0 }}>
+                      <span>
+                        <a href={`${'https://glpi.inventario.unifecaf.edu.br'}/front/ticket.form.php?id=${t.glpi_ticket_id}`} target="_blank" rel="noreferrer">
+                          #{t.glpi_ticket_id} — {t.title || 'sem título'}
+                        </a>
+                      </span>
+                      <span>{t.reason}</span>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => dismissUnparsed(t.id)}>Dispensar</button>
+                    </div>
+                    {t.raw_description && (
+                      <pre style={{
+                        fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface-2)',
+                        borderRadius: 6, padding: '8px 10px', marginTop: 8, whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word', fontFamily: 'inherit', maxHeight: 160, overflowY: 'auto',
+                      }}>
+                        {t.raw_description.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Reveal>
       )}
     </div>
   )

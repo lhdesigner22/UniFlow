@@ -1,0 +1,87 @@
+.page { padding: 36px 32px; display: flex; flex-direction: column; gap: 22px; }
+.loading { display: flex; align-items: center; justify-content: center; height: 60vh; color: var(--text-muted); }
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.addWrap { position: relative; }
+.title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
+.sub { font-size: 13px; color: var(--text-muted); }
+.error { font-size: 12px; color: var(--danger, #EF4444); margin-bottom: 8px; }
+
+.emptyBox { text-align: center; padding: 72px 24px; }
+.emptyBox h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+.emptyBox p { color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 13px; }
+
+/* ── Pessoa aberta: avatar | divisor | linha do tempo + história ── */
+.selectedRow {
+  display: flex; gap: 24px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg, 16px); box-shadow: var(--shadow-sm);
+  padding: 24px;
+}
+.who { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 110px; flex-shrink: 0; text-align: center; }
+.whoName { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.3; }
+.divider { width: 1px; align-self: stretch; background: var(--border2); flex-shrink: 0; }
+.detail { flex: 1; min-width: 0; }
+.detailLoading { flex: 1; color: var(--text-muted); font-size: 13px; padding: 20px 0; }
+
+.sectionHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.sectionTitle { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.empty { font-size: 13px; color: var(--text-muted); }
+
+/* ── Linha do tempo horizontal ── */
+.timelineScroll { overflow-x: auto; padding-bottom: 6px; }
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; min-width: min-content; position: relative; }
+.milestone {
+  position: relative; flex: 1 0 150px; max-width: 220px; padding: 0 12px 0 0;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.mDate { font-size: 11.5px; font-weight: 700; color: var(--brand); text-transform: capitalize; }
+.mRail { display: flex; align-items: center; }
+.mDot {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  background: var(--brand); border: 2px solid var(--surface); box-shadow: 0 0 0 2px var(--brand);
+}
+/* a linha que liga um ponto ao próximo */
+.mLine { flex: 1; height: 2px; background: var(--border2); margin: 0 4px 0 6px; }
+.milestone:last-child .mLine { visibility: hidden; }
+.mTitle { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.35; }
+.mDesc { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+.mActions { display: flex; gap: 2px; margin-top: 2px; }
+.mActions button { border: none; background: transparent; cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 5px; }
+.mActions button:hover { background: var(--surface-2); }
+
+/* ── História ── */
+.story { font-size: 14px; line-height: 1.7; color: var(--text); white-space: pre-wrap; margin: 0; }
+.storyEdit { display: flex; flex-direction: column; gap: 10px; }
+.storyBtns { display: flex; gap: 8px; }
+
+/* ── Outras pessoas (clicar pra abrir) ── */
+.othersTitle { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.othersGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.otherCard {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 16px 10px; cursor: pointer; font: inherit; color: inherit;
+  transition: border-color .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease);
+}
+.otherCard:hover { border-color: var(--brand); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.otherName { font-size: 12.5px; font-weight: 600; color: var(--text); line-height: 1.3; }
+.otherMeta { font-size: 11px; color: var(--text-muted); }
+
+@media (max-width: 768px) {
+  .page { padding: 20px 16px; }
+  .selectedRow { flex-direction: column; align-items: stretch; padding: 18px; }
+  .who { flex-direction: row; width: auto; text-align: left; }
+  .divider { width: auto; height: 1px; align-self: auto; }
+}
+
+.removeLink { border: none; background: none; color: var(--text-muted); font-size: 11px; cursor: pointer; padding: 2px 4px; }
+.removeLink:hover { color: var(--danger, #EF4444); text-decoration: underline; }
+.otherWrap { position: relative; display: flex; }
+.otherWrap .otherCard { flex: 1; }
+.removeBtn {
+  position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 6px;
+  border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 11px;
+  opacity: .55; transition: opacity .12s, background .12s;
+}
+.otherWrap:hover .removeBtn { opacity: 1; }
+.removeBtn:hover { background: var(--surface-2); color: var(--danger, #EF4444); }

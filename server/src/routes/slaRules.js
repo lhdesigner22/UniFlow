@@ -5,14 +5,14 @@ import { auth } from '../middleware/auth.js'
 const app = new Hono()
 app.use('*', auth)
 
-// Middleware: apenas super_admin (mesmo padrão inline de admin.js — não exportado lá,
-// então replicado aqui em vez de importado)
+// Middleware: super_admin (leitura + escrita) ou auditor (só leitura — mesmo
+// padrão inline de admin.js, não exportado lá, então replicado aqui)
 const superAdmin = async (c, next) => {
   const db = c.get('db')
   const u = await db.prepare('SELECT system_role FROM users WHERE id = ?').get(c.get('user').id)
-  if (u?.system_role !== 'super_admin')
-    return c.json({ error: 'Acesso restrito ao Super Admin.' }, 403)
-  await next()
+  if (u?.system_role === 'super_admin') return await next()
+  if (u?.system_role === 'auditor' && c.req.method === 'GET') return await next()
+  return c.json({ error: 'Acesso restrito ao Super Admin.' }, 403)
 }
 app.use('*', superAdmin)
 

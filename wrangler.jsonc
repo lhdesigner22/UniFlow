@@ -20,15 +20,65 @@
 			"database_id": "5e7598bf-d493-43e9-b593-29b014330d94"
 		}
 	],
-	// R2 desativado por enquanto (exige assinatura paga na Cloudflare) — quando
-	// quiser ativar anexos: `npx wrangler r2 bucket create uniflow-uploads` e
-	// devolver este bloco:
-	// "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "uniflow-uploads" }],
+	// R2 (nativo da Cloudflare) ficou de fora — exige habilitar billing na
+	// conta. Anexos da Base de Conhecimento usam o Google Drive (a org já
+	// usa Google Workspace) em vez disso — ver server/src/lib/driveClient.js.
+	// Credenciais (GOOGLE_SA_EMAIL/GOOGLE_SA_PRIVATE_KEY, da service account)
+	// são secrets, nunca aqui; GOOGLE_DRIVE_FOLDER_ID não é sensível e fica
+	// em "vars" abaixo.
 	"migrations": [
 		{ "tag": "v1", "new_sqlite_classes": ["PipeRoom"] },
-		{ "tag": "v2", "deleted_classes": ["PipeRoom"] }
+		{ "tag": "v2", "deleted_classes": ["PipeRoom"] },
+		{ "tag": "v3", "new_sqlite_classes": ["LiveHub"] }
 	],
+	// Tempo real entre aparelhos (WebSocket) — ver server/src/lib/liveHub.js.
+	"durable_objects": {
+		"bindings": [{ "name": "LIVE_HUB", "class_name": "LiveHub" }]
+	},
+	// Quatro cron triggers (limite da conta é 5 — ver nota abaixo sobre
+	// subrequests). Cada operação que bate na API do GLPI fica isolada no seu
+	// próprio tick/invocação — motivo: o Worker Free tem um limite de 50
+	// subrequests POR INVOCAÇÃO (não por Worker/dia), e cada init/kill de
+	// sessão + página de busca do GLPI conta como 1 subrequest. Empilhar
+	// Eventos + cache de técnicos + Total num mesmo tick estourava esse
+	// limite (erro real visto em produção: "Too many subrequests by single
+	// Worker invocation"), e como o Total vinha por último, ele era sempre o
+	// que falhava — e o `scheduled()` sem isolamento de erro (já corrigido)
+	// fazia isso derrubar até o envio dos e-mails de resumo diário/semanal.
+	//   - "* * * * *"            → só o Backlog (busca leve, sem GLPI pesado)
+	//   - "*/15 * * * *"         → SLA + digests + sync de Eventos + outbox
+	//   - "5,20,35,50 * * * *"   → refresh do cache de técnicos (pesado)
+	//   - "10,25,40,55 * * * *"  → "Total de Chamados" (pesado)
+	// Ver server/src/worker.js `scheduled()`.
+	//   - "0 12 * * SUN"           → domingo 09h (Brasília): sincroniza a grade
+	//                              de salas (server/src/lib/roomScheduleSync.js)
 	"triggers": {
-		"crons": ["*/15 * * * *"]
+		"crons": ["* * * * *", "*/15 * * * *", "5,20,35,50 * * * *", "10,25,40,55 * * * *", "0 12 * * SUN"]
+	},
+	// Navegador headless da Cloudflare (Browser Rendering) — usado só pela
+	// sincronização semanal da grade de salas. Plano Free: 10 min/dia.
+	"browser": { "binding": "BROWSER" },
+	// Sem isso o esbuild injeta __name(...) dentro das funções que mandamos
+	// pro navegador via page.evaluate, e elas quebram lá ("__name is not defined").
+	"keep_names": false,
+	// Workers Logs — permite ver no dashboard da Cloudflare (Workers &
+	// Pages > uniflow > Logs) o tempo de CPU real de cada requisição/cron,
+	// pra validar consumo sem precisar adivinhar. head_sampling_rate: 1 =
+	// guarda 100% das invocações (tráfego baixo o suficiente pra não pesar).
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	// Importação automática GLPI → Agenda (fila "Eventos"). Só a URL base fica
+	// aqui (não é sensível); GLPI_APP_TOKEN e GLPI_USER_TOKEN são secrets
+	// (`wrangler secret put`).
+	"vars": {
+		"GLPI_BASE_URL": "https://glpi.inventario.unifecaf.edu.br",
+		// ID da subpasta "UniFlow - Anexos" DENTRO do Drive Compartilhado
+		// "Helpdesk" (não é o ID do Drive Compartilhado em si — esse é
+		// "0AJJJXF4KglSiUk9PVA", usado por engano antes) — não é segredo, só
+		// identifica onde os anexos ficam; as credenciais de acesso de verdade
+		// são secrets.
+		"GOOGLE_DRIVE_FOLDER_ID": "1ra7HBLIn8yjv8Yh1QlHOFBxSNiY7ARix"
 	}
 }

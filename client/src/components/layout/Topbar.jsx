@@ -3,6 +3,10 @@ import { useLocation } from 'react-router-dom'
 import { useNotificationStore } from '../../store/notificationStore'
 import { useAuthStore } from '../../store/authStore'
 import { useTheme } from '../../hooks/useTheme'
+import { useVisiblePolling } from '../../hooks/useVisiblePolling'
+import { useLiveRefresh } from '../../hooks/useLiveRefresh'
+import { useDepartmentStore, getDeptView, setDeptView } from '../../store/departmentStore'
+import { parseDbTimestamp } from '../../utils/formatDuration'
 import s from './Topbar.module.css'
 
 function IconMenu() {
@@ -60,6 +64,7 @@ function IconSearch() {
 export default function Topbar({ onMenuClick }) {
   const [showNotifs, setShowNotifs] = useState(false)
   const [search, setSearch] = useState('')
+  const [avatarFailed, setAvatarFailed] = useState(false)
   const { notifications, unread, fetch, markRead, markAllRead } = useNotificationStore()
   const { user } = useAuthStore()
   const { theme, toggle } = useTheme()
@@ -67,16 +72,30 @@ export default function Topbar({ onMenuClick }) {
   const location = useLocation()
 
   useEffect(() => { fetch() }, [location.pathname])
-  useEffect(() => {
-    const timer = setInterval(fetch, 30000)
-    return () => clearInterval(timer)
-  }, [])
+  // Antes era setInterval fixo de 30s independente da aba estar visível —
+  // rodava o dia inteiro em toda sessão aberta, mesmo em segundo plano.
+  // Contra o limite de requests/dia do plano Free, isso pesava bastante
+  // (essa é a única coisa que roda em TODA página, sempre). Agora só faz
+  // polling com a aba visível, e o intervalo dobrou (30s → 60s).
+  useVisiblePolling(fetch, 60_000)
+  // Tempo real: qualquer alteração feita em outro aparelho pode ter gerado uma
+  // notificação pra mim (cartão atribuído, aprovação pedida...) — busca na hora
+  // em vez de esperar o próximo ciclo de 60s.
+  useLiveRefresh(null, fetch)
 
   useEffect(() => {
     const handler = e => { if (ref.current && !ref.current.contains(e.target)) setShowNotifs(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  // "Ver como departamento": só pra quem enxerga todos os departamentos. Estreita
+  // as listas do sistema inteiro pro departamento escolhido (o servidor decide);
+  // recarrega a página pra todas as telas buscarem de novo já filtradas.
+  const { departments, loaded: deptsLoaded, fetch: fetchDepartments } = useDepartmentStore()
+  const seesAllDepartments = user?.scope === 'all'
+  useEffect(() => { if (seesAllDepartments && !deptsLoaded) fetchDepartments() }, [seesAllDepartments, deptsLoaded])
+  const changeDeptView = e => { setDeptView(e.target.value); window.location.reload() }
 
   const handleThemeToggle = () => {
     document.documentElement.classList.add('theme-transition')
@@ -103,6 +122,18 @@ export default function Topbar({ onMenuClick }) {
       </div>
 
       <div className={s.actions}>
+        {seesAllDepartments && (
+          <select
+            className={s.deptView}
+            value={getDeptView()}
+            onChange={changeDeptView}
+            title="Ver o sistema como um departamento (só filtra a tela — não muda o seu acesso)"
+          >
+            <option value="all">🏢 Todos os departamentos</option>
+            <option value="geral">🌐 Só o que é Geral</option>
+            {departments.map(d => <option key={d.id} value={d.id}>🏢 {d.name}</option>)}
+          </select>
+        )}
         {/* Theme toggle */}
         <button
           className={`btn btn-icon ${s.themeBtn}`}
@@ -152,7 +183,7 @@ export default function Topbar({ onMenuClick }) {
                       <div className={s.notifTitle}>{n.title}</div>
                       {n.content && <div className={s.notifContent}>{n.content}</div>}
                       <div className={s.notifTime}>
-                        {new Date(n.created_at).toLocaleString('pt-BR', {
+                        {parseDbTimestamp(n.created_at)?.toLocaleString('pt-BR', {
                           day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
                         })}
                       </div>
@@ -166,8 +197,8 @@ export default function Topbar({ onMenuClick }) {
 
         {/* User avatar */}
         <div className={s.userAvatar} title={user?.name}>
-          {user?.avatar
-            ? <img src={user.avatar} alt={user.name} className={s.avatarImg} />
+          {user?.avatar && !avatarFailed
+            ? <img src={user.avatar} alt={user.name} referrerPolicy="no-referrer" onError={() => setAvatarFailed(true)} className={s.avatarImg} />
             : <span>{user?.name?.charAt(0).toUpperCase()}</span>
           }
         </div>

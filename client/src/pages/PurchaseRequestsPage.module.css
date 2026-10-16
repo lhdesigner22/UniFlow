@@ -1,0 +1,164 @@
+.page { padding: 36px 32px; display: flex; flex-direction: column; gap: 20px; }
+.loading { display: flex; align-items: center; justify-content: center; height: 60vh; color: var(--text-muted); }
+
+.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
+.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.headerRight { display: flex; align-items: center; gap: 10px; }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 72px 24px; }
+.empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+.empty p { color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 13px; }
+
+/* ── KPI row ── */
+.kpiRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.kpiCard {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px; box-shadow: var(--shadow-sm);
+}
+.kpiNumber { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--text); }
+.kpiLabel { font-size: 11.5px; color: var(--text-muted); line-height: 1.3; }
+.kpiTotal { background: rgba(59,130,246,.08); border-color: rgba(59,130,246,.25); }
+.kpiTotal .kpiNumber { color: var(--brand); }
+.kpiDone { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.25); }
+.kpiDone .kpiNumber { color: #16a34a; }
+[data-theme="dark"] .kpiDone .kpiNumber { color: #4ade80; }
+
+/* ── Tabela ── */
+.tableCard {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.tableFilters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.searchInput { width: auto; min-width: 240px; flex: 1; max-width: 360px; }
+.tableFilters select { width: auto; min-width: 160px; }
+.tableCount { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; min-width: 980px; }
+.table th {
+  text-align: left; padding: 8px 10px; font-size: 10.5px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1px solid var(--border2); white-space: nowrap; background: var(--surface);
+}
+.table td { padding: 8px 10px; border-bottom: 1px solid var(--border2); vertical-align: middle; }
+.table tbody tr:hover td { background: var(--surface-2); }
+.mono { font-family: var(--font-mono, ui-monospace, monospace); color: var(--text-muted); white-space: nowrap; }
+
+/* Item / Departamento — nome em cima, linha secundária (descrição/unidade)
+   embaixo. Sem display:flex no <td> (junto com border-collapse isso causa
+   um retângulo fantasma no Chrome — o "risco"/linha bugada que apareceu) —
+   os spans dentro já são block por padrão, então empilham sozinhos. */
+.itemCell { max-width: 200px; }
+.itemName {
+  display: block; font-weight: 600; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.itemDesc {
+  display: block; font-size: 11px; color: var(--text-muted); margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.descCell { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chartEmpty { font-size: 12px; color: var(--text-muted); padding: 30px 0; text-align: center; }
+
+.linkCell { text-align: center; }
+.cardLink {
+  font: inherit; font-size: 15px; color: var(--brand); font-weight: 600; text-decoration: none;
+  border: none; background: none; padding: 0; margin: 0; cursor: pointer; white-space: nowrap;
+}
+.cardLink:hover { text-decoration: underline; }
+
+.rowActions { display: flex; gap: 2px; }
+.iconBtn {
+  width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent;
+  cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
+  transition: background .12s;
+}
+.iconBtn:hover { background: var(--surface-2); }
+
+/* ── Aprovador (botão com avatares empilhados, abre o ApproversModal) ── */
+.approverBtn {
+  display: flex; align-items: center; border: none; background: none; cursor: pointer;
+  padding: 2px; position: relative;
+}
+.pendingDot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--danger, #EF4444);
+  margin-left: 4px; flex-shrink: 0;
+}
+
+/* ── Status (select colorido quando é uma etapa manual; botão só-leitura
+   quando ainda depende dos aprovadores) ── */
+.statusSelect {
+  width: auto; padding: 4px 26px 4px 10px; font-size: 12px; font-weight: 600;
+  border-radius: 20px; border: 1px solid transparent; cursor: pointer; font-family: inherit;
+}
+.statusReadonly { padding-right: 10px; appearance: none; }
+.statusSelect[data-status="pendente"] { background: rgba(245,158,11,.14); color: #b45309; }
+.statusSelect[data-status="aprovado"] { background: rgba(59,130,246,.12); color: #1d4ed8; }
+.statusSelect[data-status="enviada_ao_gestor"] { background: rgba(20,184,166,.14); color: #0f766e; }
+.statusSelect[data-status="reprovado"] { background: rgba(239,68,68,.14); color: #b91c1c; }
+.statusSelect[data-status="comprado"] { background: rgba(139,92,246,.14); color: #6d3fe0; }
+.statusSelect[data-status="entregue"] { background: rgba(34,197,94,.14); color: #16a34a; }
+[data-theme="dark"] .statusSelect[data-status="pendente"] { color: #fbbf24; }
+[data-theme="dark"] .statusSelect[data-status="aprovado"] { color: #93c5fd; }
+[data-theme="dark"] .statusSelect[data-status="enviada_ao_gestor"] { color: #5eead4; }
+[data-theme="dark"] .statusSelect[data-status="reprovado"] { color: #f87171; }
+[data-theme="dark"] .statusSelect[data-status="comprado"] { color: #c4b5fd; }
+[data-theme="dark"] .statusSelect[data-status="entregue"] { color: #4ade80; }
+
+/* Status e Ações ficam fixos na borda direita ao rolar a tabela pros lados. */
+.stickyStatus, .stickyActions {
+  position: sticky; background: var(--surface); z-index: 1;
+}
+.stickyStatus { right: 76px; min-width: 150px; }
+.stickyActions { right: 0; min-width: 76px; box-shadow: -6px 0 8px -6px rgba(16,24,40,.15); }
+.table tbody tr:hover .stickyStatus, .table tbody tr:hover .stickyActions { background: var(--surface-2); }
+
+/* ── Chips de aprovadores (form de criação) — mesmo padrão de ApprovalsPage ── */
+.chipsRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface-2); border-radius: 20px; padding: 3px 10px 3px 4px;
+  font-size: 12px; color: var(--text);
+}
+.chipRemove { background: none; border: none; color: var(--text-muted); font-size: 14px; line-height: 1; padding: 0 2px; }
+.chipRemove:hover { color: var(--danger); }
+.inviteWrap { position: relative; }
+.hint { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
+
+/* ── ApproversModal — igual ao "Aprovadores" do DetailModal de Aprovações ── */
+.approverList { display: flex; flex-direction: column; gap: 10px; }
+.approverRow { display: flex; align-items: center; gap: 10px; }
+.approverInfo { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.approverName { font-size: 13px; font-weight: 600; color: var(--text); }
+.approverComment { font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+.statusBadge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+.decisionPending { background: rgba(245,158,11,.15); color: #b45309; }
+[data-theme="dark"] .decisionPending { color: #fbbf24; }
+.decisionApproved { background: rgba(34,197,94,.15); color: #15803d; }
+[data-theme="dark"] .decisionApproved { color: #4ade80; }
+.decisionRejected { background: rgba(239,68,68,.15); color: #b91c1c; }
+[data-theme="dark"] .decisionRejected { color: #f87171; }
+
+.section { border-top: 1px solid var(--border2); padding-top: 14px; margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.sectionTitle { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.decideRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ── Histórico de status (StatusChangeModal grava, ApproversModal exibe) ── */
+.historyList { display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; }
+.historyRow { display: flex; align-items: flex-start; gap: 10px; }
+.historyInfo { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
+.historyGiver { font-size: 13px; font-weight: 600; color: var(--text); }
+.historyMeta { font-size: 11.5px; color: var(--text-muted); line-height: 1.4; }
+
+.fileError { font-size: 12px; color: var(--danger, #EF4444); margin-top: 6px; }
+
+@media (max-width: 768px) {
+  .page { padding: 20px 16px; gap: 16px; }
+  .header { flex-direction: column; }
+}

@@ -1,0 +1,12 @@
+{
+  // Config SÓ pra teste local (wrangler dev --local). Caminhos relativos a este arquivo.
+  "name": "uniflow-test",
+  "main": "../src/worker.js",
+  "compatibility_date": "2026-08-21",
+  "compatibility_flags": ["nodejs_compat"],
+  "keep_names": false,
+  "assets": { "directory": "../../client/dist", "not_found_handling": "single-page-application", "run_worker_first": ["/api/*"] },
+  "d1_databases": [{ "binding": "DB", "database_name": "uniflow", "database_id": "local-test", "migrations_dir": "../../migrations" }],
+  "durable_objects": { "bindings": [{ "name": "LIVE_HUB", "class_name": "LiveHub" }] },
+  "migrations": [{ "tag": "v3", "new_sqlite_classes": ["LiveHub"] }]
+}
