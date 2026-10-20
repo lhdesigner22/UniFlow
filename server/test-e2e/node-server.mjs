@@ -6,6 +6,7 @@
 // Não tem: tempo real (Durable Object), Browser Rendering, arquivos estáticos.
 //
 //   cd server && node test-e2e/node-server.mjs     (banco novo em memória a cada execução)
+//   MOCK_GMAIL=1 node test-e2e/node-server.mjs      (+ Gmail de mentira, pra loan-replies-e2e.mjs)
 import { registerHooks } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { createServer } from 'node:http'
@@ -73,11 +74,75 @@ const env = {
 }
 const ctx = { waitUntil() {}, passThroughOnException() {} }
 
+// ── MOCK_GMAIL=1: Gmail de mentira (envio + caixa de entrada) ────────────
+// Intercepta o fetch pros hosts do Google. Controle pelos endpoints /__mock/*
+// (só existem neste servidor de teste):
+//   POST /__mock/gmail/inbox  {id, threadId, from, subject, text?, html?}  → põe na caixa
+//   GET  /__mock/gmail/sent                                               → enviados
+//   POST /__mock/gmail/mode   {oauthCanRead}                              → token OAuth só de envio?
+//   POST /__mock/cron         {cron, minute}                              → roda o scheduled()
+//   GET  /__mock/setting?key=                                             → lê app_settings
+const mock = { sent: [], inbox: [], oauthCanRead: true }
+if (process.env.MOCK_GMAIL) {
+  const { generateKeyPairSync } = await import('node:crypto')
+  Object.assign(env, {
+    GMAIL_CLIENT_ID: 'id', GMAIL_CLIENT_SECRET: 'secret', GMAIL_REFRESH_TOKEN: 'refresh', GMAIL_SENDER_EMAIL: 'helpdesk.ti@fecaf.com.br',
+    GOOGLE_SA_EMAIL: 'sa@test.iam.gserviceaccount.com',
+    GOOGLE_SA_PRIVATE_KEY: generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ type: 'pkcs8', format: 'pem' }),
+  })
+  const b64url = s => Buffer.from(s, 'utf8').toString('base64url')
+  const realFetch = globalThis.fetch
+  const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(typeof input === 'string' ? input : input.url)
+    if (url.host === 'oauth2.googleapis.com') {
+      const body = new URLSearchParams(String(init.body || ''))
+      return json({ access_token: body.get('grant_type') === 'refresh_token' ? 'oauth-token' : 'sa-token' })
+    }
+    if (url.host !== 'gmail.googleapis.com') return realFetch(input, init)
+    const token = String(init.headers?.Authorization || '').replace('Bearer ', '')
+    if (url.pathname.endsWith('/messages/send')) {
+      const raw = Buffer.from(JSON.parse(init.body).raw, 'base64url').toString('utf8')
+      const n = mock.sent.length + 1
+      mock.sent.push({ raw, threadId: `t-${n}` })
+      return json({ id: `sent-${n}`, threadId: `t-${n}` })
+    }
+    if (token === 'oauth-token' && !mock.oauthCanRead) return json({ error: { code: 403, message: 'Request had insufficient authentication scopes.' } }, 403)
+    if (url.pathname.endsWith('/messages')) return json({ messages: mock.inbox.map(m => ({ id: m.id, threadId: m.threadId })) })
+    const m = mock.inbox.find(x => url.pathname.endsWith(`/messages/${x.id}`))
+    if (!m) return json({ error: 'not found' }, 404)
+    const parts = []
+    if (m.text) parts.push({ mimeType: 'text/plain', body: { data: b64url(m.text) } })
+    if (m.html) parts.push({ mimeType: 'text/html', body: { data: b64url(m.html) } })
+    return json({
+      id: m.id, threadId: m.threadId, internalDate: String(m.internalDate || Date.now()), snippet: (m.text || '').slice(0, 100),
+      payload: { mimeType: 'multipart/alternative', headers: [{ name: 'From', value: m.from }, { name: 'Subject', value: m.subject }], parts },
+    })
+  }
+}
+async function mockControl(req, url, body) {
+  if (url.pathname === '/__mock/gmail/inbox') { mock.inbox.push(JSON.parse(body)); return { ok: true } }
+  if (url.pathname === '/__mock/gmail/sent') return mock.sent
+  if (url.pathname === '/__mock/gmail/mode') { Object.assign(mock, JSON.parse(body)); return { ok: true } }
+  if (url.pathname === '/__mock/cron') {
+    const { cron, minute = 0 } = JSON.parse(body)
+    const at = new Date(); at.setUTCMinutes(minute)
+    await worker.scheduled({ cron, scheduledTime: at.getTime() }, env, ctx)
+    return { ok: true }
+  }
+  if (url.pathname === '/__mock/setting') return sqlite.prepare('SELECT value FROM app_settings WHERE key = ?').get(url.searchParams.get('key')) || null
+  return null
+}
+
 const PORT = Number(process.env.PORT || 8799)
 createServer(async (req, res) => {
   const chunks = []
   for await (const ch of req) chunks.push(ch)
   const body = chunks.length ? Buffer.concat(chunks) : undefined
+  if (req.url.startsWith('/__mock/')) {
+    const out = await mockControl(req, new URL(req.url, 'http://x'), body?.toString() || '{}')
+    res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(out)); return
+  }
   const request = new Request(`http://127.0.0.1:${PORT}${req.url}`, {
     method: req.method, headers: req.headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : body,
   })

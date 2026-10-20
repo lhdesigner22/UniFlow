@@ -119,7 +119,7 @@ function encodeSubject(subject) {
   return `=?UTF-8?B?${utf8ToBase64(subject)}?=`
 }
 
-async function getGmailAccessToken(env) {
+export async function getGmailAccessToken(env) {
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -177,6 +177,9 @@ async function sendViaGmail(env, { to, subject, html, text }, accessToken) {
     const body = await res.text().catch(() => '')
     throw new Error(`Gmail API respondeu ${res.status}: ${body.slice(0, 300)}`)
   }
+  // { id, threadId } — o threadId liga a resposta do destinatário a este e-mail
+  // (ver lib/gmailInbox.js).
+  return await res.json().catch(() => ({}))
 }
 
 function pickProvider(env) {
@@ -218,11 +221,12 @@ export async function flushOutbox(env, db) {
       }
 
       const payload = { to, subject: row.subject, html: row.body_html, text: row.body_text }
-      if (provider === 'gmail') await sendViaGmail(env, payload, gmailAccessToken)
+      let threadId = null
+      if (provider === 'gmail') threadId = (await sendViaGmail(env, payload, gmailAccessToken))?.threadId || null
       else if (provider === 'cloudflare') await sendViaCloudflare(env, payload)
       else await sendViaResend(env, payload)
 
-      await db.prepare("UPDATE email_outbox SET status='sent', sent_at=datetime('now') WHERE id=?").run(row.id)
+      await db.prepare("UPDATE email_outbox SET status='sent', sent_at=datetime('now'), provider_thread_id=? WHERE id=?").run(threadId, row.id)
       sent++
     } catch (e) {
       await db.prepare("UPDATE email_outbox SET status='failed', error=? WHERE id=?").run(String(e?.message || e), row.id)

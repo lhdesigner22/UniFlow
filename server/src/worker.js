@@ -48,6 +48,7 @@ import { runGlpiBacklogSync } from './lib/glpiBacklogSync.js'
 import { runGlpiTotalSync } from './lib/glpiTotalSync.js'
 import { runRoomScheduleSync } from './lib/roomScheduleSync.js'
 import { refreshGlpiTechCache } from './lib/glpiTechCache.js'
+import { syncLoanReplies, gmailInboxConfigured } from './lib/gmailInbox.js'
 
 const app = new Hono()
 
@@ -253,7 +254,19 @@ export default {
       //   1) importação de chamados novos pra Agenda, enquanto sobrar fila;
       //   2) depois, a limpeza de duplicatas (ligada pelo botão do Admin).
       // Com as duas flags desligadas isso custa 1 consulta ao banco por minuto.
-      await processGlpiQueues(env, db).catch(e => console.error('GLPI queues error', e.message))
+      //
+      // A cada 5 min (minuto terminado em 3 ou 8), no lugar das filas: busca
+      // respostas por e-mail dos avisos de empréstimo e põe no chat
+      // (lib/gmailInbox.js). Fica fora do mesmo minuto das filas pelo mesmo
+      // limite de subrequests; as filas só atrasam 1 minuto.
+      const minute = new Date(event.scheduledTime || Date.now()).getUTCMinutes()
+      if (minute % 5 === 3 && gmailInboxConfigured(env)) {
+        await syncLoanReplies(env, db)
+          .then(r => { if (r.matched > 0) return broadcastLive(env, { r: 'equipment-loans' }) })
+          .catch(e => console.error('Gmail inbox sync error', e.message))
+      } else {
+        await processGlpiQueues(env, db).catch(e => console.error('GLPI queues error', e.message))
+      }
     }
 
     // "*/15 * * * *" — SLA + digests + sync de Eventos pra Agenda + outbox.

@@ -91,3 +91,29 @@ hora, a cada `flushOutbox`).
 
 Pra ver quantos e-mails estão esperando: aba Notificações do Admin, ou
 `GET /api/admin/settings/email-outbox`.
+
+### Respostas por e-mail → chat do Empréstimo de Equipamentos
+
+`server/src/lib/gmailInbox.js`. Quando o solicitante responde a uma mensagem
+rápida ✉️ ou ao aviso de prazo, a resposta cai na caixa do Gmail que envia
+(`GMAIL_SENDER_EMAIL`). O UniFlow lê só os e-mails com os assuntos desses
+avisos (últimos 30 dias) e põe cada resposta no chat do empréstimo, sem a
+parte citada. A ligação é pelo fio (threadId) do Gmail, que o envio passou a
+guardar em `email_outbox.provider_thread_id`. E-mails mandados antes disso
+casam por remetente + assunto.
+
+Quando roda: no cron de 1 min, nos minutos terminados em 3 e 8 (no lugar das
+filas do GLPI naquele minuto), e quando alguém abre o chat (`?check=1`, no
+máximo 1 vez a cada 20 s).
+
+Permissão de leitura, tentada nesta ordem:
+1. o próprio `GMAIL_REFRESH_TOKEN`, se foi gerado com escopo de leitura
+   (`gmail.readonly` ou `https://mail.google.com/`);
+2. a Service Account (`GOOGLE_SA_*`) com o escopo
+   `https://www.googleapis.com/auth/gmail.readonly` autorizado em Admin Console →
+   Segurança → Controles de API → Delegação em todo o domínio, no mesmo Client ID
+   já usado pelo Drive/Diretório. Ela entra na caixa `GMAIL_INBOX_EMAIL` (secret
+   opcional) ou, se não houver, na `GMAIL_SENDER_EMAIL`.
+
+Resultado da última rodada: `app_settings.gmail_inbox_status` (JSON com `auth`,
+`ok`, `error`, `matched`).

@@ -375,6 +375,10 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
   )
 }
 
+// Resposta por e-mail que ninguém abriu ainda (bolinha vermelha no ✉️).
+// As duas datas vêm do servidor no mesmo formato ('YYYY-MM-DD HH:MM:SS', UTC).
+const hasNewReply = l => !!l.last_reply_at && (!l.replies_seen_at || l.last_reply_at > l.replies_seen_at)
+
 const QUICK_MESSAGES = [
   'Lembrete: por favor, devolva o equipamento à T.I. assim que possível.',
   'O prazo de devolução do equipamento já passou. Pode devolver hoje, por favor?',
@@ -391,9 +395,13 @@ function MessageModal({ loan, onClose, onEmailSaved }) {
   const [error, setError] = useState('')
   const [history, setHistory] = useState(null)
 
-  const loadHistory = () => api.get(`/equipment-loans/${loan.id}/messages`)
-    .then(r => setHistory(r.data || [])).catch(() => setHistory([]))
-  useEffect(() => { loadHistory() }, [loan.id])
+  // Abre na hora com o que já está salvo e, em seguida, pede pro servidor
+  // procurar respostas novas na caixa do Gmail (`check=1`, alguns segundos).
+  const loadHistory = (check = false) => api.get(`/equipment-loans/${loan.id}/messages`, { params: check ? { check: 1 } : {} })
+    .then(r => setHistory(r.data || [])).catch(() => setHistory(h => h || []))
+  useEffect(() => { loadHistory().then(() => loadHistory(true)) }, [loan.id])
+  // Resposta que chegou com o chat aberto (o servidor checa a caixa a cada 5 min).
+  useLiveRefresh(['equipment-loans'], () => loadHistory())
 
   // E-mail guardado só vale se for de colaborador/professor — conta de aluno
   // (@a.fecaf.com.br) não recebe; aí pede um válido.
@@ -426,18 +434,22 @@ function MessageModal({ loan, onClose, onEmailSaved }) {
 
       {history && history.length > 0 && (
         <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column-reverse', gap: 8, marginBottom: 14 }}>
-          {history.map(m => (
-            <div key={m.id} style={{
-              alignSelf: 'flex-end', maxWidth: '88%', background: 'var(--surface-2)', borderRadius: 10, padding: '8px 12px', fontSize: 13,
-              border: m.status === 'failed' ? '1px solid var(--red, #EF4444)' : '1px solid transparent',
-            }}>
-              <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{m.message}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                {m.sent_by_name || '—'} · {new Date(m.created_at.replace(' ', 'T') + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                {m.status === 'sent' ? ' · ✓ enviado' : m.status === 'failed' ? ' · ✗ falhou' : ' · enviando'}
+          {history.map(m => {
+            const incoming = m.direction === 'in' // resposta do solicitante por e-mail
+            return (
+              <div key={m.id} style={{
+                alignSelf: incoming ? 'flex-start' : 'flex-end', maxWidth: '88%', borderRadius: 10, padding: '8px 12px', fontSize: 13,
+                background: incoming ? 'color-mix(in srgb, var(--brand) 14%, transparent)' : 'var(--surface-2)',
+                border: m.status === 'failed' ? '1px solid var(--red, #EF4444)' : '1px solid transparent',
+              }}>
+                <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{m.message}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  {incoming ? `↩ ${loan.requester_name || m.from_email}` : (m.sent_by_name || '—')} · {new Date(m.created_at.replace(' ', 'T') + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  {incoming ? ' · resposta por e-mail' : m.status === 'sent' ? ' · ✓ enviado' : m.status === 'failed' ? ' · ✗ falhou' : ' · enviando'}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -760,7 +772,14 @@ export default function EquipmentLoansPage() {
                     </td>
                     <td className={s.stickyActions}>
                       <div className={s.rowActions}>
-                        <button className={s.iconBtn} title="Enviar mensagem por e-mail ao solicitante" onClick={() => setMessaging(l)}>✉️</button>
+                        <button
+                          className={s.iconBtn} style={{ position: 'relative' }}
+                          title={hasNewReply(l) ? 'O solicitante respondeu por e-mail — abrir conversa' : 'Enviar mensagem por e-mail ao solicitante'}
+                          onClick={() => setMessaging(l)}
+                        >
+                          ✉️
+                          {hasNewReply(l) && <span aria-label="resposta nova" style={{ position: 'absolute', top: 1, right: 1, width: 8, height: 8, borderRadius: '50%', background: 'var(--red, #EF4444)' }} />}
+                        </button>
                         {canEdit(l) && <>
                           <button className={s.iconBtn} title="Editar" onClick={() => setEditing(l)}>✏️</button>
                           <button className={s.iconBtn} title="Excluir" onClick={() => deleteLoan(l)}>🗑️</button>
@@ -790,7 +809,11 @@ export default function EquipmentLoansPage() {
       {messaging && (
         <MessageModal
           loan={messaging}
-          onClose={() => setMessaging(null)}
+          onClose={() => {
+            // Abrir o chat marca as respostas como vistas (o servidor também grava).
+            setLoans(prev => prev.map(l => l.id === messaging.id ? { ...l, replies_seen_at: l.last_reply_at || l.replies_seen_at } : l))
+            setMessaging(null)
+          }}
           onEmailSaved={(id, email) => {
             setLoans(prev => prev.map(l => l.id === id ? { ...l, requester_email: email } : l))
             setMessaging(m => m && { ...m, requester_email: email })

@@ -4,6 +4,8 @@ import { auth } from '../middleware/auth.js'
 import { sendLoanDeadlineEmail, sendLoanQuickMessage, DEADLINE_PERIODS } from '../lib/loanDeadlineEmail.js'
 import { isAllowedLoanEmail, LOAN_EMAIL_ERROR } from '../lib/loanEmailDomains.js'
 import { escapeCsv } from '../lib/csv.js'
+import { syncLoanRepliesThrottled } from '../lib/gmailInbox.js'
+import { broadcastLive } from '../lib/liveHub.js'
 import { accessOf, departmentFilter, departmentForCreate, departmentForUpdate, canSeeDepartment, canModifyDepartment } from '../lib/permissions.js'
 
 // Empréstimo de Equipamentos — qualquer usuário logado pode registrar um
@@ -22,7 +24,9 @@ const LIST_COLUMNS = `
   e.id, e.requester_name, e.requester_email, e.equipment_model, e.patrimony,
   e.building, e.location, e.notes, e.status, e.loan_date, e.returned_at,
   e.equipment_inventory_id, e.created_by, e.created_at, e.updated_at, u.name as author_name,
-  e.department_id, dd.name as department_name, dd.color as department_color
+  e.department_id, dd.name as department_name, dd.color as department_color,
+  e.replies_seen_at,
+  (SELECT MAX(m.imported_at) FROM equipment_loan_messages m WHERE m.loan_id = e.id AND m.direction = 'in') as last_reply_at
 `
 
 // Se veio um item do inventário, confirma que existe, é do mesmo prédio e
@@ -216,16 +220,32 @@ app.post('/:id/status', async c => {
   return c.json(updated)
 })
 
-// GET /:id/messages — histórico das mensagens rápidas enviadas pra esse empréstimo
+// GET /:id/messages — histórico do "chat": mensagens rápidas enviadas pela T.I.
+// (direction='out') e respostas do solicitante por e-mail (direction='in',
+// trazidas do Gmail por lib/gmailInbox.js). `?check=1` busca respostas novas
+// na caixa antes de responder (o front chama assim logo depois de abrir o
+// chat). Abrir o chat marca as respostas como vistas.
 app.get('/:id/messages', async c => {
   const db = c.get('db')
-  const loanRow = await db.prepare('SELECT department_id FROM equipment_loans WHERE id = ?').get(c.req.param('id'))
+  const id = c.req.param('id')
+  const loanRow = await db.prepare('SELECT department_id FROM equipment_loans WHERE id = ?').get(id)
   if (!loanRow || !canSeeDepartment(await accessOf(c), loanRow.department_id)) return c.json([])
+
+  if (c.req.query('check')) {
+    try {
+      const r = await syncLoanRepliesThrottled(c.env, db)
+      if (r.matched > 0) c.executionCtx.waitUntil(broadcastLive(c.env, { r: 'equipment-loans' }))
+    } catch (e) {
+      console.error('Gmail inbox sync (chat aberto) falhou', e.message) // o histórico sai mesmo assim
+    }
+  }
+
   const rows = await db.prepare(`
-    SELECT m.id, m.to_email, m.message, m.status, m.error, m.created_at, u.name as sent_by_name
+    SELECT m.id, m.to_email, m.message, m.status, m.error, m.created_at, m.direction, m.from_email, u.name as sent_by_name
     FROM equipment_loan_messages m LEFT JOIN users u ON u.id = m.sent_by
     WHERE m.loan_id = ? ORDER BY m.created_at DESC LIMIT 50
-  `).all(c.req.param('id'))
+  `).all(id)
+  await db.prepare("UPDATE equipment_loans SET replies_seen_at = datetime('now') WHERE id = ?").run(id)
   return c.json(rows)
 })
 
