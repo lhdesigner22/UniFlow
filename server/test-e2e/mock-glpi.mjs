@@ -58,6 +58,12 @@ http.createServer((req, res) => {
   if (p === '/__reset') { seed(); return json(res, 200, { ok: true }) }
   if (p.endsWith('/initSession')) return json(res, 200, { session_token: 'tok' })
   if (p.endsWith('/killSession')) return json(res, 200, {})
+  // Cadastro de entidades — inclui uma SEM nenhum chamado (GENTE E GESTÃO)
+  if (p.endsWith('/apirest.php/Entity')) return json(res, 200, [
+    { id: 0, name: 'Entidade raiz', completename: 'Entidade raiz' },
+    { id: 4, name: 'SERVICE DESK', completename: 'Entidade raiz > SERVICE DESK' },
+    { id: 9, name: 'GENTE E GESTÃO', completename: 'Entidade raiz > GENTE E GESTÃO' },
+  ])
   if (p.includes('/search/Ticket')) {
     stats.searches++
     const [from, to] = (url.searchParams.get('range') || '0-249').split('-').map(Number)

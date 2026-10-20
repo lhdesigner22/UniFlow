@@ -315,6 +315,20 @@ export async function glpiFetchTickets(env, { entityName, statusCodes }) {
   }
 }
 
+// Cadastro de entidades do GLPI (o que o token enxerga), como caminho completo
+// ("Entidade raiz > GENTE E GESTÃO") — mesmo formato do campo Entidade dos
+// chamados. Alimenta a lista de escolha do Admin → Departamentos: antes ela
+// vinha só dos chamados baixados, então entidade sem chamado aberto sumia.
+export async function glpiFetchEntities(env) {
+  const sessionToken = await glpiInitSession(env)
+  try {
+    const rows = await glpiFetchPaginated(env, sessionToken, 'Entity', { expandDropdowns: false, pageSize: 1000, maxPages: 3 })
+    return [...new Set(rows.map(e => String(e.completename || e.name || '').trim()).filter(Boolean))]
+  } finally {
+    await glpiKillSession(env, sessionToken)
+  }
+}
+
 // A parte cara: TODOS os vínculos técnico↔chamado (type=2) + TODOS os
 // usuários, pra resolver nomes. Deliberadamente sem filtrar por conjunto de
 // chamados (o cache é reaproveitado tanto pelo backlog quanto pelo total,

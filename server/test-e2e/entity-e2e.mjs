@@ -31,6 +31,10 @@ await cron('10,25,40,55 * * * *'); await sleep(3500)
 // lista de entidades vistas no GLPI
 r = await call('u-test', 'GET', '/api/admin/glpi/entities')
 check('Admin enxerga as entidades que existem no GLPI', Array.isArray(r.j) && r.j.includes('Entidade raiz > SERVICE DESK') && r.j.includes('Entidade raiz > RH Interno'), JSON.stringify(r.j))
+check('...inclusive entidade SEM chamado (vem do cadastro /Entity)', r.j?.includes('Entidade raiz > GENTE E GESTÃO'), JSON.stringify(r.j))
+await cron('* * * * *'); await sleep(2500) // o Backlog de 1 min não pode mais apagar a lista
+r = await call('u-test', 'GET', '/api/admin/glpi/entities')
+check('...e o Backlog seguinte não tira nenhuma da lista', r.j?.includes('Entidade raiz > RH Interno') && r.j?.includes('Entidade raiz > GENTE E GESTÃO'), JSON.stringify(r.j))
 
 // ── Backlog ──────────────────────────────────────────────────────────────
 r = await call('d-ti-ana', 'GET', '/api/glpi-backlog')

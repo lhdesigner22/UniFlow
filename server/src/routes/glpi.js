@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { auth } from '../middleware/auth.js'
 import { runGlpiSync } from '../lib/glpiSync.js'
-import { glpiSolveTickets } from '../lib/glpiClient.js'
+import { glpiSolveTickets, glpiFetchEntities } from '../lib/glpiClient.js'
 import { loadDuplicates, solveDuplicates } from '../lib/glpiDuplicateSolver.js'
 import { broadcastLive } from '../lib/liveHub.js'
 import { loadSeenEntities } from '../lib/glpiEntities.js'
@@ -157,9 +157,28 @@ app.post('/resolve-duplicates', async c => {
   return c.json({ ...stats, background: canContinue })
 })
 
-// GET /entities — caminhos de entidade vistos nos chamados do GLPI (a lista de
-// escolha da entidade de cada departamento; atualizada a cada minuto pelo Backlog)
-app.get('/entities', async c => c.json(await loadSeenEntities(c.get('db'))))
+// GET /entities — lista de escolha da entidade de cada departamento: o cadastro
+// de entidades do GLPI (guardado por 1 h em app_settings.glpi_entities_all;
+// ?refresh=1 busca de novo) + os caminhos vistos nos chamados. Se o GLPI não
+// responder, fica com o que já tinha.
+const ENTITY_CACHE_MS = 60 * 60 * 1000
+app.get('/entities', async c => {
+  const db = c.get('db')
+  let cached = { at: 0, list: [] }
+  try { cached = JSON.parse((await db.scalar("SELECT value FROM app_settings WHERE key = 'glpi_entities_all'")) || '{}') } catch { /* sem cache */ }
+  let list = Array.isArray(cached.list) ? cached.list : []
+  if (c.req.query('refresh') || !cached.at || Date.now() - cached.at > ENTITY_CACHE_MS) {
+    try {
+      list = await glpiFetchEntities(c.env)
+      await db.prepare("INSERT INTO app_settings (key, value) VALUES ('glpi_entities_all', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+        .run(JSON.stringify({ at: Date.now(), list }))
+    } catch (e) {
+      console.error('GLPI: falha ao buscar entidades', e.message)
+    }
+  }
+  const all = new Set([...list, ...(await loadSeenEntities(db))])
+  return c.json([...all].sort((a, b) => a.localeCompare(b, 'pt-BR')))
+})
 
 // GET /unparsed — chamados que bateram no filtro mas não foram reconhecidos
 app.get('/unparsed', async c => {

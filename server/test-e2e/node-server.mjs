@@ -139,6 +139,12 @@ createServer(async (req, res) => {
   const chunks = []
   for await (const ch of req) chunks.push(ch)
   const body = chunks.length ? Buffer.concat(chunks) : undefined
+  // Igual ao `wrangler dev --test-scheduled`: GET /cdn-cgi/handler/scheduled?cron=...
+  if (req.url.startsWith('/cdn-cgi/handler/scheduled')) {
+    const cron = new URL(req.url, 'http://x').searchParams.get('cron') || '* * * * *'
+    await worker.scheduled({ cron, scheduledTime: Date.now() }, env, ctx)
+    res.writeHead(200); res.end('ok'); return
+  }
   if (req.url.startsWith('/__mock/')) {
     const out = await mockControl(req, new URL(req.url, 'http://x'), body?.toString() || '{}')
     res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(out)); return

@@ -11,7 +11,7 @@
 //   - Cor do técnico no gráfico: verde ≤3, amarelo 4–6, vermelho ≥7
 import { glpiFetchTickets, resolveAssignees, OPEN_STATUS_CODES as GLPI_OPEN_STATUS_CODES } from './glpiClient.js'
 import { loadGlpiTechCache } from './glpiTechCache.js'
-import { configuredEntities, matchesEntity, entityKey, distinctEntityPaths, saveSeenEntities, DEFAULT_ENTITY } from './glpiEntities.js'
+import { configuredEntities, matchesEntity, entityKey, DEFAULT_ENTITY } from './glpiEntities.js'
 
 const STATUS_LABEL = {
   1: 'Novo', 2: 'Em andamento', 3: 'Aguardando', 4: 'Pendente',
@@ -154,7 +154,10 @@ export async function runGlpiBacklogSync(env, db) {
     glpiFetchTickets(env, { entityName: null, statusCodes: GLPI_OPEN_STATUS_CODES }),
     loadGlpiTechCache(db),
   ])
-  await saveSeenEntities(db, distinctEntityPaths(allTickets)) // lista de escolha do Admin
+  // (Não grava mais a lista de entidades vistas aqui: este sync só vê chamados
+  // ABERTOS e sobrescrevia a lista a cada minuto — entidade sem chamado aberto
+  // sumia do Admin. Quem acumula é o Total de Chamados; o cadastro completo vem
+  // de GET /admin/glpi/entities.)
 
   const entities = await configuredEntities(db)
   const statements = []

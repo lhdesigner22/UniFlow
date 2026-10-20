@@ -1,5 +1,5 @@
 DELETE FROM departments WHERE id IN ('d-ti','d-rh');
-INSERT INTO departments (id,name,color) VALUES ('d-ti','TI','#3b82f6'),('d-rh','RH','#ef4444');
+INSERT INTO departments (id,name,color,glpi_entity_name) VALUES ('d-ti','TI','#3b82f6','SERVICE DESK'),('d-rh','RH','#ef4444',NULL);
 DELETE FROM users WHERE id IN ('d-ti-ana','d-rh-ana','d-rh-col','d-nodept');
 INSERT INTO users (id,name,email,password,system_role,role_id,department_id) VALUES ('d-ti-ana','d-ti-ana','dtia@colegioser.com','x','user','role-analista','d-ti'),('d-rh-ana','d-rh-ana','drha@colegioser.com','x','user','role-analista','d-rh'),('d-rh-col','d-rh-col','drhc@colegioser.com','x','user','role-colaborador','d-rh'),('d-nodept','d-nodept','dnd@colegioser.com','x','user','role-analista',NULL);
 UPDATE users SET department_id='d-ti' WHERE id='u-test';
