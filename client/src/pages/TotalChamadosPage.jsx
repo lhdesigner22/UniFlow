@@ -357,9 +357,12 @@ export default function TotalChamadosPage() {
             <div className={s.tableFilters}>
               <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                 <option value="">Todos os status</option>
-                {Object.entries(snapshot.statusLabels).map(([code, label]) => (
-                  <option key={code} value={code}>{label}</option>
-                ))}
+                {/* Só os status que existem nesta entidade (as filas do TI não aparecem nos outros departamentos) */}
+                {Object.entries(snapshot.statusLabels)
+                  .filter(([code]) => (snapshot.byStatus?.[code] || 0) > 0)
+                  .map(([code, label]) => (
+                    <option key={code} value={code}>{label}</option>
+                  ))}
               </select>
               <select value={techFilter} onChange={e => setTechFilter(e.target.value)}>
                 <option value="">Todos os técnicos</option>

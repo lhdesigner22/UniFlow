@@ -94,6 +94,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - Quem tem escopo `all` usa **"Ver como departamento"** (Topbar → header `X-Department-View`): só estreita listas, nunca amplia acesso.
 - **Chamados por entidade do GLPI**: `departments.glpi_entity_name` (TI = "SERVICE DESK"); resumos por entidade em `glpi_backlog_snapshot`/
   `glpi_total_*` com id `entity:<nome>`; `lib/glpiEntities.js`. Departamento sem entidade não vê chamados.
+  Dashboard do Backlog por entidade: os status 10/13–17 (Compras, Manutenção, RH, Desligamento, Inventário, Eventos) são **filas do TI** —
+  os cartões delas só aparecem no SERVICE DESK (ou se a fila tiver chamado). Todo departamento tem "Alta prioridade", "Parados há +30
+  dias" e o gráfico **por categoria** (campo 7 do GLPI, só na busca do Backlog — o Total não traz categoria pra não estourar 2 MB).
 
 ## GLPI
 - Eventos (status 17 "Eventos") → Agenda (`lib/glpiSync.js`, parsers em `glpiParser.js`). Importa em **lotes** (≤30 por rodada; flag

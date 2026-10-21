@@ -22,7 +22,21 @@ const STATUS_LABEL = {
 const PRIORITY_LABEL = { 1: 'Muito baixa', 2: 'Baixa', 3: 'Média', 4: 'Alta', 5: 'Muito alta', 6: 'Crítica' }
 const NON_TECH_STATUS = new Set([10, 13, 16, 17])
 const AGE_BUCKETS = ['0-7 dias', '8-30 dias', '31-90 dias', '90+ dias']
-const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+// Alguns nomes no GLPI foram gravados com a codificação trocada (UTF-8 lido
+// como Latin-1: "SubstituiÃ§Ã£o"). Desfaz só quando tem a "cara" disso e o
+// resultado é UTF-8 válido; o resto passa como está.
+export function fixMojibake(s) {
+  if (!s || !/[ÃÂ][\u0080-¿]/.test(s)) return s
+  try {
+    const bytes = Uint8Array.from([...s].map(ch => ch.charCodeAt(0)))
+    if (bytes.some(b => b > 255)) return s
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    return s
+  }
+}
+
+const MONTH_NAMES =['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 function techColor(count) {
   if (count >= 7) return 'red'
@@ -96,6 +110,18 @@ export function computeBacklogSnapshot({ tickets, assigneeNamesByTicket }) {
     if (bucket) byAge[bucket]++
   }
 
+  // Por categoria do GLPI — é o que mais diferencia um departamento do outro
+  // (as categorias do RH não são as do TI). Guarda o caminho completo
+  // ("Infra > Rede > Wi-Fi"), que é como aparece no GLPI.
+  const countByCategory = {}
+  for (const t of tickets) {
+    const cat = fixMojibake(String(t.category || '').trim()) || 'Sem categoria'
+    countByCategory[cat] = (countByCategory[cat] || 0) + 1
+  }
+  const byCategory = Object.entries(countByCategory)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+
   const ticketList = tickets
     .slice()
     .sort((a, b) => (b.date_mod || '').localeCompare(a.date_mod || ''))
@@ -107,6 +133,7 @@ export function computeBacklogSnapshot({ tickets, assigneeNamesByTicket }) {
       statusLabel: STATUS_LABEL[Number(t.status)] || String(t.status),
       priority: Number(t.priority),
       technicians: assigneeNamesByTicket[t.id] || [],
+      category: fixMojibake(String(t.category || '').trim()) || null,
       date_creation: t.date_creation,
       date_mod: t.date_mod,
     }))
@@ -121,6 +148,10 @@ export function computeBacklogSnapshot({ tickets, assigneeNamesByTicket }) {
     monthlyTrend: computeMonthlyTrend(tickets),
     semTecnico,
     byTechnician,
+    byCategory,
+    // Vale pro dashboard: prioridade Alta ou acima, e parados há mais de 30 dias
+    highPriority: tickets.filter(t => Number(t.priority) >= 4).length,
+    olderThan30: byAge['31-90 dias'] + byAge['90+ dias'],
     tickets: ticketList,
     updatedAt: new Date().toISOString(),
   }
@@ -151,7 +182,7 @@ export async function runGlpiBacklogSync(env, db) {
   // o filtro por entidade já era feito aqui no código, depois da busca) e gera um
   // resumo por entidade configurada, guardado com id `entity:<nome>`.
   const [allTickets, techCache] = await Promise.all([
-    glpiFetchTickets(env, { entityName: null, statusCodes: GLPI_OPEN_STATUS_CODES }),
+    glpiFetchTickets(env, { entityName: null, statusCodes: GLPI_OPEN_STATUS_CODES, withCategory: true }),
     loadGlpiTechCache(db),
   ])
   // (Não grava mais a lista de entidades vistas aqui: este sync só vê chamados

@@ -13,9 +13,9 @@ function reservation({ name, room, date = '2027-01-01', start = '06:00', end = '
   return `Nome da reserva: ${name}\nSala: ${room}\nInício: ${start} - ${ext}\nTérmino: ${end} - ${ext}`
 }
 const SD = 'Entidade raiz > SERVICE DESK'
-function add(name, content, { status = 17, entity = SD, created = '2026-10-15 09:00:00' } = {}) {
+function add(name, content, { status = 17, entity = SD, created = '2026-10-15 09:00:00', category = null, priority = 3 } = {}) {
   const id = nextId++
-  tickets.set(id, { id, name, content, status, entity, priority: 3, date: created, date_mod: created })
+  tickets.set(id, { id, name, content, status, entity, priority, category, date: created, date_mod: created })
   return id
 }
 
@@ -38,9 +38,9 @@ function seed() {
   add('Suporte técnico sem data', 'Foi dado suporte técnico ao evento, sem nenhuma data no texto.')
   // outra ENTIDADE do GLPI (RH Interno): abertos (1,2,3), resolvidos (5) e fechado (6)
   const RH = 'Entidade raiz > RH Interno'
-  add('RH: acesso ao sistema de folha', 'x', { status: 1, entity: RH, created: '2026-10-10 10:00:00' })
-  add('RH: impressora do setor', 'x', { status: 2, entity: RH, created: '2026-10-11 10:00:00' })
-  add('RH: crachá novo', 'x', { status: 3, entity: RH, created: '2026-10-12 10:00:00' })
+  add('RH: acesso ao sistema de folha', 'x', { status: 1, entity: RH, created: '2026-10-10 10:00:00', category: 'RH > Folha de pagamento', priority: 5 })
+  add('RH: impressora do setor', 'x', { status: 2, entity: RH, created: '2026-10-11 10:00:00', category: 'Infra > Impressora' })
+  add('RH: crachá novo', 'x', { status: 3, entity: RH, created: '2026-08-12 10:00:00', category: 'RH > Folha de pagamento' }) // aberto há +30 dias
   add('RH: senha do e-mail', 'x', { status: 5, entity: RH, created: '2026-09-01 10:00:00' })
   add('RH: monitor sem imagem', 'x', { status: 5, entity: RH, created: '2026-09-05 10:00:00' })
   add('RH: teclado', 'x', { status: 6, entity: RH, created: '2026-08-20 10:00:00' })
@@ -73,7 +73,7 @@ http.createServer((req, res) => {
       if (url.searchParams.get(`criteria[${i}][field]`) === '12') wanted.add(Number(url.searchParams.get(`criteria[${i}][value]`)))
     }
     const rows = [...tickets.values()].filter(t => wanted.has(t.status)).map(t => ({
-      2: t.id, 1: t.name, 12: t.status, 3: t.priority, 15: t.date, 19: t.date_mod, 80: t.entity,
+      2: t.id, 1: t.name, 12: t.status, 3: t.priority, 15: t.date, 19: t.date_mod, 80: t.entity, 7: t.category,
     }))
     return json(res, 200, { data: rows.slice(from, to + 1), totalcount: rows.length })
   }

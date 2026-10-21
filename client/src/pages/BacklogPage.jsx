@@ -17,17 +17,24 @@ const AGE_COLORS = { '0-7 dias': '#22C55E', '8-30 dias': '#F59E0B', '31-90 dias'
 // Réplica dos KPIs do "Dashboard de Helpdesk GLPI" (projeto irmão) — os
 // códigos de status são específicos dessa instalação do GLPI. `codes` é
 // usado pro clique no card filtrar a tabela pelo(s) mesmo(s) status.
+//
+// Os status 10, 13–17 são filas do TI (SERVICE DESK): Compras, Manutenção, RH,
+// Desligamento, Inventário, Eventos. Nos outros departamentos elas viviam
+// zeradas — agora só aparecem no SERVICE DESK ou se a fila tiver chamado.
 const KPI_DEFS = [
   { key: 'novos', label: 'Novos', codes: ['1'], calc: b => b.byStatus['1'] || 0 },
   { key: 'andamento', label: 'Em andamento / Aguardando', codes: ['2', '3'], calc: b => (b.byStatus['2'] || 0) + (b.byStatus['3'] || 0) },
   { key: 'pendentes', label: 'Pendentes', codes: ['4'], calc: b => b.byStatus['4'] || 0 },
-  { key: 'compras', label: 'Compras', codes: ['10'], calc: b => b.byStatus['10'] || 0 },
-  { key: 'manutencao', label: 'Manutenção', codes: ['13'], calc: b => b.byStatus['13'] || 0 },
-  { key: 'rh', label: 'RH', codes: ['14'], calc: b => b.byStatus['14'] || 0 },
-  { key: 'desligamento', label: 'Desligamento', codes: ['15'], calc: b => b.byStatus['15'] || 0 },
-  { key: 'inventario', label: 'Inventário', codes: ['16'], calc: b => b.byStatus['16'] || 0 },
-  { key: 'eventos', label: 'Eventos', codes: ['17'], calc: b => b.byStatus['17'] || 0 },
+  { key: 'compras', label: 'Compras', codes: ['10'], queue: true, calc: b => b.byStatus['10'] || 0 },
+  { key: 'manutencao', label: 'Manutenção', codes: ['13'], queue: true, calc: b => b.byStatus['13'] || 0 },
+  { key: 'rh', label: 'RH', codes: ['14'], queue: true, calc: b => b.byStatus['14'] || 0 },
+  { key: 'desligamento', label: 'Desligamento', codes: ['15'], queue: true, calc: b => b.byStatus['15'] || 0 },
+  { key: 'inventario', label: 'Inventário', codes: ['16'], queue: true, calc: b => b.byStatus['16'] || 0 },
+  { key: 'eventos', label: 'Eventos', codes: ['17'], queue: true, calc: b => b.byStatus['17'] || 0 },
 ]
+const TI_ENTITY = 'SERVICE DESK'
+const isTiEntity = entity => String(entity || '').toUpperCase().split('>').some(seg => seg.trim() === TI_ENTITY)
+const OLD_BUCKETS = ['31-90 dias', '90+ dias']
 
 const PRIORITY_LABEL = { 1: 'Muito baixa', 2: 'Baixa', 3: 'Média', 4: 'Alta', 5: 'Muito alta', 6: 'Crítica' }
 const TECH_COLOR = { green: 'var(--success)', amber: 'var(--warning)', red: 'var(--danger)' }
@@ -69,7 +76,9 @@ export default function BacklogPage() {
   const [techFilter, setTechFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('') // string vazia, ou código(s) separados por vírgula
   const [monthFilter, setMonthFilter] = useState('')
-  const [ageFilter, setAgeFilter] = useState('')
+  const [ageFilter, setAgeFilter] = useState('') // faixa de idade, ou '__old__' = mais de 30 dias
+  const [priorityFilter, setPriorityFilter] = useState('') // '' | 'alta' (Alta ou acima)
+  const [categoryFilter, setCategoryFilter] = useState('')
   const tableRef = useRef(null)
   // Entidade do GLPI: o departamento da pessoa define qual aparece; quem enxerga todos
   // os departamentos pode escolher (entityChoice vazio = a entidade padrão do servidor).
@@ -110,10 +119,19 @@ export default function BacklogPage() {
   const applyTech = name => { setTechFilter(prev => (prev === name ? '' : name)); scrollToTable() }
   const applyMonth = month => { setMonthFilter(prev => (prev === month ? '' : month)); scrollToTable() }
   const applyAge = bucket => { setAgeFilter(prev => (prev === bucket ? '' : bucket)); scrollToTable() }
-  const clearFilters = () => { setStatusFilter(''); setTechFilter(''); setMonthFilter(''); setAgeFilter('') }
-  const hasActiveFilter = !!(statusFilter || techFilter || monthFilter || ageFilter)
+  const applyPriority = p => { setPriorityFilter(prev => (prev === p ? '' : p)); scrollToTable() }
+  const applyCategory = c => { setCategoryFilter(prev => (prev === c ? '' : c)); scrollToTable() }
+  const clearFilters = () => { setStatusFilter(''); setTechFilter(''); setMonthFilter(''); setAgeFilter(''); setPriorityFilter(''); setCategoryFilter('') }
+  const hasActiveFilter = !!(statusFilter || techFilter || monthFilter || ageFilter || priorityFilter || categoryFilter)
+
+  // Trocou de entidade: os filtros de uma não fazem sentido na outra
+  useEffect(() => { clearFilters() }, [entityChoice])
 
   const chartData = useMemo(() => (snapshot?.byTechnician || []).slice(0, 15), [snapshot])
+  const categoryData = useMemo(() => (snapshot?.byCategory || []).slice(0, 12), [snapshot])
+  const isTi = isTiEntity(meta.entity)
+  // Filas do TI: no SERVICE DESK sempre; nos outros só se a fila tiver chamado
+  const kpis = useMemo(() => (snapshot ? KPI_DEFS.filter(k => !k.queue || isTi || k.calc(snapshot) > 0) : []), [snapshot, isTi])
 
   const statusPieData = useMemo(() => {
     if (!snapshot) return []
@@ -138,10 +156,13 @@ export default function BacklogPage() {
       if (techFilter === '__none__' && t.technicians.length > 0) return false
       if (techFilter && techFilter !== '__none__' && !t.technicians.includes(techFilter)) return false
       if (monthFilter && String(t.date_creation || '').slice(0, 7) !== monthFilter) return false
-      if (ageFilter && ageBucket(t.date_creation) !== ageFilter) return false
+      if (ageFilter === '__old__' && !OLD_BUCKETS.includes(ageBucket(t.date_creation))) return false
+      if (ageFilter && ageFilter !== '__old__' && ageBucket(t.date_creation) !== ageFilter) return false
+      if (priorityFilter === 'alta' && !(Number(t.priority) >= 4)) return false
+      if (categoryFilter && (t.category || 'Sem categoria') !== categoryFilter) return false
       return true
     })
-  }, [snapshot, techFilter, statusFilter, monthFilter, ageFilter])
+  }, [snapshot, techFilter, statusFilter, monthFilter, ageFilter, priorityFilter, categoryFilter])
 
   if (loading) return <div className={s.loading}>Carregando backlog...</div>
 
@@ -188,7 +209,7 @@ export default function BacklogPage() {
               <span className={s.kpiNumber}>{snapshot.totalOpen}</span>
               <span className={s.kpiLabel}>Total em aberto</span>
             </button>
-            {KPI_DEFS.map(k => (
+            {kpis.map(k => (
               <button
                 key={k.key}
                 type="button"
@@ -207,6 +228,28 @@ export default function BacklogPage() {
               <span className={s.kpiNumber}>{snapshot.semTecnico}</span>
               <span className={s.kpiLabel}>Sem técnico atribuído</span>
             </button>
+            {snapshot.highPriority !== undefined && (
+              <button
+                type="button"
+                className={`${s.kpiCard} ${s.kpiWarn} ${s.kpiClickable} ${priorityFilter === 'alta' ? s.kpiActive : ''}`}
+                onClick={() => applyPriority('alta')}
+                title="Prioridade Alta, Muito alta ou Crítica"
+              >
+                <span className={s.kpiNumber}>{snapshot.highPriority}</span>
+                <span className={s.kpiLabel}>Alta prioridade</span>
+              </button>
+            )}
+            {snapshot.olderThan30 !== undefined && (
+              <button
+                type="button"
+                className={`${s.kpiCard} ${s.kpiWarn} ${s.kpiClickable} ${ageFilter === '__old__' ? s.kpiActive : ''}`}
+                onClick={() => applyAge('__old__')}
+                title="Abertos há mais de 30 dias"
+              >
+                <span className={s.kpiNumber}>{snapshot.olderThan30}</span>
+                <span className={s.kpiLabel}>Parados há +30 dias</span>
+              </button>
+            )}
           </div>
 
           {/* ── Distribuição por status (largura cheia — cresce com o nº de categorias) ── */}
@@ -284,10 +327,39 @@ export default function BacklogPage() {
             </Reveal>
           </div>
 
+          {/* ── Por categoria do GLPI (o que mais muda de um departamento pro outro) ── */}
+          {categoryData.length > 0 && (
+            <Reveal className={s.chartCard}>
+              <h3>Chamados abertos por categoria</h3>
+              <p className={s.chartNote}>Categorias do GLPI{snapshot.byCategory.length > categoryData.length ? ` — as ${categoryData.length} com mais chamados` : ''}. Clique numa barra pra filtrar a tabela.</p>
+              <ResponsiveContainer width="100%" height={Math.max(140, categoryData.length * 34)}>
+                <BarChart data={categoryData} layout="vertical" margin={{ top: 5, right: 24, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" width={220} tick={{ fill: 'var(--text)', fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: 'var(--text)', fontWeight: 600, marginBottom: 4 }}
+                    itemStyle={{ color: 'var(--text)' }}
+                    formatter={v => [`${v} chamado(s)`, 'Em aberto']}
+                  />
+                  <Bar dataKey="count" radius={[0, 4, 4, 0]} cursor="pointer" fill="var(--brand)" onClick={d => d?.payload && applyCategory(d.payload.name)}>
+                    {categoryData.map((c, i) => (
+                      <Cell key={i} fill="var(--brand)" opacity={categoryFilter && categoryFilter !== c.name ? 0.35 : 1} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Reveal>
+          )}
+
           {/* ── Backlog por técnico ── */}
           <Reveal className={s.chartCard}>
             <h3>Backlog por técnico</h3>
-            <p className={s.chartNote}>Chamados abertos, excluindo filas departamentais (Compras/Manutenção/Inventário/Eventos). Verde ≤3 · Amarelo 4–6 · Vermelho ≥7.</p>
+            <p className={s.chartNote}>
+              {isTi ? 'Chamados abertos, excluindo filas departamentais (Compras/Manutenção/Inventário/Eventos). ' : 'Chamados abertos com técnico atribuído. '}
+              Verde ≤3 · Amarelo 4–6 · Vermelho ≥7.
+            </p>
             {chartData.length === 0 ? (
               <p className={s.chartEmpty}>Nenhum chamado com técnico atribuído no momento.</p>
             ) : (
@@ -317,9 +389,11 @@ export default function BacklogPage() {
             <div className={s.tableFilters}>
               <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                 <option value="">Todos os status</option>
-                {Object.entries(snapshot.statusLabels).map(([code, label]) => (
-                  <option key={code} value={code}>{label}</option>
-                ))}
+                {Object.entries(snapshot.statusLabels)
+                  .filter(([code]) => !['5', '6'].includes(code) && (isTi || ['1', '2', '3', '4'].includes(code) || snapshot.byStatus[code] > 0))
+                  .map(([code, label]) => (
+                    <option key={code} value={code}>{label}</option>
+                  ))}
               </select>
               <select value={techFilter} onChange={e => setTechFilter(e.target.value)}>
                 <option value="">Todos os técnicos</option>
@@ -336,9 +410,20 @@ export default function BacklogPage() {
               </select>
               <select value={ageFilter} onChange={e => setAgeFilter(e.target.value)}>
                 <option value="">Qualquer idade</option>
+                <option value="__old__">Mais de 30 dias</option>
                 {AGE_BUCKETS_ORDER.map(b => (
                   <option key={b} value={b}>{b}</option>
                 ))}
+              </select>
+              {categoryData.length > 0 && (
+                <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+                  <option value="">Todas as categorias</option>
+                  {snapshot.byCategory.map(c => <option key={c.name} value={c.name}>{c.name} ({c.count})</option>)}
+                </select>
+              )}
+              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
+                <option value="">Qualquer prioridade</option>
+                <option value="alta">Alta ou acima</option>
               </select>
               {hasActiveFilter && (
                 <button className="btn btn-ghost btn-sm" onClick={clearFilters}>✕ Limpar filtros</button>
@@ -350,7 +435,7 @@ export default function BacklogPage() {
               <table className={s.table}>
                 <thead>
                   <tr>
-                    <th>ID</th><th>Título</th><th>Status</th><th>Prioridade</th>
+                    <th>ID</th><th>Título</th><th>Categoria</th><th>Status</th><th>Prioridade</th>
                     <th>Técnico(s)</th><th>Aberto em</th><th>Modificado em</th>
                   </tr>
                 </thead>
@@ -359,6 +444,7 @@ export default function BacklogPage() {
                     <tr key={t.id}>
                       <td className={s.mono}>#{t.id}</td>
                       <td className={s.titleCell} title={t.title}>{t.title}</td>
+                      <td className={s.titleCell} title={t.category || ''}>{t.category || <span className={s.noTech}>—</span>}</td>
                       <td><span className="badge badge-blue">{t.statusLabel}</span></td>
                       <td>{PRIORITY_LABEL[t.priority] || t.priority}</td>
                       <td>{t.technicians.length ? t.technicians.join(', ') : <span className={s.noTech}>—</span>}</td>
@@ -367,7 +453,7 @@ export default function BacklogPage() {
                     </tr>
                   ))}
                   {filteredTickets.length === 0 && (
-                    <tr><td colSpan={7} className={s.chartEmpty}>Nenhum chamado bate com esse filtro.</td></tr>
+                    <tr><td colSpan={8} className={s.chartEmpty}>Nenhum chamado bate com esse filtro.</td></tr>
                   )}
                 </tbody>
               </table>

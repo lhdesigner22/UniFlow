@@ -199,7 +199,7 @@ export const OPEN_STATUS_CODES = [1, 2, 3, 4, 10, 13, 14, 15, 16, 17]
 // entidade, não só o backlog em aberto).
 export const ALL_STATUS_CODES = [1, 2, 3, 4, 5, 6, 10, 13, 14, 15, 16, 17]
 
-async function glpiSearchTicketsByStatus(env, sessionToken, entityName, statusCodes) {
+async function glpiSearchTicketsByStatus(env, sessionToken, entityName, statusCodes, extraFields = []) {
   const pageSize = 500
   const maxPages = 30 // até 15.000 chamados — folga generosa sobre o esperado
   const criteria = statusCodes
@@ -207,7 +207,7 @@ async function glpiSearchTicketsByStatus(env, sessionToken, entityName, statusCo
       ? `criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=${code}`
       : `criteria[${i}][link]=OR&criteria[${i}][field]=12&criteria[${i}][searchtype]=equals&criteria[${i}][value]=${code}`)
     .join('&')
-  const forcedisplay = ['2', '1', '12', '3', '15', '19', '80']
+  const forcedisplay = ['2', '1', '12', '3', '15', '19', '80', ...extraFields]
     .map((field, i) => `forcedisplay[${i}]=${field}`).join('&')
 
   const rows = []
@@ -297,11 +297,15 @@ async function glpiListSearchOptions(env, sessionToken, itemtype) {
 // resolve técnico nenhum — só devolve os chamados. Quem precisa do nome do
 // técnico usa `glpiFetchTechnicianCache` (pesado, só roda a cada 15 min) via
 // o cache em D1 — ver `glpiTechCache.js`.
-export async function glpiFetchTickets(env, { entityName, statusCodes }) {
+// `withCategory`: traz também a categoria (campo 7, "Pai > Filho") — só o
+// Backlog pede (poucos chamados, abertos); o Total não, porque o cache cru dele
+// já fica perto do limite de 2 MB por linha do D1.
+export async function glpiFetchTickets(env, { entityName, statusCodes, withCategory = false }) {
   const sessionToken = await glpiInitSession(env)
   try {
-    const searchRows = await glpiSearchTicketsByStatus(env, sessionToken, entityName, statusCodes)
+    const searchRows = await glpiSearchTicketsByStatus(env, sessionToken, entityName, statusCodes, withCategory ? ['7'] : [])
     return searchRows.map(row => ({
+      ...(withCategory ? { category: row['7'] || null } : {}),
       id: Number(row['2']),
       name: row['1'],
       status: row['12'],
