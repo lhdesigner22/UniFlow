@@ -115,6 +115,20 @@ const item = (r.j?.checklist || []).find(i => i.id === itemB)
 expect('item do quadro B continua lá', !!item, true)
 expect('...e não foi renomeado', item?.title, 'Item B')
 
+// ── Etiquetas do quadro (criar/editar/apagar) ────────────────────────────
+r = await call('ana', 'POST', `/api/boards/${boardB}/labels`, { name: 'Urgente', color: '#EF4444' })
+expect('cria etiqueta no quadro', r.s, 200)
+const labelB = r.j?.id
+expect('cor que não é #RRGGBB é recusada', (await call('ana', 'POST', `/api/boards/${boardB}/labels`, { name: 'x', color: 'red;background:url(//x)' })).s, 400)
+expect('nome vazio é recusado', (await call('ana', 'POST', `/api/boards/${boardB}/labels`, { name: '  ' })).s, 400)
+r = await call('ana', 'PUT', `/api/boards/${boardB}/labels/${labelB}`, { name: 'Muito urgente', color: '#22C55E' })
+expect('renomeia e troca a cor', `${r.s} ${r.j?.name} ${r.j?.color}`, '200 Muito urgente #22C55E')
+expect('não edita etiqueta de outro quadro pela URL do seu', (await call('colab', 'PUT', `/api/boards/${boardA}/labels/${labelB}`, { name: 'hack' })).s, 404)
+expect('põe a etiqueta no cartão', (await call('ana', 'POST', `/api/boards/${boardB}/cards/${cardB}/labels`, { label_id: labelB })).s, 200)
+expect('apaga a etiqueta do quadro', (await call('ana', 'DELETE', `/api/boards/${boardB}/labels/${labelB}`)).s, 200)
+r = await call('ana', 'GET', `/api/boards/${boardB}/cards/${cardB}`)
+expect('...e ela sai do cartão', (r.j?.labels || []).length, 0)
+
 // ── Reordenar colunas (rota que nunca era alcançada) ─────────────────────
 r = await call('ana', 'PUT', `/api/boards/${boardB}/columns/reorder`, { columns: colsB.map((c, i) => ({ id: c.id, order_index: colsB.length - i })) })
 expect('PUT /columns/reorder responde 200', r.s, 200)

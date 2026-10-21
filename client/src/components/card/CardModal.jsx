@@ -4,6 +4,7 @@ import Modal from '../common/Modal'
 import MemberPicker from '../common/MemberPicker'
 import { avatarColor } from '../../utils/avatarColor'
 import { formatDuration, hhmmToSeconds, secondsToHHMM, parseDbTimestamp, todayLocalISO } from '../../utils/formatDuration'
+import { confirmDialog } from '../../store/dialogStore'
 import s from './CardModal.module.css'
 
 // Foto dentro de um "chip" (membro/lançamento de tempo/comentário) — cai
@@ -35,13 +36,20 @@ const PROGRESS_OPTIONS = [
   { value: 'completed', label: '🟢 Concluído' },
 ]
 
+// Cores prontas pras etiquetas do quadro (o servidor só aceita #RRGGBB).
+const LABEL_COLORS = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#0EA5A5', '#3B82F6', '#8B5CF6', '#EC4899', '#64748B']
+
 function fmtDateTime(v) {
   // Timestamps do backend vêm em UTC sem sufixo 'Z' — parseDbTimestamp trata
   // isso corretamente (ver esse helper pra mais contexto).
   return parseDbTimestamp(v).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function CardModal({ boardId, cardId, board, currentUser, onClose, onPatchLocal, onDeleted }) {
+export default function CardModal({ boardId, cardId, board, currentUser, onClose, onPatchLocal, onDeleted, onBoardLabelsChange }) {
+  // Formulário de etiqueta do quadro: null = fechado; { id?, name, color } = criando (sem id) ou editando
+  const [labelForm, setLabelForm] = useState(null)
+  const [editingLabels, setEditingLabels] = useState(false)
+  const [labelError, setLabelError] = useState('')
   const [card, setCard] = useState(null)
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(null)
@@ -127,6 +135,38 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
       await api.post(`/boards/${boardId}/cards/${cardId}/labels`, { label_id: label.id })
       patch(prev => ({ ...prev, labels: [...(prev.labels || []), label] }))
     }
+  }
+
+  // Etiquetas do QUADRO (criar/editar/apagar) — valem pra todos os cartões dele.
+  const boardLabels = board.labels || []
+  const saveLabelForm = async () => {
+    const name = labelForm?.name.trim()
+    if (!name) return
+    setLabelError('')
+    try {
+      if (labelForm.id) {
+        const { data } = await api.put(`/boards/${boardId}/labels/${labelForm.id}`, { name, color: labelForm.color })
+        onBoardLabelsChange?.(boardLabels.map(l => l.id === data.id ? data : l))
+        patch(prev => ({ ...prev, labels: (prev.labels || []).map(l => l.id === data.id ? data : l) }))
+      } else {
+        const { data } = await api.post(`/boards/${boardId}/labels`, { name, color: labelForm.color })
+        onBoardLabelsChange?.([...boardLabels, data])
+        // Quem cria a etiqueta de dentro de um cartão quase sempre quer ela nesse cartão.
+        await api.post(`/boards/${boardId}/cards/${cardId}/labels`, { label_id: data.id })
+        patch(prev => ({ ...prev, labels: [...(prev.labels || []), data] }))
+      }
+      setLabelForm(null)
+    } catch (e) {
+      setLabelError(e.response?.data?.error || 'Não deu pra salvar a etiqueta.')
+    }
+  }
+  const deleteLabel = async (label) => {
+    const ok = await confirmDialog(`Apagar a etiqueta "${label.name}"? Ela sai de todos os cartões deste quadro.`, { title: 'Apagar etiqueta', confirmLabel: 'Apagar' })
+    if (!ok) return
+    await api.delete(`/boards/${boardId}/labels/${label.id}`)
+    onBoardLabelsChange?.(boardLabels.filter(l => l.id !== label.id), { reload: true })
+    patch(prev => ({ ...prev, labels: (prev.labels || []).filter(l => l.id !== label.id) }))
+    if (labelForm?.id === label.id) setLabelForm(null)
   }
 
   // ── Members ───────────────────────────────────────────────────
@@ -285,21 +325,54 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
         <div className={s.metaField}>
           <span className="label">Etiquetas</span>
           <div className={s.chipsRow}>
-            {(board.labels || []).map(l => {
+            {boardLabels.map(l => {
               const active = card.labels?.some(x => x.id === l.id)
               return (
-                <button
-                  key={l.id}
-                  className={s.labelToggle}
-                  style={{ background: active ? l.color : 'transparent', borderColor: l.color, color: active ? '#fff' : l.color }}
-                  onClick={() => toggleLabel(l)}
-                >
-                  {l.name}
-                </button>
+                <span key={l.id} className={s.labelWrap}>
+                  <button
+                    className={s.labelToggle}
+                    style={{ background: active ? l.color : 'transparent', borderColor: l.color, color: active ? '#fff' : l.color }}
+                    onClick={() => editingLabels ? setLabelForm({ id: l.id, name: l.name, color: l.color }) : toggleLabel(l)}
+                    title={editingLabels ? 'Renomear / trocar a cor' : active ? 'Tirar do cartão' : 'Pôr no cartão'}
+                  >
+                    {editingLabels && '✏️ '}{l.name}
+                  </button>
+                  {editingLabels && <button className={s.chipRemove} title="Apagar etiqueta do quadro" onClick={() => deleteLabel(l)}>×</button>}
+                </span>
               )
             })}
-            {(!board.labels || board.labels.length === 0) && <span className={s.emptyHint}>Nenhuma etiqueta no quadro ainda.</span>}
+            {boardLabels.length === 0 && !labelForm && <span className={s.emptyHint}>Nenhuma etiqueta no quadro ainda.</span>}
+            {!labelForm && (
+              <button className="btn btn-ghost btn-sm" onClick={() => { setLabelError(''); setLabelForm({ name: '', color: LABEL_COLORS[boardLabels.length % LABEL_COLORS.length] }) }}>+ Etiqueta</button>
+            )}
+            {boardLabels.length > 0 && !labelForm && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditingLabels(v => !v)}>{editingLabels ? 'Pronto' : 'Editar'}</button>
+            )}
           </div>
+          {labelForm && (
+            <div className={s.labelForm}>
+              <input
+                value={labelForm.name} maxLength={30} autoFocus placeholder="Nome da etiqueta (ex: Urgente)"
+                onChange={e => setLabelForm(f => ({ ...f, name: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter') saveLabelForm(); if (e.key === 'Escape') setLabelForm(null) }}
+              />
+              <div className={s.colorRow}>
+                {LABEL_COLORS.map(col => (
+                  <button
+                    key={col} type="button" aria-label={`Cor ${col}`}
+                    className={`${s.colorSwatch} ${labelForm.color === col ? s.colorSwatchActive : ''}`}
+                    style={{ background: col }}
+                    onClick={() => setLabelForm(f => ({ ...f, color: col }))}
+                  />
+                ))}
+              </div>
+              {labelError && <span className={s.labelError}>{labelError}</span>}
+              <div className={s.labelFormActions}>
+                <button className="btn btn-primary btn-sm" disabled={!labelForm.name.trim()} onClick={saveLabelForm}>{labelForm.id ? 'Salvar' : 'Criar etiqueta'}</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setLabelForm(null)}>Cancelar</button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Description ── */}

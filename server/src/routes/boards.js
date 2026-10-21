@@ -7,6 +7,17 @@ import { resolveBoardRole, getVisibleBoardIds, isSuperAdmin } from '../lib/board
 const app = new Hono()
 app.use('*', auth)
 
+// Etiquetas do quadro: nome curto e cor só em hexadecimal (#RRGGBB) — a cor
+// vai direto pro style do chip na tela.
+const DEFAULT_LABEL_COLOR = '#0EA5A5'
+function cleanLabel(name, color) {
+  const n = String(name ?? '').trim()
+  if (!n) return { error: 'Nome é obrigatório' }
+  if (n.length > 30) return { error: 'Nome da etiqueta muito longo (máx. 30 caracteres)' }
+  if (color !== undefined && color !== null && color !== '' && !/^#[0-9a-f]{6}$/i.test(String(color))) return { error: 'Cor inválida' }
+  return { name: n, color: color || null }
+}
+
 const DEFAULT_COLUMNS = ['A Fazer', 'Em Andamento', 'Concluído']
 
 // Resolve o board + o papel do usuário requisitante nele (ver lib/boardAccess.js).
@@ -268,12 +279,35 @@ app.post('/:id/labels', async c => {
   if (!role) return c.json({ error: 'Sem acesso a este quadro' }, 403)
 
   const { name, color } = await c.req.json()
-  if (!name) return c.json({ error: 'Nome é obrigatório' }, 400)
+  const label = cleanLabel(name, color)
+  if (label.error) return c.json(label, 400)
 
   const labelId = uuid()
   await db.prepare('INSERT INTO board_labels (id, board_id, name, color) VALUES (?, ?, ?, ?)')
-    .run(labelId, id, name, color || '#0EA5A5')
+    .run(labelId, id, label.name, label.color || DEFAULT_LABEL_COLOR)
 
+  return c.json(await db.prepare('SELECT * FROM board_labels WHERE id = ?').get(labelId))
+})
+
+// PUT /:id/labels/:labelId — renomear / trocar a cor
+app.put('/:id/labels/:labelId', async c => {
+  const db = c.get('db')
+  const user = c.get('user')
+  const id = c.req.param('id')
+  const labelId = c.req.param('labelId')
+
+  const { board, role } = await getBoardAccess(db, id, user.id)
+  if (!board) return c.json({ error: 'Quadro não encontrado' }, 404)
+  if (!role) return c.json({ error: 'Sem acesso a este quadro' }, 403)
+
+  const current = await db.prepare('SELECT * FROM board_labels WHERE id = ? AND board_id = ?').get(labelId, id)
+  if (!current) return c.json({ error: 'Etiqueta não encontrada' }, 404)
+  const { name, color } = await c.req.json()
+  const label = cleanLabel(name ?? current.name, color)
+  if (label.error) return c.json(label, 400)
+
+  await db.prepare('UPDATE board_labels SET name = ?, color = ? WHERE id = ? AND board_id = ?')
+    .run(label.name, label.color || current.color, labelId, id)
   return c.json(await db.prepare('SELECT * FROM board_labels WHERE id = ?').get(labelId))
 })
 

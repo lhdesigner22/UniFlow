@@ -454,6 +454,10 @@ export default function BoardPage() {
           onClose={() => setOpenCardId(null)}
           onPatchLocal={patchCardLocal}
           onDeleted={() => { removeCardLocal(openCardId); setOpenCardId(null) }}
+          onBoardLabelsChange={(labels, { reload } = {}) => {
+            setBoard(prev => ({ ...prev, labels }))
+            if (reload) load({ silent: true }) // etiqueta apagada sai dos outros cartões também
+          }}
         />
       )}
 
