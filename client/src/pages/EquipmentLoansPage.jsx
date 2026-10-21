@@ -5,7 +5,8 @@ import { useLiveRefresh } from '../hooks/useLiveRefresh'
 import { useAuthStore } from '../store/authStore'
 import { canEdit as canEditModule } from '../utils/permissions'
 import { confirmDialog, alertDialog } from '../store/dialogStore'
-import { downloadFile } from '../utils/download'
+import { exportLoansXlsx } from '../utils/exports'
+import ExportXlsxButton from '../components/common/ExportXlsxButton'
 import Modal from '../components/common/Modal'
 import Reveal from '../components/common/Reveal'
 import InventoryPicker from '../components/common/InventoryPicker'
@@ -668,7 +669,6 @@ export default function EquipmentLoansPage() {
 
   const writable = canEditModule(user, 'loans') // cargo que só VÊ os empréstimos não registra/altera
   const canEdit = l => writable && (l.created_by === user?.id || user?.system_role === 'super_admin')
-  const exportCsv = () => downloadFile('/equipment-loans/export', 'emprestimo-equipamentos.csv')
 
   if (loading) return <div className={s.loading}>Carregando empréstimos...</div>
 
@@ -688,7 +688,7 @@ export default function EquipmentLoansPage() {
               <button className="btn btn-ghost" onClick={() => setShowInventory(true)}>📋 Inventário</button>
             </>
           )}
-          <button className="btn btn-ghost" onClick={exportCsv}>⬇ Exportar CSV</button>
+          <ExportXlsxButton onExport={exportLoansXlsx} />
           {writable && <button className="btn btn-primary" onClick={() => setEditing({})}>+ Novo empréstimo</button>}
         </div>
       </div>

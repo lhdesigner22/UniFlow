@@ -301,7 +301,8 @@ app.delete('/:id', async c => {
   return c.json({ ok: true })
 })
 
-// GET /export — CSV
+// GET /export — CSV, ou `?format=json` (dados crus pra planilha XLSX que o
+// navegador monta — client/src/utils/xlsxExport.js)
 app.get('/export', async c => {
   const db = c.get('db')
   const dept = departmentFilter(await accessOf(c), 'e.department_id')
@@ -310,6 +311,7 @@ app.get('/export', async c => {
     WHERE 1=1${dept.sql}
     ORDER BY e.loan_date DESC, e.created_at DESC
   `).all(...dept.args)
+  if (c.req.query('format') === 'json') return c.json({ rows })
 
   const STATUS_LABEL = { aguardando_devolucao: 'Aguardando devolução', devolvido: 'Devolvido', uso_permanente: 'Uso Permanente' }
   const headers = ['Data', 'Solicitante', 'Email', 'Equipamento', 'Patrimônio', 'Prédio', 'Sala/Localidade', 'Observação', 'Situação', 'Devolvido em', 'Cadastrado por', 'Criado em']

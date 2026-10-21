@@ -44,7 +44,10 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   versão do wrangler): `cd server && node test-e2e/node-server.mjs` roda o mesmo worker.js no Node com D1 em SQLite (memória,
   migrações + seeds) na porta 8799 — as suítes rodam igual. Sem tempo real nem arquivos estáticos.
 - Suítes: `roles`, `dept`, `developments`, `security` (nesta ordem: o `security` força novo login do analista e invalida o token tv:0
-  dele). `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`.
+  dele). `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`; `xlsx` gera as 3 planilhas e confere
+  (passe uma pasta como argumento pra salvar os .xlsx e abrir no Excel).
+- **Exportações são XLSX montado no navegador** (`client/src/utils/xlsxExport.js` + `exports.js`, ExcelJS por import dinâmico, fora do
+  pré-cache do PWA); o servidor só devolve `/export?format=json` (gerar no Worker estouraria os 10 ms de CPU). O CSV antigo ainda responde.
 
 ## Armadilhas do ambiente (Windows)
 - Shell Bash do Claude: **evite `node -e`/heredocs com crases e `${}`** e `sed` com texto complexo — grave scripts Node em arquivo e rode,

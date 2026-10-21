@@ -286,16 +286,20 @@ app.delete('/:id', async c => {
   return c.json({ ok: true })
 })
 
-// GET /export — CSV com as mesmas colunas da tela + aprovadores
+// GET /export — CSV com as mesmas colunas da tela + aprovadores, ou
+// `?format=json` (dados crus pra planilha XLSX montada no navegador).
+// `?month=YYYY-MM` = só aquele mês de referência (o que a tela está mostrando).
 app.get('/export', async c => {
   const db = c.get('db')
   const vis = visibilityClause(await accessOf(c), c.get('user').id)
+  const month = /^\d{4}-\d{2}$/.test(c.req.query('month') || '') ? c.req.query('month') : null
   const rows = await db.prepare(`
     SELECT ${LIST_COLUMNS} FROM purchase_requests p LEFT JOIN users u ON u.id = p.created_by LEFT JOIN departments dd ON dd.id = p.department_id
-    WHERE 1=1${vis.sql}
-    ORDER BY p.created_at DESC
-  `).all(...vis.args)
+    WHERE 1=1${vis.sql}${month ? ' AND p.reference_month = ?' : ''}
+    ORDER BY p.reference_month DESC, p.created_at DESC
+  `).all(...vis.args, ...(month ? [month] : []))
   for (const row of rows) row.approvers = await getApprovers(db, row.id)
+  if (c.req.query('format') === 'json') return c.json({ rows, month })
 
   const headers = ['Mês', 'Nome', 'Chamado', 'Departamento', 'Descrição', 'Unidade/Sede', 'Qtd', 'Valor Unitário', 'Valor Total', 'Link', 'Observação', 'Status', 'Aprovador(es)', 'Cadastrado por', 'Criado em']
   const lines = [headers.map(escapeCsv).join(',')]

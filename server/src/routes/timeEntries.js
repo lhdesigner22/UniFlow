@@ -229,6 +229,13 @@ app.get('/time/export', async c => {
     WHERE te.duration_seconds IS NOT NULL AND date(te.started_at) BETWEEN ? AND ? ${boardFilter}
     ORDER BY te.started_at
   `).all(...args)
+  // Dados crus pra planilha XLSX montada no navegador (client/src/utils/xlsxExport.js)
+  if (c.req.query('format') === 'json') {
+    return c.json({
+      from, to,
+      rows: rows.map(r => ({ user_name: r.user_name, board_name: r.board_name, card_title: r.card_title, started_at: r.started_at, duration_seconds: r.duration_seconds, note: r.note || '' })),
+    })
+  }
 
   const headers = ['Usuário', 'Quadro', 'Cartão', 'Data', 'Duração (h:mm)', 'Observação']
   const lines = [headers.map(escapeCsv).join(',')]

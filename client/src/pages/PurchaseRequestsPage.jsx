@@ -5,7 +5,8 @@ import { useLiveRefresh } from '../hooks/useLiveRefresh'
 import { useAuthStore } from '../store/authStore'
 import { canEdit as canEditModule } from '../utils/permissions'
 import { confirmDialog, alertDialog } from '../store/dialogStore'
-import { downloadFile } from '../utils/download'
+import { exportPurchasesXlsx } from '../utils/exports'
+import ExportXlsxButton from '../components/common/ExportXlsxButton'
 import { parseDbTimestamp } from '../utils/formatDuration'
 import { currentMonth, monthLabel, buildMonthOptions } from '../utils/months'
 import Modal from '../components/common/Modal'
@@ -401,7 +402,7 @@ export default function PurchaseRequestsPage() {
 
   const writable = canEditModule(user, 'purchases')
   const canEdit = r => writable && (r.created_by === user?.id || user?.system_role === 'super_admin')
-  const exportCsv = () => downloadFile('/purchase-requests/export', 'solicitacoes-compra.csv')
+  const exportXlsx = () => exportPurchasesXlsx({ month: monthFilter || undefined }) // o mês que a tela está mostrando
 
   const openApprovers = (requests || []).find(r => r.id === approversFor)
 
@@ -415,7 +416,7 @@ export default function PurchaseRequestsPage() {
           <p className={s.sub}>Itens pedidos, aprovador, valores e status — do pedido até a entrega.</p>
         </div>
         <div className={s.headerRight}>
-          <button className="btn btn-ghost" onClick={exportCsv}>⬇ Exportar CSV</button>
+          <ExportXlsxButton onExport={exportXlsx} />
           {writable && <button className="btn btn-primary" onClick={() => setEditing({})}>+ Nova solicitação</button>}
         </div>
       </div>

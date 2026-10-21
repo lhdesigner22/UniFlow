@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, ResponsiveContainer, Cell } from 'recharts'
 import api from '../services/api'
-import { downloadFile } from '../utils/download'
+import { exportTimeXlsx } from '../utils/exports'
+import ExportXlsxButton from '../components/common/ExportXlsxButton'
 import { avatarColor } from '../utils/avatarColor'
 import { formatDuration } from '../utils/formatDuration'
 import Reveal from '../components/common/Reveal'
@@ -44,10 +45,7 @@ export default function TeamTimePage() {
   const byUserChart = (summary?.byUser || []).map(u => ({ ...u, hours: Math.round((u.totalSeconds / 3600) * 10) / 10 }))
   const byDayChart = (summary?.byDay || []).map(d => ({ ...d, hours: Math.round((d.totalSeconds / 3600) * 10) / 10 }))
 
-  const exportCsv = () => {
-    const qs = new URLSearchParams(params).toString()
-    downloadFile(`/time/export?${qs}`, `tempo-equipe-${from}-a-${to}.csv`)
-  }
+  const exportXlsx = () => exportTimeXlsx({ from, to, boardId, boardName: boards.find(b => b.id === boardId)?.name })
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null
@@ -66,7 +64,7 @@ export default function TeamTimePage() {
           <h1 className={s.title}>Tempo da equipe</h1>
           <p className={s.sub}>Acompanhe as horas registradas em cada quadro.</p>
         </div>
-        <button className="btn btn-ghost" onClick={exportCsv}>⬇ Exportar CSV</button>
+        <ExportXlsxButton onExport={exportXlsx} />
       </div>
 
       <div className={s.filters}>

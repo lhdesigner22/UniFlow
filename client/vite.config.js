@@ -32,6 +32,9 @@ export default defineConfig({
       // do build (JS/CSS/HTML/ícones); nada em runtimeCaching aponta pra /api.
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // A biblioteca das planilhas (ExcelJS, ~900 KB) só é baixada quando
+        // alguém exporta — não entra no pacote que todo aparelho pré-baixa.
+        globIgnores: ['**/exceljs*'],
         navigateFallbackDenylist: [/^\/api\//],
       },
     }),
