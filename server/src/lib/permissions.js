@@ -25,6 +25,7 @@ export const MODULES = [
   { key: 'printers', label: 'Impressoras', hint: 'Cadastro e drivers' },
   { key: 'loans', label: 'Empréstimo de Equipamentos', hint: 'Empréstimos, inventário e grade de salas' },
   { key: 'companies', label: 'Empresas, Parceiros e Links', hint: 'Filiais, parceiros e links de internet' },
+  { key: 'incidents', label: 'Incidentes Laboratórios', hint: 'Defeitos, sinistros e ocorrências nos laboratórios' },
 ]
 export const MODULE_KEYS = MODULES.map(m => m.key)
 export const LEVELS = ['none', 'view', 'edit']
@@ -45,6 +46,7 @@ const RESOURCE_MODULE = {
   'glpi-total': 'tickets',
   kb: 'kb', // Gestão usa a mesma rota com category=gestao — ver moduleForRequest
   developments: 'gestao', // Gestão → Desenvolvimentos
+  'lab-incidents': 'incidents',
   approvals: 'approvals',
   'purchase-requests': 'purchases',
   printers: 'printers',

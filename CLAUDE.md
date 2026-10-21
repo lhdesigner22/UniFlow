@@ -32,7 +32,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0053). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0054). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -43,9 +43,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Se o `wrangler dev`/`d1 --local` quebrar** com "access violation" (aconteceu em out/2026 no Windows 11 Insider 26300, qualquer
   versão do wrangler): `cd server && node test-e2e/node-server.mjs` roda o mesmo worker.js no Node com D1 em SQLite (memória,
   migrações + seeds) na porta 8799 — as suítes rodam igual. Sem tempo real nem arquivos estáticos.
-- Suítes: `roles`, `dept`, `developments`, `security` (nesta ordem: o `security` força novo login do analista e invalida o token tv:0
-  dele). `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`; `xlsx` gera as 3 planilhas e confere
-  (passe uma pasta como argumento pra salvar os .xlsx e abrir no Excel).
+- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `security` (nesta ordem: o `security` força novo login do analista e
+  invalida o token tv:0 dele). `xlsx` conta linhas — rode em banco limpo (servidor recém-subido); passe uma pasta como argumento pra
+  salvar os .xlsx e abrir no Excel. `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`.
 - **Exportações são XLSX montado no navegador** (`client/src/utils/xlsxExport.js` + `exports.js`, ExcelJS por import dinâmico, fora do
   pré-cache do PWA); o servidor só devolve `/export?format=json` (gerar no Worker estouraria os 10 ms de CPU). O CSV antigo ainda responde.
 
@@ -82,7 +82,8 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 ## Permissões (cargos × departamentos) — decisões do Luiz
 - **Cargos configuráveis** (tabela `roles`, Admin → aba Cargos): por módulo `none|view|edit` + escopo `all|department`.
   Módulos em `server/src/lib/permissions.js` (`MODULES`): boards, agenda, metrics, team, tickets, kb, gestao, approvals,
-  purchases, printers, loans, companies. Cargos iniciais: Super Admin, Gestor, Analista, Colaborador, Auditor.
+  purchases, printers, loans, companies, incidents. **Módulo novo = migração que dá o nível dele aos cargos existentes**
+  (`json_set` em `roles.permissions`, ver 0054) — sem isso ninguém além do Super Admin enxerga. Cargos iniciais: Super Admin, Gestor, Analista, Colaborador, Auditor.
   Quem já existia virou Analista (mesmo acesso de antes); **quem entra novo vira Colaborador** (sem departamento = só vê o "Geral").
 - `users.system_role` (`super_admin|auditor|user`) continua mandando no código antigo (51 checagens); o cargo define o system_role. Super Admin/Auditor
   sempre valem mais que a tabela (ninguém se tranca fora). Nunca deixar o sistema sem Super Admin.
@@ -118,6 +119,11 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Gestão → Desenvolvimentos** (`routes/developments.js`, `DevelopmentsPage.jsx`, módulo `gestao`): vitrine dos sistemas da equipe
   (logo, para que serve, link, situação). Logo reduzida a 256 px no navegador e guardada como data URL no D1 (sem SVG). O menu lateral
   lista cada um (`GET /developments?menu=1`, sem as logos). Etiquetas dos quadros: criar/editar pelo próprio cartão (CardModal).
+- **Fluxos → Incidentes Laboratórios** (`routes/labIncidents.js`, `LabIncidentsPage.jsx`, módulo `incidents`, por prédio SEDE/CENTRO/G5):
+  defeito, sinistro, projeção/TV, organização, rede; gravidade; data/hora da ocorrência (horário de Brasília, texto `YYYY-MM-DDTHH:MM`);
+  situação aberto → em andamento → resolvido (+ solução, quem/quando). Até 10 fotos, reduzidas no navegador (`utils/imageResize.js`) e
+  guardadas como data URL em `lab_incident_photos` (miniatura na lista, grande sob demanda — sem `?token=` na URL). Exporta Excel.
+  Registra/muda situação: quem tem `incidents=edit`; editar dados/excluir: quem registrou ou Super Admin.
 
 ## Estado / pendências conhecidas
 - Tudo acima está em produção. Ainda **sem uso real confirmado pelo Luiz**: limpeza de duplicatas em massa de feriados, cargos/departamentos

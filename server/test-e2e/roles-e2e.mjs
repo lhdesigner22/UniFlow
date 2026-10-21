@@ -56,7 +56,7 @@ expect('Auditor: POST /kb liberado', (await call('auditor', 'POST', '/api/kb', {
 r = await call('admin', 'GET', '/api/admin/roles')
 expect('Admin: lista cargos', r.s, 200)
 expect('lista traz os 5 cargos nativos', r.j?.roles?.length >= 5 ? 'ok' : r.j?.roles?.length, 'ok')
-expect('lista traz os 12 módulos', r.j?.modules?.length, 12)
+expect('lista traz os 13 módulos', r.j?.modules?.length, 13)
 
 r = await call('admin', 'POST', '/api/admin/roles', { name: 'Recepção', scope: 'department', permissions: { agenda: 'edit', loans: 'view', bogus: 'edit', printers: 'xyz' } })
 expect('Admin: cria cargo "Recepção"', r.s, 200)

@@ -117,6 +117,18 @@ expect('Tempo: subtítulo com período e quadro', /Quadro: Quadro Planilha/.test
 ws = wb.getWorksheet('Por pessoa')
 expect('Por pessoa: 2 lançamentos', ws.getCell('B6').value, 2)
 
+// ── Incidentes Laboratórios ──────────────────────────────────────────────
+await post('/lab-incidents', { building: 'sede', lab: 'Laboratório 3', category: 'projecao', severity: 'critica', title: 'TV sem sinal', occurred_at: '2026-10-21T19:40' })
+const { exportLabIncidentsXlsx } = await import(pathToFileURL(path.join(clientDir, 'src/utils/exports.js')).href)
+await exportLabIncidentsXlsx({ building: 'sede' })
+wb = await open('incidentes-laboratorios-sede.xlsx')
+expect('Incidentes: abas', wb.worksheets.map(w => w.name).join(' | '), 'Incidentes | Por laboratório | Por tipo')
+ws = wb.getWorksheet('Incidentes')
+const occ = ws.getCell('A6').value
+expect('data/hora da ocorrência no horário de Brasília', occ instanceof Date && occ.toISOString().slice(0, 16), '2026-10-21T19:40')
+expect('gravidade crítica em vermelho', ws.getCell('E6').fill?.fgColor?.argb, 'FFFEE2E2')
+expect('situação "Aberto"', ws.getCell('N6').value, 'Aberto')
+
 if (outDir) for (const [n, b] of Object.entries(files)) fs.writeFileSync(path.join(outDir, n), Buffer.from(await b.arrayBuffer()))
 console.log(ok ? '\nTUDO OK' : '\nHOUVE FALHAS')
 process.exit(ok ? 0 : 1)

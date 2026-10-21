@@ -234,7 +234,9 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const [teamOpen, setTeamOpen] = useState(teamActive)
   const purchaseActive = location.pathname.startsWith('/solicitacoes-compra')
   const [purchaseMonthsOpen, setPurchaseMonthsOpen] = useState(purchaseActive)
-  const flowsActive = FLOWS_PATHS.includes(location.pathname) || purchaseActive
+  const incidentsActive = location.pathname.startsWith('/incidentes-laboratorios')
+  const [incidentsOpen, setIncidentsOpen] = useState(incidentsActive)
+  const flowsActive = FLOWS_PATHS.includes(location.pathname) || purchaseActive || incidentsActive
   const [flowsOpen, setFlowsOpen] = useState(flowsActive)
   const vlansActive = location.pathname.startsWith('/gestao/vlans')
   const [vlansOpen, setVlansOpen] = useState(vlansActive)
@@ -253,6 +255,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
   useEffect(() => { if (teamActive) setTeamOpen(true) }, [location.pathname])
   useEffect(() => { if (flowsActive) setFlowsOpen(true) }, [location.pathname])
   useEffect(() => { if (purchaseActive) setPurchaseMonthsOpen(true) }, [location.pathname])
+  useEffect(() => { if (incidentsActive) setIncidentsOpen(true) }, [location.pathname])
   useEffect(() => { if (gestaoActive) setGestaoOpen(true) }, [location.pathname])
   useEffect(() => { if (vlansActive) setVlansOpen(true) }, [location.pathname])
   useEffect(() => { if (devsActive) setDevsOpen(true) }, [location.pathname])
@@ -276,7 +279,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
   // correspondente aqui no menu é buscado de novo (o contador sobe/desce sem
   // precisar navegar). Cada recurso tem seu próprio "tick" que entra nas
   // dependências do efeito abaixo.
-  const [liveTick, setLiveTick] = useState({ boards: 0, printers: 0, companies: 0, approvals: 0, purchase: 0, developments: 0 })
+  const [liveTick, setLiveTick] = useState({ boards: 0, printers: 0, companies: 0, approvals: 0, purchase: 0, developments: 0, incidents: 0 })
   const bump = key => setLiveTick(t => ({ ...t, [key]: t[key] + 1 }))
   // Mexer em cartão/coluna de um quadro não muda a lista de quadros do menu.
   useLiveRefresh(['boards'], msg => { if (!msg?.s) bump('boards') })
@@ -285,6 +288,15 @@ export default function Sidebar({ mobileOpen, onClose }) {
   useLiveRefresh(['approvals'], () => bump('approvals'))
   useLiveRefresh(['purchase-requests'], () => bump('purchase'))
   useLiveRefresh(['developments'], () => bump('developments'))
+  useLiveRefresh(['lab-incidents'], () => bump('incidents'))
+
+  // Fluxos → Incidentes Laboratórios: em aberto (aberto + em andamento) por prédio.
+  const [incidentCounts, setIncidentCounts] = useState({})
+  useEffect(() => {
+    if (!canView(user, 'incidents')) return
+    api.get('/lab-incidents/counts').then(r => setIncidentCounts(r.data || {})).catch(() => {})
+  }, [user?.id, location.pathname, liveTick.incidents])
+  const incidentsTotal = Object.values(incidentCounts).reduce((a, n) => a + n, 0)
 
   // Gestão → Desenvolvimentos: só os nomes (sem as logos) pra listar no menu.
   const [developments, setDevelopments] = useState([])
@@ -475,7 +487,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
           </NavLink>
           </>
           )}
-          {(can('approvals') || can('purchases')) && (
+          {(can('approvals') || can('purchases') || can('incidents')) && (
           <>
           <button
             type="button"
@@ -518,6 +530,29 @@ export default function Sidebar({ mobileOpen, onClose }) {
                     {purchaseMonths.map(m => (
                       <NavLink key={m.key} to={`/solicitacoes-compra/${m.key}`} className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
                         <span>{m.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+              )}
+              {can('incidents') && (
+              <div className={s.navSubGroup}>
+                <button
+                  type="button"
+                  className={`${s.navSubGroupHeader} ${incidentsActive ? s.active : ''}`}
+                  onClick={() => setIncidentsOpen(o => !o)}
+                >
+                  <span>Incidentes Laboratórios</span>
+                  {!!incidentsTotal && <span className={s.navCount}>{incidentsTotal}</span>}
+                  <span className={`${s.navGroupChevron} ${incidentsOpen ? s.open : ''}`}><IconChevronSmall open={incidentsOpen} /></span>
+                </button>
+                {incidentsOpen && (
+                  <div className={s.navSubSubList}>
+                    {[['sede', 'SEDE'], ['centro', 'CENTRO'], ['g5', 'G5']].map(([key, label]) => (
+                      <NavLink key={key} to={`/incidentes-laboratorios/${key}`} className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
+                        <span>{label}</span>
+                        {!!incidentCounts[key] && <span className={s.navCount}>{incidentCounts[key]}</span>}
                       </NavLink>
                     ))}
                   </div>

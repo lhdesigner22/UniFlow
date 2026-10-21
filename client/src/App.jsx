@@ -14,6 +14,7 @@ import TotalChamadosPage from './pages/TotalChamadosPage'
 import KnowledgeBasePage from './pages/KnowledgeBasePage'
 import GestaoPage from './pages/GestaoPage'
 import DevelopmentsPage from './pages/DevelopmentsPage'
+import LabIncidentsPage from './pages/LabIncidentsPage'
 import VaultPage from './pages/VaultPage'
 import VlansPage from './pages/VlansPage'
 import ApprovalsPage from './pages/ApprovalsPage'
@@ -72,6 +73,8 @@ export default function App() {
           <Route path="gestao/vlans" element={<Navigate to="/gestao/vlans/matriz" replace />} />
           <Route path="gestao/vlans/:site" element={<VlansPage />} />
           <Route path="aprovacoes" element={<RequireModule module="approvals"><ApprovalsPage /></RequireModule>} />
+          <Route path="incidentes-laboratorios" element={<Navigate to="/incidentes-laboratorios/sede" replace />} />
+          <Route path="incidentes-laboratorios/:building" element={<RequireModule module="incidents"><LabIncidentsPage /></RequireModule>} />
           <Route path="solicitacoes-compra" element={<Navigate to="/solicitacoes-compra/todos" replace />} />
           <Route path="solicitacoes-compra/:month" element={<RequireModule module="purchases"><PurchaseRequestsPage /></RequireModule>} />
           <Route path="impressoras" element={<Navigate to="/impressoras/sede" replace />} />

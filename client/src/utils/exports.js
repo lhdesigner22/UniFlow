@@ -139,6 +139,105 @@ export async function exportPurchasesXlsx({ month } = {}) {
   })
 }
 
+// ── Incidentes Laboratórios ────────────────────────────────────────────────
+const INC_BUILDING = { sede: 'SEDE', centro: 'CENTRO', g5: 'G5' }
+const INC_CATEGORY = { maquina: 'Máquina com defeito', sinistro: 'Sinistro / dano', projecao: 'Projeção / TV', organizacao: 'Bagunça / organização', rede: 'Rede / internet', outro: 'Outro' }
+const INC_SEVERITY = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' }
+const INC_STATUS = { aberto: 'Aberto', em_andamento: 'Em andamento', resolvido: 'Resolvido' }
+const INC_SEVERITY_BADGE = { Baixa: 'gray', Média: 'yellow', Alta: 'red', Crítica: 'red' }
+const INC_STATUS_BADGE = { Aberto: 'yellow', 'Em andamento': 'blue', Resolvido: 'green' }
+// occurred_at já é horário de Brasília ('YYYY-MM-DDTHH:MM') → Date "local" pro Excel
+const localDateTime = v => {
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5])) : null
+}
+
+export async function exportLabIncidentsXlsx({ building } = {}) {
+  const { data } = await api.get('/lab-incidents/export', { params: building ? { building } : {} })
+  const rows = data.rows || []
+  const items = rows.map(r => ({
+    occurred: localDateTime(r.occurred_at),
+    building: INC_BUILDING[r.building] || r.building,
+    lab: r.lab,
+    category: INC_CATEGORY[r.category] || r.category,
+    severity: INC_SEVERITY[r.severity] || r.severity,
+    title: r.title,
+    description: r.description || null,
+    equipment: r.equipment || null,
+    patrimony: r.patrimony || null,
+    reporter: r.reported_by_name || null,
+    classInfo: r.class_info || null,
+    glpi: r.glpi_ticket || null,
+    photos: Number(r.photo_count) || 0,
+    status: INC_STATUS[r.status] || r.status,
+    resolution: r.resolution || null,
+    resolvedAt: dbDateTime(r.resolved_at),
+    resolvedBy: r.resolved_by_name || null,
+    author: r.author_name || null,
+    created: dbDateTime(r.created_at),
+  }))
+  const open = r => r.status !== 'resolvido'
+  const byLab = groupSum(rows, r => `${INC_BUILDING[r.building] || r.building} · ${r.lab}`, { open, done: r => !open(r) })
+    .sort((a, b) => b.count - a.count)
+  const byType = groupSum(rows, r => INC_CATEGORY[r.category] || r.category, { open, critical: r => open(r) && (r.severity === 'alta' || r.severity === 'critica') })
+    .sort((a, b) => b.count - a.count)
+  const where = building ? INC_BUILDING[building] || building.toUpperCase() : 'Todos os prédios'
+
+  await downloadXlsx({
+    fileName: `incidentes-laboratorios-${building || 'todos'}`,
+    title: 'Incidentes Laboratórios',
+    subtitle: `${where} · ${rows.length} incidente(s), ${rows.filter(open).length} em aberto`,
+    author: author(),
+    sheets: [
+      {
+        name: 'Incidentes',
+        columns: [
+          { header: 'Data e hora', key: 'occurred', width: 17, type: 'datetime' },
+          { header: 'Prédio', key: 'building', width: 9 },
+          { header: 'Laboratório / sala', key: 'lab', width: 20 },
+          { header: 'Tipo', key: 'category', width: 21 },
+          { header: 'Gravidade', key: 'severity', width: 11, badge: INC_SEVERITY_BADGE },
+          { header: 'Resumo', key: 'title', width: 34, wrap: true },
+          { header: 'Descrição', key: 'description', width: 44, wrap: true },
+          { header: 'Equipamento', key: 'equipment', width: 22, wrap: true },
+          { header: 'Patrimônio', key: 'patrimony', width: 12 },
+          { header: 'Quem relatou', key: 'reporter', width: 20 },
+          { header: 'Turma / professor', key: 'classInfo', width: 24, wrap: true },
+          { header: 'Chamado GLPI', key: 'glpi', width: 12 },
+          { header: 'Fotos', key: 'photos', width: 8, type: 'int', total: 'sum' },
+          { header: 'Situação', key: 'status', width: 15, badge: INC_STATUS_BADGE, total: 'count' },
+          { header: 'Solução / andamento', key: 'resolution', width: 40, wrap: true },
+          { header: 'Resolvido em', key: 'resolvedAt', width: 17, type: 'datetime' },
+          { header: 'Resolvido por', key: 'resolvedBy', width: 20 },
+          { header: 'Registrado por', key: 'author', width: 20 },
+          { header: 'Registrado em', key: 'created', width: 17, type: 'datetime' },
+        ],
+        rows: items,
+      },
+      {
+        name: 'Por laboratório', title: 'Incidentes Laboratórios — por laboratório', tabColor: 'FF22C55E',
+        columns: [
+          { header: 'Laboratório', key: 'key', width: 32 },
+          { header: 'Incidentes', key: 'count', width: 13, type: 'int', total: 'sum' },
+          { header: 'Em aberto', key: 'open', width: 13, type: 'int', total: 'sum' },
+          { header: 'Resolvidos', key: 'done', width: 13, type: 'int', total: 'sum' },
+        ],
+        rows: byLab,
+      },
+      {
+        name: 'Por tipo', title: 'Incidentes Laboratórios — por tipo', tabColor: 'FF8B5CF6',
+        columns: [
+          { header: 'Tipo', key: 'key', width: 26 },
+          { header: 'Incidentes', key: 'count', width: 13, type: 'int', total: 'sum' },
+          { header: 'Em aberto', key: 'open', width: 13, type: 'int', total: 'sum' },
+          { header: 'Alta/crítica em aberto', key: 'critical', width: 22, type: 'int', total: 'sum' },
+        ],
+        rows: byType,
+      },
+    ],
+  })
+}
+
 // ── Empréstimo de equipamentos ─────────────────────────────────────────────
 const LOAN_STATUS = { aguardando_devolucao: 'Aguardando devolução', devolvido: 'Devolvido', uso_permanente: 'Uso permanente' }
 const LOAN_BADGE = { 'Aguardando devolução': 'yellow', Devolvido: 'green', 'Uso permanente': 'blue' }
