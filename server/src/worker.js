@@ -35,6 +35,7 @@ import roomScheduleRoutes from './routes/roomSchedule.js'
 import directoryRoutes from './routes/directory.js'
 import journeyRoutes from './routes/journey.js'
 import liveRoutes from './routes/live.js'
+import developmentsRoutes from './routes/developments.js'
 import { broadcastLive } from './lib/liveHub.js'
 
 // O Durable Object precisa ser exportado do módulo principal do Worker.
@@ -204,6 +205,7 @@ app.route('/api/equipment-inventory', equipmentInventoryRoutes)
 app.route('/api/room-schedule', roomScheduleRoutes)
 app.route('/api/directory', directoryRoutes)
 app.route('/api/journey', journeyRoutes)
+app.route('/api/developments', developmentsRoutes)
 
 async function processGlpiQueues(env, db) {
   const flags = await db.prepare("SELECT key, value FROM app_settings WHERE key IN ('glpi_import_pending', 'glpi_dup_autosolve', 'glpi_dup_auto')").all()

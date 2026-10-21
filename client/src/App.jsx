@@ -13,6 +13,7 @@ import BacklogPage from './pages/BacklogPage'
 import TotalChamadosPage from './pages/TotalChamadosPage'
 import KnowledgeBasePage from './pages/KnowledgeBasePage'
 import GestaoPage from './pages/GestaoPage'
+import DevelopmentsPage from './pages/DevelopmentsPage'
 import VaultPage from './pages/VaultPage'
 import VlansPage from './pages/VlansPage'
 import ApprovalsPage from './pages/ApprovalsPage'
@@ -66,6 +67,8 @@ export default function App() {
           <Route path="gestao" element={<Navigate to="/gestao/documentos" replace />} />
           <Route path="gestao/documentos" element={<RequireModule module="gestao"><GestaoPage /></RequireModule>} />
           <Route path="gestao/cofre-senhas" element={<VaultPage />} />
+          <Route path="gestao/desenvolvimentos" element={<RequireModule module="gestao"><DevelopmentsPage /></RequireModule>} />
+          <Route path="gestao/desenvolvimentos/:id" element={<RequireModule module="gestao"><DevelopmentsPage /></RequireModule>} />
           <Route path="gestao/vlans" element={<Navigate to="/gestao/vlans/matriz" replace />} />
           <Route path="gestao/vlans/:site" element={<VlansPage />} />
           <Route path="aprovacoes" element={<RequireModule module="approvals"><ApprovalsPage /></RequireModule>} />

@@ -238,7 +238,9 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const [flowsOpen, setFlowsOpen] = useState(flowsActive)
   const vlansActive = location.pathname.startsWith('/gestao/vlans')
   const [vlansOpen, setVlansOpen] = useState(vlansActive)
-  const gestaoActive = GESTAO_PATHS.includes(location.pathname) || vlansActive
+  const devsActive = location.pathname.startsWith('/gestao/desenvolvimentos')
+  const [devsOpen, setDevsOpen] = useState(devsActive)
+  const gestaoActive = GESTAO_PATHS.includes(location.pathname) || vlansActive || devsActive
   const [gestaoOpen, setGestaoOpen] = useState(gestaoActive)
   const boardsActive = location.pathname.startsWith('/boards/')
   const [boardsListOpen, setBoardsListOpen] = useState(boardsActive)
@@ -253,6 +255,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
   useEffect(() => { if (purchaseActive) setPurchaseMonthsOpen(true) }, [location.pathname])
   useEffect(() => { if (gestaoActive) setGestaoOpen(true) }, [location.pathname])
   useEffect(() => { if (vlansActive) setVlansOpen(true) }, [location.pathname])
+  useEffect(() => { if (devsActive) setDevsOpen(true) }, [location.pathname])
   useEffect(() => { if (boardsActive) setBoardsListOpen(true) }, [location.pathname])
 
   // Se o quadro aberto agora estiver "escondido" atrás do corte de
@@ -273,7 +276,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
   // correspondente aqui no menu é buscado de novo (o contador sobe/desce sem
   // precisar navegar). Cada recurso tem seu próprio "tick" que entra nas
   // dependências do efeito abaixo.
-  const [liveTick, setLiveTick] = useState({ boards: 0, printers: 0, companies: 0, approvals: 0, purchase: 0 })
+  const [liveTick, setLiveTick] = useState({ boards: 0, printers: 0, companies: 0, approvals: 0, purchase: 0, developments: 0 })
   const bump = key => setLiveTick(t => ({ ...t, [key]: t[key] + 1 }))
   // Mexer em cartão/coluna de um quadro não muda a lista de quadros do menu.
   useLiveRefresh(['boards'], msg => { if (!msg?.s) bump('boards') })
@@ -281,6 +284,16 @@ export default function Sidebar({ mobileOpen, onClose }) {
   useLiveRefresh(['companies'], () => bump('companies'))
   useLiveRefresh(['approvals'], () => bump('approvals'))
   useLiveRefresh(['purchase-requests'], () => bump('purchase'))
+  useLiveRefresh(['developments'], () => bump('developments'))
+
+  // Gestão → Desenvolvimentos: só os nomes (sem as logos) pra listar no menu.
+  const [developments, setDevelopments] = useState([])
+  useEffect(() => {
+    if (!canView(user, 'gestao')) return
+    api.get('/developments', { params: { menu: 1 } })
+      .then(r => setDevelopments(r.data || []))
+      .catch(() => {})
+  }, [user?.id, liveTick.developments])
 
   useEffect(() => {
     api.get('/boards')
@@ -662,6 +675,31 @@ export default function Sidebar({ mobileOpen, onClose }) {
                       <NavLink to="/gestao/vlans/administrativo" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
                         <span>Administrativo</span>
                       </NavLink>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Sistemas que a equipe desenvolveu — um item por desenvolvimento */}
+              {can('gestao') && (
+                <div className={s.navSubGroup}>
+                  <button
+                    type="button"
+                    className={`${s.navSubGroupHeader} ${devsActive ? s.active : ''}`}
+                    onClick={() => setDevsOpen(o => !o)}
+                  >
+                    <span>Desenvolvimentos</span>
+                    <span className={`${s.navGroupChevron} ${devsOpen ? s.open : ''}`}><IconChevronSmall open={devsOpen} /></span>
+                  </button>
+                  {devsOpen && (
+                    <div className={s.navSubSubList}>
+                      <NavLink end to="/gestao/desenvolvimentos" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
+                        <span>Ver todos</span>
+                      </NavLink>
+                      {developments.map(d => (
+                        <NavLink key={d.id} to={`/gestao/desenvolvimentos/${d.id}`} className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
+                          <span>{d.name}</span>
+                        </NavLink>
+                      ))}
                     </div>
                   )}
                 </div>

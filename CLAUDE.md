@@ -32,7 +32,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0052). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0053). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -43,7 +43,8 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Se o `wrangler dev`/`d1 --local` quebrar** com "access violation" (aconteceu em out/2026 no Windows 11 Insider 26300, qualquer
   versão do wrangler): `cd server && node test-e2e/node-server.mjs` roda o mesmo worker.js no Node com D1 em SQLite (memória,
   migrações + seeds) na porta 8799 — as suítes rodam igual. Sem tempo real nem arquivos estáticos.
-- Suítes: `roles`, `dept`, `security` (nesta ordem: o `security` força novo login do analista e invalida o token tv:0 dele).
+- Suítes: `roles`, `dept`, `developments`, `security` (nesta ordem: o `security` força novo login do analista e invalida o token tv:0
+  dele). `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`.
 
 ## Armadilhas do ambiente (Windows)
 - Shell Bash do Claude: **evite `node -e`/heredocs com crases e `${}`** e `sed` com texto complexo — grave scripts Node em arquivo e rode,
@@ -111,6 +112,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   `loan-replies-e2e.mjs`.
 - Desempenho (estrelas/luas — 👎 privado: quem recebeu + Super Admin), Jornada, Organograma, Impressoras (drag-and-drop), Compras por mês,
   Aprovações (trocar decisão), Cofre de Senhas (AES-GCM), **VLANs** (Gestão; senhas de Wi-Fi no banco, não no repo; acesso = lista do Cofre).
+- **Gestão → Desenvolvimentos** (`routes/developments.js`, `DevelopmentsPage.jsx`, módulo `gestao`): vitrine dos sistemas da equipe
+  (logo, para que serve, link, situação). Logo reduzida a 256 px no navegador e guardada como data URL no D1 (sem SVG). O menu lateral
+  lista cada um (`GET /developments?menu=1`, sem as logos). Etiquetas dos quadros: criar/editar pelo próprio cartão (CardModal).
 
 ## Estado / pendências conhecidas
 - Tudo acima está em produção. Ainda **sem uso real confirmado pelo Luiz**: limpeza de duplicatas em massa de feriados, cargos/departamentos

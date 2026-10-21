@@ -44,6 +44,7 @@ const RESOURCE_MODULE = {
   'glpi-backlog': 'tickets',
   'glpi-total': 'tickets',
   kb: 'kb', // Gestão usa a mesma rota com category=gestao — ver moduleForRequest
+  developments: 'gestao', // Gestão → Desenvolvimentos
   approvals: 'approvals',
   'purchase-requests': 'purchases',
   printers: 'printers',
