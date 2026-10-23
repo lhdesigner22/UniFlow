@@ -5,6 +5,7 @@ import { glpiSolveTickets, glpiFetchEntities } from '../lib/glpiClient.js'
 import { loadDuplicates, solveDuplicates } from '../lib/glpiDuplicateSolver.js'
 import { broadcastLive } from '../lib/liveHub.js'
 import { loadSeenEntities } from '../lib/glpiEntities.js'
+import { glpiPauseState, isGlpiPaused, setGlpiPaused, PAUSED_MESSAGE } from '../lib/glpiPause.js'
 
 const app = new Hono()
 app.use('*', auth)
@@ -17,6 +18,29 @@ const superAdmin = async (c, next) => {
   return c.json({ error: 'Acesso restrito ao Super Admin.' }, 403)
 }
 app.use('*', superAdmin)
+
+// ── Interruptor "pausar consultas ao GLPI" (ver lib/glpiPause.js) ─────────
+// GET /pause → estado · PUT /pause { paused } → liga/desliga (Super Admin)
+app.get('/pause', async c => c.json(await glpiPauseState(c.get('db'))))
+app.put('/pause', async c => {
+  const db = c.get('db')
+  const { paused } = await c.req.json()
+  const me = await db.prepare('SELECT name FROM users WHERE id = ?').get(c.get('user').id)
+  const state = await setGlpiPaused(db, paused === true, me?.name)
+  console.log(`GLPI ${state.paused ? 'PAUSADO' : 'religado'} por ${me?.name || c.get('user').id}`)
+  return c.json(state)
+})
+
+// Pausado: as ações que falam com o GLPI respondem 503 sem tocar nele
+// (as que só leem o banco do UniFlow — duplicatas, não reconhecidos — seguem).
+const GLPI_ACTIONS = new Set(['/sync-now', '/resolve-retroactive', '/resolve-duplicates'])
+app.use('*', async (c, next) => {
+  const sub = c.req.path.replace(/^\/api\/admin\/glpi/, '')
+  if (c.req.method === 'POST' && GLPI_ACTIONS.has(sub) && await isGlpiPaused(c.get('db'))) {
+    return c.json({ error: PAUSED_MESSAGE, paused: true }, 503)
+  }
+  await next()
+})
 
 // POST /sync-now — dispara a sincronização na hora (não espera o cron)
 app.post('/sync-now', async c => {
@@ -167,7 +191,8 @@ app.get('/entities', async c => {
   let cached = { at: 0, list: [] }
   try { cached = JSON.parse((await db.scalar("SELECT value FROM app_settings WHERE key = 'glpi_entities_all'")) || '{}') } catch { /* sem cache */ }
   let list = Array.isArray(cached.list) ? cached.list : []
-  if (c.req.query('refresh') || !cached.at || Date.now() - cached.at > ENTITY_CACHE_MS) {
+  const stale = c.req.query('refresh') || !cached.at || Date.now() - cached.at > ENTITY_CACHE_MS
+  if (stale && !(await isGlpiPaused(db))) { // pausado: fica com a lista guardada
     try {
       list = await glpiFetchEntities(c.env)
       await db.prepare("INSERT INTO app_settings (key, value) VALUES ('glpi_entities_all', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")

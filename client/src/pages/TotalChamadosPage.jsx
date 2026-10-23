@@ -146,6 +146,11 @@ export default function TotalChamadosPage() {
         <div>
           <h1 className={s.title}>Total de Chamados</h1>
           <p className={s.sub}>Visão histórica completa dos chamados do GLPI ({meta.entity || 'sem entidade'}) — abertos e finalizados. Clique em qualquer card ou barra pra filtrar a tabela.</p>
+          {snapshot?.glpiPaused && (
+            <p style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, background: 'color-mix(in srgb, var(--danger, #EF4444) 12%, transparent)', color: 'var(--danger, #EF4444)' }}>
+              ⏸️ Consultas ao GLPI pausadas (Admin → GLPI) — mostrando o último resumo salvo, sem atualizar.
+            </p>
+          )}
         </div>
         <div className={s.headerRight}>
           <EntityPicker entity={meta.entity} entities={meta.entities} onChange={setEntityChoice} />

@@ -51,6 +51,7 @@ import { runGlpiBacklogSync } from './lib/glpiBacklogSync.js'
 import { runGlpiTotalSync } from './lib/glpiTotalSync.js'
 import { runRoomScheduleSync } from './lib/roomScheduleSync.js'
 import { refreshGlpiTechCache } from './lib/glpiTechCache.js'
+import { isGlpiPaused } from './lib/glpiPause.js'
 import { syncLoanReplies, gmailInboxConfigured, gmailInboxOverdue } from './lib/gmailInbox.js'
 
 const app = new Hono()
@@ -244,6 +245,10 @@ export default {
   fetch: app.fetch,
   async scheduled(event, env, ctx) {
     const db = createDb(env)
+    // Interruptor do Admin → GLPI: pausado = nenhum cron fala com o GLPI
+    // (Backlog, filas/duplicatas, Eventos, técnicos, Total). O resto (e-mail,
+    // SLA, resumos, grade de salas) segue normal. 1 consulta ao banco.
+    const glpiOn = !(await isGlpiPaused(db).catch(() => false))
 
     // "* * * * *" — a cada 1 min: SÓ a busca de chamados em aberto do
     // Backlog (uma única chamada de busca ao GLPI, ~1 página). Não resolve
@@ -265,7 +270,7 @@ export default {
           .catch(e => console.error('Gmail inbox sync error', e.message))
       }
 
-      await runGlpiBacklogSync(env, db).catch(e => console.error('GLPI backlog sync error', e.message))
+      if (glpiOn) await runGlpiBacklogSync(env, db).catch(e => console.error('GLPI backlog sync error', e.message))
 
       // Filas grandes do GLPI processadas aos poucos, um lote por minuto (o
       // limite de 50 subrequests por execução não deixa fazer tudo de uma vez).
@@ -275,7 +280,7 @@ export default {
       // Com as duas flags desligadas isso custa 1 consulta ao banco por minuto.
       // No minuto em que leu os e-mails, pula as filas (limite de subrequests);
       // elas só atrasam 1 minuto.
-      if (!readMail) {
+      if (!readMail && glpiOn) {
         await processGlpiQueues(env, db).catch(e => console.error('GLPI queues error', e.message))
       }
     }
@@ -294,7 +299,7 @@ export default {
     if (event.cron === '*/15 * * * *') {
       await runSlaSweep(env, db).catch(e => console.error('SLA sweep error', e.message))
       await runDigests(env, db).catch(e => console.error('Digests error', e.message))
-      await runGlpiSync(env, db)
+      if (glpiOn) await runGlpiSync(env, db)
         .then(r => { if (r?.created > 0) return broadcastLive(env, { r: 'events' }) }) // eventos novos na Agenda → atualiza quem estiver olhando
         .catch(e => console.error('GLPI events sync error', e.message))
       await flushOutbox(env, db).catch(e => console.error('Flush outbox error', e.message))
@@ -308,7 +313,7 @@ export default {
     // outras no mesmo tick estourava esse limite (erro real visto em
     // produção: "Too many subrequests by single Worker invocation").
     if (event.cron === '5,20,35,50 * * * *') {
-      await refreshGlpiTechCache(env, db).catch(e => console.error('GLPI tech cache refresh error', e.message))
+      if (glpiOn) await refreshGlpiTechCache(env, db).catch(e => console.error('GLPI tech cache refresh error', e.message))
     }
 
     // "10,25,40,55 * * * *" — "Total de Chamados": varre TODO o histórico da
@@ -316,7 +321,7 @@ export default {
     // próprio tick pelo mesmo motivo do cache de técnicos acima — 5 min
     // depois dele, então já lê o cache de técnicos fresco desta mesma volta.
     if (event.cron === '10,25,40,55 * * * *') {
-      await runGlpiTotalSync(env, db).catch(e => console.error('GLPI total sync error', e.message))
+      if (glpiOn) await runGlpiTotalSync(env, db).catch(e => console.error('GLPI total sync error', e.message))
     }
 
     // "0 12 * * SUN" — domingo: atualiza sozinho a cópia da grade de salas do

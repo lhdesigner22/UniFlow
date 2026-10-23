@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { auth } from '../middleware/auth.js'
 import { runGlpiTotalSync, buildTotalSnapshot } from '../lib/glpiTotalSync.js'
 import { accessOf } from '../lib/permissions.js'
+import { isGlpiPaused, PAUSED_MESSAGE } from '../lib/glpiPause.js'
 import { resolveRequestEntity, entityKey, DEFAULT_ENTITY, loadHiddenTechs, saveHiddenTechs } from '../lib/glpiEntities.js'
 
 const app = new Hono()
@@ -23,6 +24,7 @@ app.get('/', async c => {
   if (noEntity) return c.json({ noEntity: true, entities })
   const key = entityKey(entity)
   const hiddenTechnicians = await loadHiddenTechs(db, entity)
+  const glpiPaused = await isGlpiPaused(db)
   const legacy = entity === DEFAULT_ENTITY // antes das entidades por departamento, o único resumo era o 'current' (SERVICE DESK)
 
   if (from || to) {
@@ -38,13 +40,13 @@ app.get('/', async c => {
       return true
     })
     const snapshot = buildTotalSnapshot(filtered, assigneeNamesByTicket)
-    return c.json({ ...snapshot, updatedAt: rawRow.updated_at, filtered: true, from: from || null, to: to || null, entity, entities, hiddenTechnicians })
+    return c.json({ ...snapshot, updatedAt: rawRow.updated_at, filtered: true, from: from || null, to: to || null, entity, entities, hiddenTechnicians, glpiPaused })
   }
 
   let row = await db.prepare('SELECT data, updated_at FROM glpi_total_snapshot WHERE id = ?').get(key)
   if (!row && legacy) row = await db.prepare("SELECT data, updated_at FROM glpi_total_snapshot WHERE id = 'current'").get()
   if (!row) return c.json({ empty: true, entity, entities })
-  return c.json({ ...JSON.parse(row.data), updatedAt: row.updated_at, entity, entities, hiddenTechnicians })
+  return c.json({ ...JSON.parse(row.data), updatedAt: row.updated_at, entity, entities, hiddenTechnicians, glpiPaused })
 })
 
 // PUT /hidden-technicians { entity, names } — técnicos ocultos nos gráficos
@@ -77,6 +79,7 @@ app.post('/refresh', async c => {
   const u = await db.prepare('SELECT system_role FROM users WHERE id = ?').get(c.get('user').id)
   if (u?.system_role !== 'super_admin')
     return c.json({ error: 'Acesso restrito ao Super Admin.' }, 403)
+  if (await isGlpiPaused(db)) return c.json({ error: PAUSED_MESSAGE, paused: true }, 503)
 
   const result = await runGlpiTotalSync(c.env, db)
   return c.json(result)

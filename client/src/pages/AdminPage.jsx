@@ -82,6 +82,50 @@ function RecipientChips({ recipients, onAddUser, onAddEmail, onRemove }) {
   )
 }
 
+// Interruptor "pausar consultas ao GLPI" (server/src/lib/glpiPause.js). Pausado,
+// o UniFlow não fala com o GLPI (crons e botões); as telas ficam com o último
+// resumo salvo. Usado quando o servidor do GLPI está fora ou sobrecarregado.
+function GlpiPauseCard() {
+  const [state, setState] = useState(null)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { api.get('/admin/glpi/pause').then(r => setState(r.data)).catch(() => setState({ paused: false })) }, [])
+  const toggle = async () => {
+    const pausing = !state.paused
+    const ok = await confirmDialog(
+      pausing
+        ? 'Pausar TODAS as consultas do UniFlow ao GLPI? Backlog, Total de Chamados, importação de Eventos e duplicatas param de atualizar até você religar.'
+        : 'Religar as consultas ao GLPI? Na próxima rodada o UniFlow volta a buscar os chamados (o Backlog em até 1 min; Total e técnicos em até 15 min).',
+      { title: pausing ? 'Pausar GLPI' : 'Religar GLPI', danger: pausing, confirmLabel: pausing ? 'Pausar' : 'Religar' }
+    )
+    if (!ok) return
+    setBusy(true)
+    try { setState((await api.put('/admin/glpi/pause', { paused: pausing })).data) }
+    catch (e) { await alertDialog(e.response?.data?.error || 'Não deu pra mudar.', { title: 'Erro', danger: true }) }
+    finally { setBusy(false) }
+  }
+  if (!state) return null
+  const when = state.at ? new Date(state.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 16,
+      padding: '14px 18px', borderRadius: 'var(--radius)', border: `1px solid ${state.paused ? 'var(--danger, #EF4444)' : 'var(--border2)'}`,
+      background: state.paused ? 'color-mix(in srgb, var(--danger, #EF4444) 10%, transparent)' : 'var(--surface)',
+    }}>
+      <div>
+        <strong style={{ fontSize: 14 }}>{state.paused ? '⏸️ Consultas ao GLPI PAUSADAS' : '▶️ Consultas ao GLPI ativas'}</strong>
+        <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 3 }}>
+          {state.paused
+            ? `O UniFlow não está falando com o GLPI${when ? ` (desde ${when}${state.by ? `, por ${state.by}` : ''})` : ''}. Backlog e Total mostram o último resumo salvo.`
+            : 'Backlog a cada 1 min; técnicos, Total e Eventos a cada 15 min. Pause se o GLPI estiver fora do ar ou lento.'}
+        </p>
+      </div>
+      <button className={`btn ${state.paused ? 'btn-primary' : 'btn-ghost'}`} disabled={busy} onClick={toggle}>
+        {busy ? 'Salvando...' : state.paused ? '▶️ Religar GLPI' : '⏸️ Pausar GLPI'}
+      </button>
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const navigate = useNavigate()
   const { user: me } = useAuthStore()
@@ -720,6 +764,7 @@ export default function AdminPage() {
       {/* ── Tab: GLPI ── */}
       {tab === 'glpi' && (
         <Reveal as="div" className={s.section}>
+          <GlpiPauseCard />
           <div className={s.info}>
             <strong>🖥️ Como funciona:</strong> A cada 15 min, o sistema busca no GLPI os chamados da fila "Eventos" (status configurado) da entidade configurada, extrai data/hora da descrição (formato do sistema de reservas de sala) e cria automaticamente um evento na Agenda. Chamados cuja descrição não segue o formato esperado ficam na lista abaixo pra você criar o evento manualmente.
           </div>
