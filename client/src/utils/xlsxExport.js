@@ -19,6 +19,7 @@ const MUTED = 'FF64748B'
 const FORMATS = {
   text: '@',
   int: '#,##0',
+  dec: '#,##0.0',
   money: '"R$" #,##0.00',
   date: 'dd/mm/yyyy',
   datetime: 'dd/mm/yyyy hh:mm',
@@ -102,7 +103,7 @@ function addTableSheet(wb, { name, title, subtitle, columns, rows, totalLabel = 
     cell.value = c.header
     cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: HEADER_TEXT } }
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BRAND } }
-    cell.alignment = { vertical: 'middle', horizontal: ['money', 'int', 'duration'].includes(c.type) ? 'right' : 'left', wrapText: true }
+    cell.alignment = { vertical: 'middle', horizontal: ['money', 'int', 'dec', 'duration'].includes(c.type) ? 'right' : 'left', wrapText: true }
     cell.border = allBorders
   })
   header.height = 24
@@ -122,7 +123,7 @@ function addTableSheet(wb, { name, title, subtitle, columns, rows, totalLabel = 
         cell.value = v
         if (FORMATS[c.type] && c.type !== 'text') cell.numFmt = FORMATS[c.type]
       }
-      cell.alignment = { vertical: 'top', wrapText: !!c.wrap, horizontal: ['money', 'int', 'duration'].includes(c.type) ? 'right' : (c.badge ? 'center' : 'left') }
+      cell.alignment = { vertical: 'top', wrapText: !!c.wrap, horizontal: ['money', 'int', 'dec', 'duration'].includes(c.type) ? 'right' : (c.badge ? 'center' : 'left') }
       cell.border = allBorders
       const badge = c.badge && v != null ? BADGES[c.badge[v]] : null
       if (badge) {
@@ -156,7 +157,7 @@ function addTableSheet(wb, { name, title, subtitle, columns, rows, totalLabel = 
       cell.font = { bold: true, color: { argb: BRAND_DARK } }
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOTAL_FILL } }
       cell.border = { ...allBorders, top: { style: 'medium', color: { argb: BRAND } } }
-      cell.alignment = { horizontal: ['money', 'int', 'duration'].includes(c.type) || c.total === 'count' ? 'right' : 'left' }
+      cell.alignment = { horizontal: ['money', 'int', 'dec', 'duration'].includes(c.type) || c.total === 'count' ? 'right' : 'left' }
     })
     row.height = 20
   }

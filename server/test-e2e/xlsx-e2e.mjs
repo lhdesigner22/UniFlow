@@ -129,6 +129,20 @@ expect('data/hora da ocorrência no horário de Brasília', occ instanceof Date 
 expect('gravidade crítica em vermelho', ws.getCell('E6').fill?.fgColor?.argb, 'FFFEE2E2')
 expect('situação "Aberto"', ws.getCell('N6').value, 'Aberto')
 
+// ── Estoque de insumos ───────────────────────────────────────────────────
+const prn = await post('/printers', { location: 'sede', model: 'Lexmark MS810', ip: '10.0.0.9' })
+const sup = await post('/printer-supplies', { name: 'Toner Lexmark MS810', type: 'toner', color: 'preto', models: ['Lexmark MS810'], minimums: { sede: 3 } })
+await post(`/printer-supplies/${sup.id}/movements`, { kind: 'entrada', location: 'sede', quantity: 4 })
+await post(`/printer-supplies/${sup.id}/movements`, { kind: 'troca', location: 'sede', quantity: 2, printer_id: prn.id, happened_at: '2026-10-22T08:15' })
+const { exportPrinterSuppliesXlsx } = await import(pathToFileURL(path.join(clientDir, 'src/utils/exports.js')).href)
+await exportPrinterSuppliesXlsx()
+wb = await open('estoque-insumos-impressoras.xlsx')
+expect('Estoque: abas', wb.worksheets.map(w => w.name).join(' | '), 'Saldo por prédio | Movimentações | Trocas por impressora')
+ws = wb.getWorksheet('Saldo por prédio')
+expect('saldo SEDE 2 com mínimo 3 → "Repor" em vermelho', `${ws.getCell('F6').value}|${ws.getCell('G6').value}|${ws.getCell('H6').value}|${ws.getCell('H6').fill?.fgColor?.argb}`, '2|3|Repor|FFFEE2E2')
+ws = wb.getWorksheet('Trocas por impressora')
+expect('trocas por impressora: 2 unidades', ws.getCell('C6').value, 2)
+
 if (outDir) for (const [n, b] of Object.entries(files)) fs.writeFileSync(path.join(outDir, n), Buffer.from(await b.arrayBuffer()))
 console.log(ok ? '\nTUDO OK' : '\nHOUVE FALHAS')
 process.exit(ok ? 0 : 1)

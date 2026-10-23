@@ -238,6 +238,97 @@ export async function exportLabIncidentsXlsx({ building } = {}) {
   })
 }
 
+// ── Estoque de insumos de impressoras ──────────────────────────────────────
+const SUP_LOC = { sede: 'SEDE', adm: 'ADM', centro: 'CENTRO', g5: 'G5', clinicas: 'CLÍNICAS' }
+const SUP_TYPE = { toner: 'Toner', cilindro: 'Cilindro / fotocondutor', tinta: 'Tinta (garrafa)', cartucho: 'Cartucho', fusor: 'Fusor', residuo: 'Caixa de resíduo', kit: 'Kit de manutenção', outro: 'Outro' }
+const SUP_COLOR = { preto: 'Preto', ciano: 'Ciano', magenta: 'Magenta', amarelo: 'Amarelo', colorido: 'Colorido' }
+const SUP_KIND = { entrada: 'Entrada', troca: 'Troca na impressora', transferencia_saida: 'Transferência (saída)', transferencia_entrada: 'Transferência (entrada)', ajuste: 'Ajuste de contagem' }
+const SUP_STATUS_BADGE = { Repor: 'red', OK: 'green', 'Sem mínimo': 'gray' }
+
+export async function exportPrinterSuppliesXlsx() {
+  const { data } = await api.get('/printer-supplies/export')
+  const supplies = data.supplies || []
+  const movements = data.movements || []
+  const stock = []
+  for (const sp of supplies) {
+    for (const [loc, label] of Object.entries(SUP_LOC)) {
+      const st = sp.stocks?.[loc] || { quantity: 0, min_quantity: 0 }
+      if (!st.quantity && !st.min_quantity && !sp.usage90?.[loc]) continue // prédio sem nada desse item
+      stock.push({
+        name: sp.name + (sp.active ? '' : ' (desativado)'), code: sp.code || null, type: SUP_TYPE[sp.type] || sp.type, color: SUP_COLOR[sp.color] || null,
+        location: label, qty: st.quantity, min: st.min_quantity,
+        status: !st.min_quantity ? 'Sem mínimo' : st.quantity <= st.min_quantity ? 'Repor' : 'OK',
+        perMonth: (sp.usage90?.[loc] || 0) / 3, models: sp.models.join(', ') || null,
+      })
+    }
+  }
+  const moves = movements.map(m => ({
+    when: (() => { const x = String(m.happened_at || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/); return x ? new Date(Date.UTC(+x[1], +x[2] - 1, +x[3], +x[4], +x[5])) : null })(),
+    location: SUP_LOC[m.location] || m.location, name: m.supply_name, code: m.supply_code || null,
+    kind: SUP_KIND[m.kind] + (m.related_location ? ` — ${SUP_LOC[m.related_location]}` : ''),
+    delta: m.delta, balance: m.balance_after,
+    printer: m.printer_model ? `${m.printer_model}${m.printer_ip ? ` (${m.printer_ip})` : ''}` : null,
+    note: m.note || null, user: m.user_name || null,
+  }))
+  const swaps = movements.filter(m => m.kind === 'troca' && m.printer_id)
+  const byPrinter = groupSum(swaps, m => `${m.printer_model || '—'} · ${SUP_LOC[m.printer_location] || ''}${m.printer_ip ? ` · ${m.printer_ip}` : ''}`, { units: m => -m.delta })
+    .map(g => ({ ...g, last: swaps.filter(m => `${m.printer_model || '—'} · ${SUP_LOC[m.printer_location] || ''}${m.printer_ip ? ` · ${m.printer_ip}` : ''}` === g.key).map(m => m.happened_at).sort().pop() }))
+    .sort((a, b) => b.units - a.units)
+    .map(g => ({ ...g, last: g.last ? new Date(Date.UTC(+g.last.slice(0, 4), +g.last.slice(5, 7) - 1, +g.last.slice(8, 10), +g.last.slice(11, 13), +g.last.slice(14, 16))) : null }))
+  const toRepor = stock.filter(r => r.status === 'Repor').length
+
+  await downloadXlsx({
+    fileName: 'estoque-insumos-impressoras',
+    title: 'Estoque de insumos de impressoras',
+    subtitle: `${supplies.filter(s => s.active).length} itens no catálogo · ${toRepor} a repor`,
+    author: author(),
+    sheets: [
+      {
+        name: 'Saldo por prédio',
+        columns: [
+          { header: 'Insumo', key: 'name', width: 34, wrap: true },
+          { header: 'Código', key: 'code', width: 12 },
+          { header: 'Tipo', key: 'type', width: 20 },
+          { header: 'Cor', key: 'color', width: 10 },
+          { header: 'Prédio', key: 'location', width: 11 },
+          { header: 'Saldo', key: 'qty', width: 9, type: 'int', total: 'sum' },
+          { header: 'Mínimo', key: 'min', width: 9, type: 'int' },
+          { header: 'Situação', key: 'status', width: 13, badge: SUP_STATUS_BADGE },
+          { header: 'Consumo/mês', key: 'perMonth', width: 13, type: 'dec' },
+          { header: 'Serve em', key: 'models', width: 36, wrap: true },
+        ],
+        rows: stock,
+      },
+      {
+        name: 'Movimentações', title: 'Estoque de insumos — movimentações', tabColor: 'FF22C55E',
+        columns: [
+          { header: 'Quando', key: 'when', width: 17, type: 'datetime' },
+          { header: 'Prédio', key: 'location', width: 11 },
+          { header: 'Insumo', key: 'name', width: 32, wrap: true },
+          { header: 'Código', key: 'code', width: 12 },
+          { header: 'Movimento', key: 'kind', width: 28 },
+          { header: 'Qtd', key: 'delta', width: 7, type: 'int' },
+          { header: 'Saldo depois', key: 'balance', width: 13, type: 'int' },
+          { header: 'Impressora', key: 'printer', width: 30, wrap: true },
+          { header: 'Observação', key: 'note', width: 30, wrap: true },
+          { header: 'Registrado por', key: 'user', width: 20, total: 'count' },
+        ],
+        rows: moves,
+      },
+      {
+        name: 'Trocas por impressora', title: 'Estoque de insumos — trocas por impressora', tabColor: 'FF8B5CF6',
+        columns: [
+          { header: 'Impressora', key: 'key', width: 44 },
+          { header: 'Trocas', key: 'count', width: 10, type: 'int', total: 'sum' },
+          { header: 'Unidades usadas', key: 'units', width: 16, type: 'int', total: 'sum' },
+          { header: 'Última troca', key: 'last', width: 17, type: 'datetime' },
+        ],
+        rows: byPrinter,
+      },
+    ],
+  })
+}
+
 // ── Empréstimo de equipamentos ─────────────────────────────────────────────
 const LOAN_STATUS = { aguardando_devolucao: 'Aguardando devolução', devolvido: 'Devolvido', uso_permanente: 'Uso permanente' }
 const LOAN_BADGE = { 'Aguardando devolução': 'yellow', Devolvido: 'green', 'Uso permanente': 'blue' }

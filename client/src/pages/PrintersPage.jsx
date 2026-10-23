@@ -14,6 +14,7 @@ import s from './PrintersPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
 import { safeHref } from '../utils/safeHref'
+import PrinterSupplyHistory from '../components/common/PrinterSupplyHistory'
 
 // Mesmo teto aplicado no servidor — 95 MB, o máximo seguro dentro do limite
 // real de corpo de requisição da Cloudflare (100 MB no plano atual, um teto
@@ -176,6 +177,7 @@ export default function PrintersPage() {
   const [printers, setPrinters] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null) // null = fechado, {} = novo, impressora = editar
+  const [suppliesFor, setSuppliesFor] = useState(null) // impressora cujo histórico de insumos está aberto
 
   useLiveRefresh(['printers'], () => load()) // alguém mexeu em outro aparelho
   const load = () => {
@@ -278,6 +280,7 @@ export default function PrintersPage() {
                       {p.link_url && (
                         <a className={s.cardLink} href={safeHref(p.link_url)} target="_blank" rel="noreferrer">🔗 Link de instalação</a>
                       )}
+                      <button type="button" className={s.cardLink} onClick={() => setSuppliesFor(p)}>🧴 Histórico de insumos</button>
                       <div className={s.cardFooter}>
                         <span className={s.cardMeta}>{p.author_name || 'Alguém'} · {timeAgo(p.updated_at)}</span>
                       </div>
@@ -290,6 +293,7 @@ export default function PrintersPage() {
         </DndContext>
       )}
 
+      {suppliesFor && <PrinterSupplyHistory printer={suppliesFor} onClose={() => setSuppliesFor(null)} />}
       {editing && (
         <Editor
           printer={editing.id ? editing : null}

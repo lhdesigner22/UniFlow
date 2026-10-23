@@ -15,6 +15,7 @@ import KnowledgeBasePage from './pages/KnowledgeBasePage'
 import GestaoPage from './pages/GestaoPage'
 import DevelopmentsPage from './pages/DevelopmentsPage'
 import LabIncidentsPage from './pages/LabIncidentsPage'
+import PrinterSuppliesPage from './pages/PrinterSuppliesPage'
 import VaultPage from './pages/VaultPage'
 import VlansPage from './pages/VlansPage'
 import ApprovalsPage from './pages/ApprovalsPage'
@@ -79,6 +80,8 @@ export default function App() {
           <Route path="solicitacoes-compra/:month" element={<RequireModule module="purchases"><PurchaseRequestsPage /></RequireModule>} />
           <Route path="impressoras" element={<Navigate to="/impressoras/sede" replace />} />
           <Route path="impressoras/:location" element={<RequireModule module="printers"><PrintersPage /></RequireModule>} />
+          <Route path="estoque-insumos" element={<Navigate to="/estoque-insumos/sede" replace />} />
+          <Route path="estoque-insumos/:location" element={<RequireModule module="printers"><PrinterSuppliesPage /></RequireModule>} />
           <Route path="emprestimo-equipamentos" element={<Navigate to="/emprestimo-equipamentos/sede" replace />} />
           <Route path="emprestimo-equipamentos/:building" element={<RequireModule module="loans"><EquipmentLoansPage /></RequireModule>} />
           <Route path="empresas" element={<Navigate to="/empresas/colegio-ser" replace />} />

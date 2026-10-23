@@ -32,7 +32,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0054). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0056). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -43,7 +43,7 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Se o `wrangler dev`/`d1 --local` quebrar** com "access violation" (aconteceu em out/2026 no Windows 11 Insider 26300, qualquer
   versão do wrangler): `cd server && node test-e2e/node-server.mjs` roda o mesmo worker.js no Node com D1 em SQLite (memória,
   migrações + seeds) na porta 8799 — as suítes rodam igual. Sem tempo real nem arquivos estáticos.
-- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `security` (nesta ordem: o `security` força novo login do analista e
+- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `security` (nesta ordem: o `security` força novo login do analista e
   invalida o token tv:0 dele). `xlsx` conta linhas — rode em banco limpo (servidor recém-subido); passe uma pasta como argumento pra
   salvar os .xlsx e abrir no Excel. `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`.
 - **Exportações são XLSX montado no navegador** (`client/src/utils/xlsxExport.js` + `exports.js`, ExcelJS por import dinâmico, fora do
@@ -130,6 +130,17 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   situação aberto → em andamento → resolvido (+ solução, quem/quando). Até 10 fotos, reduzidas no navegador (`utils/imageResize.js`) e
   guardadas como data URL em `lab_incident_photos` (miniatura na lista, grande sob demanda — sem `?token=` na URL). Exporta Excel.
   Registra/muda situação: quem tem `incidents=edit`; editar dados/excluir: quem registrou ou Super Admin.
+- **Impressoras → Estoque de insumos** (`routes/printerSupplies.js`, `PrinterSuppliesPage.jsx`, rota `/estoque-insumos/:location`, módulo
+  `printers`, sem separação por departamento — é estoque da TI): catálogo (tipo, cor, código, modelos compatíveis), saldo e mínimo **por
+  prédio** em `printer_supply_stock` (não soma o histórico), histórico em `printer_supply_movements` (entrada, troca NA impressora,
+  transferência, ajuste). Movimento grava saldo + histórico na mesma transação com trava otimista (`quantity = esperado` + `changes()`):
+  concorrência dá 409, nunca saldo negativo. Consumo = trocas dos últimos 90 dias ÷ 3; cartão da impressora tem "🧴 Histórico de insumos".
+
+## Desempenho do banco (estudo de out/2026)
+- Banco pequeno (~9 MB, ~8,5 mil linhas), mas lia **~2 milhões de linhas/dia** (40% do limite Free de 5 M/dia) por falta de índice —
+  o sininho sozinho era 57%. Migração 0055 criou os índices (sininho 259 → 0 linhas por consulta). Medir: `wrangler d1 info uniflow`
+  e `wrangler d1 insights uniflow --sort-by reads`. **Tabela nova = índice nas colunas do WHERE/ORDER BY desde o início**, e contadores
+  do menu só no carregamento + tempo real (não a cada navegação).
 
 ## Estado / pendências conhecidas
 - Tudo acima está em produção. Ainda **sem uso real confirmado pelo Luiz**: limpeza de duplicatas em massa de feriados, cargos/departamentos

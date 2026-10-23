@@ -224,7 +224,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const location = useLocation()
   const chamadosActive = CHAMADOS_PATHS.includes(location.pathname)
   const [chamadosOpen, setChamadosOpen] = useState(chamadosActive)
-  const printersActive = PRINTERS_PATHS.includes(location.pathname)
+  const suppliesActive = location.pathname.startsWith('/estoque-insumos')
+  const printersActive = PRINTERS_PATHS.includes(location.pathname) || suppliesActive
   const [printersOpen, setPrintersOpen] = useState(printersActive)
   const equipmentLoansActive = EQUIPMENT_LOANS_PATHS.includes(location.pathname)
   const [equipmentLoansOpen, setEquipmentLoansOpen] = useState(equipmentLoansActive)
@@ -279,7 +280,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
   // correspondente aqui no menu é buscado de novo (o contador sobe/desce sem
   // precisar navegar). Cada recurso tem seu próprio "tick" que entra nas
   // dependências do efeito abaixo.
-  const [liveTick, setLiveTick] = useState({ boards: 0, printers: 0, companies: 0, approvals: 0, purchase: 0, developments: 0, incidents: 0 })
+  const [liveTick, setLiveTick] = useState({ boards: 0, printers: 0, companies: 0, approvals: 0, purchase: 0, developments: 0, incidents: 0, supplies: 0 })
   const bump = key => setLiveTick(t => ({ ...t, [key]: t[key] + 1 }))
   // Mexer em cartão/coluna de um quadro não muda a lista de quadros do menu.
   useLiveRefresh(['boards'], msg => { if (!msg?.s) bump('boards') })
@@ -289,6 +290,15 @@ export default function Sidebar({ mobileOpen, onClose }) {
   useLiveRefresh(['purchase-requests'], () => bump('purchase'))
   useLiveRefresh(['developments'], () => bump('developments'))
   useLiveRefresh(['lab-incidents'], () => bump('incidents'))
+  useLiveRefresh(['printer-supplies'], () => bump('supplies'))
+
+  // Impressoras → Estoque de insumos: itens no mínimo ou abaixo (todos os prédios).
+  // Só ao abrir e quando o estoque muda (não a cada navegação — economiza leitura).
+  const [suppliesLow, setSuppliesLow] = useState(0)
+  useEffect(() => {
+    if (!canView(user, 'printers')) return
+    api.get('/printer-supplies/low').then(r => setSuppliesLow(Object.values(r.data || {}).reduce((a, n) => a + n, 0))).catch(() => {})
+  }, [user?.id, liveTick.supplies])
 
   // Fluxos → Incidentes Laboratórios: em aberto (aberto + em andamento) por prédio.
   const [incidentCounts, setIncidentCounts] = useState({})
@@ -595,6 +605,10 @@ export default function Sidebar({ mobileOpen, onClose }) {
               </NavLink>
               <NavLink to="/impressoras/clinicas" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
                 <span>CLÍNICAS</span>
+              </NavLink>
+              <NavLink to="/estoque-insumos/sede" className={() => `${s.navSubItem} ${suppliesActive ? s.active : ''}`}>
+                <span>📦 Estoque de insumos</span>
+                {!!suppliesLow && <span className={s.navCount} title="Itens no estoque mínimo ou abaixo">{suppliesLow}</span>}
               </NavLink>
             </div>
           )}

@@ -50,6 +50,7 @@ const RESOURCE_MODULE = {
   approvals: 'approvals',
   'purchase-requests': 'purchases',
   printers: 'printers',
+  'printer-supplies': 'printers', // Impressoras → Estoque de insumos
   'equipment-loans': 'loans',
   'equipment-inventory': 'loans',
   'room-schedule': 'loans',
