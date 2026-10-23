@@ -50,7 +50,7 @@ import { runGlpiBacklogSync } from './lib/glpiBacklogSync.js'
 import { runGlpiTotalSync } from './lib/glpiTotalSync.js'
 import { runRoomScheduleSync } from './lib/roomScheduleSync.js'
 import { refreshGlpiTechCache } from './lib/glpiTechCache.js'
-import { syncLoanReplies, gmailInboxConfigured } from './lib/gmailInbox.js'
+import { syncLoanReplies, gmailInboxConfigured, gmailInboxOverdue } from './lib/gmailInbox.js'
 
 const app = new Hono()
 
@@ -250,6 +250,19 @@ export default {
     // separação existe porque rodar a resolução de técnico (a parte cara)
     // a cada 1 min foi o que disparou o consumo de CPU do Worker.
     if (event.cron === '* * * * *') {
+      // Respostas por e-mail dos avisos de empréstimo → chat (lib/gmailInbox.js).
+      // Roda nos minutos terminados em 3 ou 8 e, se a última leitura tiver mais
+      // de 7 min (uma rodada falhou), no minuto seguinte. Vai ANTES do Backlog:
+      // antes vinha depois e, quando o Backlog demorava/gastava mais, a leitura
+      // nem chegava a rodar (ficou dezenas de minutos parada em produção).
+      const minute = new Date(event.scheduledTime || Date.now()).getUTCMinutes()
+      const readMail = gmailInboxConfigured(env) && (minute % 5 === 3 || await gmailInboxOverdue(db))
+      if (readMail) {
+        await syncLoanReplies(env, db)
+          .then(r => { if (r.matched > 0) return broadcastLive(env, { r: 'equipment-loans' }) })
+          .catch(e => console.error('Gmail inbox sync error', e.message))
+      }
+
       await runGlpiBacklogSync(env, db).catch(e => console.error('GLPI backlog sync error', e.message))
 
       // Filas grandes do GLPI processadas aos poucos, um lote por minuto (o
@@ -258,17 +271,9 @@ export default {
       //   1) importação de chamados novos pra Agenda, enquanto sobrar fila;
       //   2) depois, a limpeza de duplicatas (ligada pelo botão do Admin).
       // Com as duas flags desligadas isso custa 1 consulta ao banco por minuto.
-      //
-      // A cada 5 min (minuto terminado em 3 ou 8), no lugar das filas: busca
-      // respostas por e-mail dos avisos de empréstimo e põe no chat
-      // (lib/gmailInbox.js). Fica fora do mesmo minuto das filas pelo mesmo
-      // limite de subrequests; as filas só atrasam 1 minuto.
-      const minute = new Date(event.scheduledTime || Date.now()).getUTCMinutes()
-      if (minute % 5 === 3 && gmailInboxConfigured(env)) {
-        await syncLoanReplies(env, db)
-          .then(r => { if (r.matched > 0) return broadcastLive(env, { r: 'equipment-loans' }) })
-          .catch(e => console.error('Gmail inbox sync error', e.message))
-      } else {
+      // No minuto em que leu os e-mails, pula as filas (limite de subrequests);
+      // elas só atrasam 1 minuto.
+      if (!readMail) {
         await processGlpiQueues(env, db).catch(e => console.error('GLPI queues error', e.message))
       }
     }

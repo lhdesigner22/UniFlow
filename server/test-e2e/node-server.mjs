@@ -81,7 +81,7 @@ const ctx = { waitUntil() {}, passThroughOnException() {} }
 //   GET  /__mock/gmail/sent                                               → enviados
 //   POST /__mock/gmail/mode   {oauthCanRead}                              → token OAuth só de envio?
 //   POST /__mock/cron         {cron, minute}                              → roda o scheduled()
-//   GET  /__mock/setting?key=                                             → lê app_settings
+//   GET  /__mock/setting?key=  ·  POST /__mock/setting {key, value}       → lê / grava app_settings
 const mock = { sent: [], inbox: [], oauthCanRead: true }
 if (process.env.MOCK_GMAIL) {
   const { generateKeyPairSync } = await import('node:crypto')
@@ -128,6 +128,11 @@ async function mockControl(req, url, body) {
     const { cron, minute = 0 } = JSON.parse(body)
     const at = new Date(); at.setUTCMinutes(minute)
     await worker.scheduled({ cron, scheduledTime: at.getTime() }, env, ctx)
+    return { ok: true }
+  }
+  if (url.pathname === '/__mock/setting' && req.method === 'POST') {
+    const { key, value } = JSON.parse(body)
+    sqlite.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, value)
     return { ok: true }
   }
   if (url.pathname === '/__mock/setting') return sqlite.prepare('SELECT value FROM app_settings WHERE key = ?').get(url.searchParams.get('key')) || null

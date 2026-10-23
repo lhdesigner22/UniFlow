@@ -117,7 +117,8 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   horários por Browser Rendering; botão/cron de domingo), e-mail do solicitante só `@fecaf.com.br`, `@pro.fecaf.com.br`, `@colegioser.com`
   (busca no diretório do Google Workspace), aviso de prazo (manhã até 10h/noite até 22h), mensagem rápida por e-mail, coluna "Registrado por".
   **Respostas por e-mail entram no chat** (`lib/gmailInbox.js`, ver docs/INTEGRACOES.md): lê a caixa do Gmail nos minutos x3/x8 do
-  cron de 1 min e ao abrir o chat; bolinha vermelha no ✉️ = resposta nova. Teste: `MOCK_GMAIL=1 node test-e2e/node-server.mjs` +
+  cron de 1 min (ANTES do Backlog — depois dele a leitura falhava na maioria das rodadas) + recuperação: se a última leitura tem
+  +7 min, o minuto seguinte relê; e ao abrir o chat. Status em `app_settings.gmail_inbox_status`. Bolinha vermelha no ✉️ = resposta nova. Teste: `MOCK_GMAIL=1 node test-e2e/node-server.mjs` +
   `loan-replies-e2e.mjs`.
 - Desempenho (estrelas/luas — 👎 privado: quem recebeu + Super Admin), Jornada, Organograma, Impressoras (drag-and-drop), Compras por mês,
   Aprovações (trocar decisão), Cofre de Senhas (AES-GCM), **VLANs** (Gestão; senhas de Wi-Fi no banco, não no repo; acesso = lista do Cofre).

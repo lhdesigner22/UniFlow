@@ -81,13 +81,22 @@ expect('abrir o chat apaga o aviso', row2.last_reply_at > row2.replies_seen_at, 
 await mock('/gmail/inbox', { id: 'in-4', threadId: sent[0].threadId, from: 'samantha.rasquinho@fecaf.com.br', subject: 'Re: x', text: 'quarta' })
 await mock('/cron', { cron: '* * * * *', minute: 4 })
 r = await call('GET', `/api/equipment-loans/${loan.id}/messages`)
-expect('minuto 4: caixa não é lida', (r.j || []).filter(m => m.direction === 'in').length, 3)
+expect('minuto 4: caixa não é lida (última leitura recente)', (r.j || []).filter(m => m.direction === 'in').length, 3)
+
+// Rodada que falhou: última leitura há mais de 7 min → o minuto seguinte (fora do x3/x8) recupera
+await mock('/setting', { key: 'gmail_inbox_status', value: JSON.stringify({ at: new Date(Date.now() - 10 * 60_000).toISOString(), ok: true }) })
+await mock('/cron', { cron: '* * * * *', minute: 4 })
+r = await call('GET', `/api/equipment-loans/${loan.id}/messages`)
+expect('última leitura atrasada: minuto 4 lê a caixa e recupera', (r.j || []).filter(m => m.direction === 'in').length, 4)
+const fresh = JSON.parse((await mock('/setting?key=gmail_inbox_status'))?.value || '{}')
+expect('...e o status volta a ficar em dia', Date.now() - Date.parse(fresh.at) < 60_000, true)
 
 // Token OAuth só com permissão de ENVIO → usa a Service Account
 await mock('/gmail/mode', { oauthCanRead: false })
+await mock('/gmail/inbox', { id: 'in-5', threadId: sent[0].threadId, from: 'samantha.rasquinho@fecaf.com.br', subject: 'Re: x', text: 'quinta' })
 await mock('/cron', { cron: '* * * * *', minute: 13 })
 r = await call('GET', `/api/equipment-loans/${loan.id}/messages`)
-expect('sem leitura no OAuth: Service Account traz a resposta', (r.j || []).filter(m => m.direction === 'in').length, 4)
+expect('sem leitura no OAuth: Service Account traz a resposta', (r.j || []).filter(m => m.direction === 'in').length, 5)
 const status = JSON.parse((await mock('/setting?key=gmail_inbox_status'))?.value || '{}')
 expect('status registra a Service Account', status.auth, 'service_account')
 

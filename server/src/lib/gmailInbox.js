@@ -240,6 +240,15 @@ export async function syncLoanReplies(env, db, { maxGets = 10 } = {}) {
   return { matched: loanIds.size, loanIds: [...loanIds] }
 }
 
+// A última rodada (cron ou chat aberto) foi há mais de 7 min? → o cron de 1 min
+// roda de novo mesmo fora dos minutos x3/x8 (recupera rodada que falhou). 1 consulta.
+export async function gmailInboxOverdue(db) {
+  const raw = await db.scalar("SELECT value FROM app_settings WHERE key = 'gmail_inbox_status'")
+  let at = 0
+  try { at = Date.parse(JSON.parse(raw || '{}').at) || 0 } catch { /* status ilegível → atrasado */ }
+  return Date.now() - at > 7 * 60_000
+}
+
 // Pra quando alguém abre o chat: no máximo 1 rodada a cada 20 s (várias
 // pessoas/abas abrindo ao mesmo tempo não multiplicam as chamadas ao Gmail).
 export async function syncLoanRepliesThrottled(env, db) {
