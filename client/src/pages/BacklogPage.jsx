@@ -131,7 +131,8 @@ export default function BacklogPage() {
   // Técnicos que o Super Admin ocultou nesta entidade (somem do gráfico e do filtro)
   const hiddenTechs = snapshot?.hiddenTechnicians || []
   const visibleTechs = useMemo(() => (snapshot?.byTechnician || []).filter(t => !hiddenTechs.includes(t.name)), [snapshot])
-  const chartData = useMemo(() => visibleTechs.slice(0, 15), [visibleTechs])
+  // Todos os técnicos visíveis (antes cortava em 15 e faltava gente) — o gráfico cresce na altura
+  const chartData = visibleTechs
   const categoryData = useMemo(() => (snapshot?.byCategory || []).slice(0, 12), [snapshot])
   const isTi = isTiEntity(meta.entity)
   // Filas do TI: no SERVICE DESK sempre; nos outros só se a fila tiver chamado
@@ -379,7 +380,7 @@ export default function BacklogPage() {
                 <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 24, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" horizontal={false} />
                   <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                  <YAxis type="category" dataKey="name" width={140} tick={{ fill: 'var(--text)', fontSize: 12 }} />
+                  <YAxis type="category" dataKey="name" width={160} interval={0} tick={{ fill: 'var(--text)', fontSize: 12 }} />
                   <Tooltip
                     contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
                     labelStyle={{ color: 'var(--text)', fontWeight: 600, marginBottom: 4 }}
