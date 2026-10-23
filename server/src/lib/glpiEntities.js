@@ -49,6 +49,27 @@ export async function loadSeenEntities(db) {
   try { return JSON.parse(row?.value || '[]') } catch { return [] }
 }
 
+// Técnicos ocultos nos gráficos "por técnico" (Backlog e Total), por entidade —
+// ex.: quem saiu da equipe ou não atende chamado. Só some do gráfico e da lista
+// de filtro; os chamados continuam contando nos totais. Guardado em
+// app_settings.glpi_hidden_techs = { "<entidade>": ["Nome", ...] }.
+async function loadHiddenMap(db) {
+  const row = await db.prepare("SELECT value FROM app_settings WHERE key = 'glpi_hidden_techs'").get()
+  try { const m = JSON.parse(row?.value || '{}'); return m && typeof m === 'object' && !Array.isArray(m) ? m : {} } catch { return {} }
+}
+export async function loadHiddenTechs(db, entity) {
+  const list = (await loadHiddenMap(db))[entity]
+  return Array.isArray(list) ? list : []
+}
+export async function saveHiddenTechs(db, entity, names) {
+  const map = await loadHiddenMap(db)
+  if (names.length) map[entity] = names
+  else delete map[entity]
+  await db.prepare(
+    "INSERT INTO app_settings (key, value) VALUES ('glpi_hidden_techs', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+  ).run(JSON.stringify(map))
+}
+
 // Qual entidade mostrar a esta requisição.
 //   - quem enxerga todos os departamentos escolhe (?entity=); sem escolha, a do
 //     departamento que está "vendo" ou a primeira configurada;

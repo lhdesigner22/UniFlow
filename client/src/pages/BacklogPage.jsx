@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import { useVisiblePolling } from '../hooks/useVisiblePolling'
 import { refreshAllGlpi } from '../utils/glpiRefresh'
 import Reveal from '../components/common/Reveal'
+import TechVisibilityButton from '../components/common/TechVisibilityButton'
 import EntityPicker, { NoEntityNotice } from '../components/common/EntityPicker'
 import s from './BacklogPage.module.css'
 
@@ -127,7 +128,10 @@ export default function BacklogPage() {
   // Trocou de entidade: os filtros de uma não fazem sentido na outra
   useEffect(() => { clearFilters() }, [entityChoice])
 
-  const chartData = useMemo(() => (snapshot?.byTechnician || []).slice(0, 15), [snapshot])
+  // Técnicos que o Super Admin ocultou nesta entidade (somem do gráfico e do filtro)
+  const hiddenTechs = snapshot?.hiddenTechnicians || []
+  const visibleTechs = useMemo(() => (snapshot?.byTechnician || []).filter(t => !hiddenTechs.includes(t.name)), [snapshot])
+  const chartData = useMemo(() => visibleTechs.slice(0, 15), [visibleTechs])
   const categoryData = useMemo(() => (snapshot?.byCategory || []).slice(0, 12), [snapshot])
   const isTi = isTiEntity(meta.entity)
   // Filas do TI: no SERVICE DESK sempre; nos outros só se a fila tiver chamado
@@ -355,7 +359,15 @@ export default function BacklogPage() {
 
           {/* ── Backlog por técnico ── */}
           <Reveal className={s.chartCard}>
-            <h3>Backlog por técnico</h3>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+              <h3>Backlog por técnico</h3>
+              <TechVisibilityButton
+                entity={meta.entity}
+                technicians={snapshot.byTechnician}
+                hidden={hiddenTechs}
+                onSaved={list => { setSnapshot(prev => ({ ...prev, hiddenTechnicians: list })); setTechFilter(f => (list.includes(f) ? '' : f)) }}
+              />
+            </div>
             <p className={s.chartNote}>
               {isTi ? 'Chamados abertos, excluindo filas departamentais (Compras/Manutenção/Inventário/Eventos). ' : 'Chamados abertos com técnico atribuído. '}
               Verde ≤3 · Amarelo 4–6 · Vermelho ≥7.
@@ -398,7 +410,7 @@ export default function BacklogPage() {
               <select value={techFilter} onChange={e => setTechFilter(e.target.value)}>
                 <option value="">Todos os técnicos</option>
                 <option value="__none__">Sem técnico</option>
-                {snapshot.byTechnician.map(t => (
+                {visibleTechs.map(t => (
                   <option key={t.name} value={t.name}>{t.name}</option>
                 ))}
               </select>

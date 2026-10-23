@@ -58,6 +58,20 @@ http.createServer((req, res) => {
   if (p === '/__reset') { seed(); return json(res, 200, { ok: true }) }
   if (p.endsWith('/initSession')) return json(res, 200, { session_token: 'tok' })
   if (p.endsWith('/killSession')) return json(res, 200, {})
+  // Técnicos atribuídos (type 2) e usuários — pros gráficos "por técnico".
+  // Paginação: tudo na 1ª página, vazio depois.
+  const firstPage = () => !(Number((url.searchParams.get('range') || '0-0').split('-')[0]) > 0)
+  if (p.endsWith('/apirest.php/Ticket_User')) {
+    const techs = [101, 102, 103]
+    return json(res, 200, firstPage() ? [...tickets.values()].map((t, i) => ({ tickets_id: t.id, users_id: techs[i % 3], type: 2 })) : [])
+  }
+  if (p.endsWith('/apirest.php/User')) {
+    return json(res, 200, firstPage() ? [
+      { id: 101, name: 'ana.tec', firstname: 'Ana', realname: 'Técnica' },
+      { id: 102, name: 'bruno.tec', firstname: 'Bruno', realname: 'Saiu da Equipe' },
+      { id: 103, name: 'carla.tec', firstname: 'Carla', realname: 'Suporte' },
+    ] : [])
+  }
   // Cadastro de entidades — inclui uma SEM nenhum chamado (GENTE E GESTÃO)
   if (p.endsWith('/apirest.php/Entity')) return json(res, 200, [
     { id: 0, name: 'Entidade raiz', completename: 'Entidade raiz' },

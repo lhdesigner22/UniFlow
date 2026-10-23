@@ -6,6 +6,7 @@ import { useVisiblePolling } from '../hooks/useVisiblePolling'
 import { refreshAllGlpi } from '../utils/glpiRefresh'
 import Reveal from '../components/common/Reveal'
 import EntityPicker, { NoEntityNotice } from '../components/common/EntityPicker'
+import TechVisibilityButton from '../components/common/TechVisibilityButton'
 import s from './TotalChamadosPage.module.css'
 
 const STATUS_COLORS = {
@@ -100,7 +101,10 @@ export default function TotalChamadosPage() {
   const clearFilters = () => { setStatusFilter(''); setTechFilter(''); setMonthFilter('') }
   const hasActiveFilter = !!(statusFilter || techFilter || monthFilter)
 
-  const techChartData = useMemo(() => (snapshot?.byTechnician || []).slice(0, 15), [snapshot])
+  // Técnicos que o Super Admin ocultou nesta entidade (somem do gráfico e do filtro)
+  const hiddenTechs = snapshot?.hiddenTechnicians || []
+  const visibleTechs = useMemo(() => (snapshot?.byTechnician || []).filter(t => !hiddenTechs.includes(t.name)), [snapshot])
+  const techChartData = useMemo(() => visibleTechs.slice(0, 15), [visibleTechs])
 
   const statusBarData = useMemo(() => {
     if (!snapshot) return []
@@ -305,7 +309,15 @@ export default function TotalChamadosPage() {
 
           {/* ── Por técnico ── */}
           <Reveal className={s.chartCard}>
-            <h3>Chamados por técnico</h3>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+              <h3>Chamados por técnico</h3>
+              <TechVisibilityButton
+                entity={meta.entity}
+                technicians={snapshot.byTechnician}
+                hidden={hiddenTechs}
+                onSaved={list => { setSnapshot(prev => ({ ...prev, hiddenTechnicians: list })); setTechFilter(f => (list.includes(f) ? '' : f)) }}
+              />
+            </div>
             <p className={s.chartNote}>Todos os chamados já atribuídos (aberto + finalizado), excluindo filas departamentais. Verde ≤3 · Amarelo 4–6 · Vermelho ≥7.</p>
             {techChartData.length === 0 ? (
               <p className={s.chartEmpty}>Nenhum chamado com técnico atribuído.</p>
@@ -367,7 +379,7 @@ export default function TotalChamadosPage() {
               <select value={techFilter} onChange={e => setTechFilter(e.target.value)}>
                 <option value="">Todos os técnicos</option>
                 <option value="__none__">Sem técnico</option>
-                {snapshot.byTechnician.map(t => (
+                {visibleTechs.map(t => (
                   <option key={t.name} value={t.name}>{t.name}</option>
                 ))}
               </select>

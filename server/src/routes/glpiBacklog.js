@@ -3,7 +3,7 @@ import { auth } from '../middleware/auth.js'
 import { runGlpiBacklogSync } from '../lib/glpiBacklogSync.js'
 import { refreshGlpiTechCache } from '../lib/glpiTechCache.js'
 import { accessOf } from '../lib/permissions.js'
-import { resolveRequestEntity, entityKey, DEFAULT_ENTITY } from '../lib/glpiEntities.js'
+import { resolveRequestEntity, entityKey, DEFAULT_ENTITY, loadHiddenTechs } from '../lib/glpiEntities.js'
 
 const app = new Hono()
 app.use('*', auth) // qualquer usuário logado pode ver o backlog (só leitura)
@@ -20,7 +20,7 @@ app.get('/', async c => {
   // O antigo ('current') era sempre o SERVICE DESK.
   if (!row && entity === DEFAULT_ENTITY) row = await db.prepare("SELECT data, updated_at FROM glpi_backlog_snapshot WHERE id = 'current'").get()
   if (!row) return c.json({ empty: true, entity, entities })
-  return c.json({ ...JSON.parse(row.data), updatedAt: row.updated_at, entity, entities })
+  return c.json({ ...JSON.parse(row.data), updatedAt: row.updated_at, entity, entities, hiddenTechnicians: await loadHiddenTechs(db, entity) })
 })
 
 // POST /refresh — super_admin apenas, recalcula na hora (não espera o cron)

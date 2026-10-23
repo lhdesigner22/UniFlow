@@ -97,6 +97,8 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   Dashboard do Backlog por entidade: os status 10/13–17 (Compras, Manutenção, RH, Desligamento, Inventário, Eventos) são **filas do TI** —
   os cartões delas só aparecem no SERVICE DESK (ou se a fila tiver chamado). Todo departamento tem "Alta prioridade", "Parados há +30
   dias" e o gráfico **por categoria** (campo 7 do GLPI, só na busca do Backlog — o Total não traz categoria pra não estourar 2 MB).
+  **Técnicos ocultos** nos gráficos "por técnico" (Total e Backlog): botão "👁 Técnicos" (só Super Admin), por entidade, em
+  `app_settings.glpi_hidden_techs`; some do gráfico e do filtro, mas os chamados continuam nos totais e na tabela.
 
 ## GLPI
 - Eventos (status 17 "Eventos") → Agenda (`lib/glpiSync.js`, parsers em `glpiParser.js`). Importa em **lotes** (≤30 por rodada; flag

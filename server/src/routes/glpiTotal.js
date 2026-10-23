@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { auth } from '../middleware/auth.js'
 import { runGlpiTotalSync, buildTotalSnapshot } from '../lib/glpiTotalSync.js'
 import { accessOf } from '../lib/permissions.js'
-import { resolveRequestEntity, entityKey, DEFAULT_ENTITY } from '../lib/glpiEntities.js'
+import { resolveRequestEntity, entityKey, DEFAULT_ENTITY, loadHiddenTechs, saveHiddenTechs } from '../lib/glpiEntities.js'
 
 const app = new Hono()
 app.use('*', auth) // qualquer usuário logado pode ver o total (só leitura)
@@ -22,6 +22,7 @@ app.get('/', async c => {
   const { entity, entities, noEntity } = await resolveRequestEntity(db, await accessOf(c), c.req.query('entity'))
   if (noEntity) return c.json({ noEntity: true, entities })
   const key = entityKey(entity)
+  const hiddenTechnicians = await loadHiddenTechs(db, entity)
   const legacy = entity === DEFAULT_ENTITY // antes das entidades por departamento, o único resumo era o 'current' (SERVICE DESK)
 
   if (from || to) {
@@ -37,13 +38,29 @@ app.get('/', async c => {
       return true
     })
     const snapshot = buildTotalSnapshot(filtered, assigneeNamesByTicket)
-    return c.json({ ...snapshot, updatedAt: rawRow.updated_at, filtered: true, from: from || null, to: to || null, entity, entities })
+    return c.json({ ...snapshot, updatedAt: rawRow.updated_at, filtered: true, from: from || null, to: to || null, entity, entities, hiddenTechnicians })
   }
 
   let row = await db.prepare('SELECT data, updated_at FROM glpi_total_snapshot WHERE id = ?').get(key)
   if (!row && legacy) row = await db.prepare("SELECT data, updated_at FROM glpi_total_snapshot WHERE id = 'current'").get()
   if (!row) return c.json({ empty: true, entity, entities })
-  return c.json({ ...JSON.parse(row.data), updatedAt: row.updated_at, entity, entities })
+  return c.json({ ...JSON.parse(row.data), updatedAt: row.updated_at, entity, entities, hiddenTechnicians })
+})
+
+// PUT /hidden-technicians { entity, names } — técnicos ocultos nos gráficos
+// "por técnico" do Total e do Backlog daquela entidade. Super Admin apenas
+// (muda o que todo mundo vê). Os chamados continuam contando nos totais.
+app.put('/hidden-technicians', async c => {
+  const db = c.get('db')
+  const u = await db.prepare('SELECT system_role FROM users WHERE id = ?').get(c.get('user').id)
+  if (u?.system_role !== 'super_admin') return c.json({ error: 'Só o Super Admin oculta técnicos.' }, 403)
+  const { entity: requested, names } = await c.req.json()
+  const { entity, noEntity } = await resolveRequestEntity(db, await accessOf(c), requested)
+  if (noEntity || !entity || (requested && entity !== requested)) return c.json({ error: 'Entidade inválida' }, 400)
+  if (!Array.isArray(names) || names.length > 300) return c.json({ error: 'Lista inválida' }, 400)
+  const clean = [...new Set(names.map(n => String(n ?? '').trim().slice(0, 120)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  await saveHiddenTechs(db, entity, clean)
+  return c.json({ entity, hiddenTechnicians: clean })
 })
 
 // POST /refresh — super_admin apenas, recalcula na hora (não espera o cron)
