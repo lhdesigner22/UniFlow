@@ -46,6 +46,7 @@ const RESOURCE_MODULE = {
   'glpi-total': 'tickets',
   kb: 'kb', // Gestão usa a mesma rota com category=gestao — ver moduleForRequest
   developments: 'gestao', // Gestão → Desenvolvimentos
+  'success-cases': 'gestao', // Gestão → Cases de Sucesso
   'lab-incidents': 'incidents',
   approvals: 'approvals',
   'purchase-requests': 'purchases',

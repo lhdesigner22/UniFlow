@@ -203,7 +203,7 @@ const EQUIPMENT_LOANS_PATHS = ['/emprestimo-equipamentos/sede', '/emprestimo-equ
 const COMPANIES_PATHS = ['/empresas/colegio-ser', '/empresas/unifecaf', '/link-internet', '/parceiros']
 const TEAM_PATHS = ['/time/desempenho', '/time/organograma', '/time/jornada']
 const FLOWS_PATHS = ['/aprovacoes']
-const GESTAO_PATHS = ['/gestao/documentos', '/gestao/cofre-senhas']
+const GESTAO_PATHS = ['/gestao/documentos', '/gestao/cofre-senhas', '/gestao/cases-de-sucesso']
 const VISIBLE_BOARDS_LIMIT = 6
 
 export default function Sidebar({ mobileOpen, onClose }) {
@@ -695,6 +695,11 @@ export default function Sidebar({ mobileOpen, onClose }) {
           </button>
           {showLabels && gestaoOpen && (
             <div className={s.navSubList}>
+              {can('gestao') && (
+              <NavLink to="/gestao/cases-de-sucesso" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
+                <span>Cases de Sucesso</span>
+              </NavLink>
+              )}
               {can('gestao') && (
               <NavLink to="/gestao/documentos" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
                 <span>Documentos</span>

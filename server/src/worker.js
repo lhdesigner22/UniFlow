@@ -37,6 +37,7 @@ import journeyRoutes from './routes/journey.js'
 import liveRoutes from './routes/live.js'
 import developmentsRoutes from './routes/developments.js'
 import labIncidentsRoutes from './routes/labIncidents.js'
+import successCasesRoutes from './routes/successCases.js'
 import printerSuppliesRoutes from './routes/printerSupplies.js'
 import { broadcastLive } from './lib/liveHub.js'
 
@@ -210,6 +211,7 @@ app.route('/api/directory', directoryRoutes)
 app.route('/api/journey', journeyRoutes)
 app.route('/api/developments', developmentsRoutes)
 app.route('/api/lab-incidents', labIncidentsRoutes)
+app.route('/api/success-cases', successCasesRoutes)
 app.route('/api/printer-supplies', printerSuppliesRoutes)
 
 async function processGlpiQueues(env, db) {
