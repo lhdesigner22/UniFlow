@@ -203,7 +203,7 @@ function ResultBox({ result }) {
   )
 }
 
-function Detail({ id, stats, year, writable, onClose, onEdit, onDelete }) {
+function Detail({ id, stats, year, writable, onClose, onEdit, onDelete, onChanged }) {
   const [item, setItem] = useState(null)
   const [viewing, setViewing] = useState(null)
   const [caption, setCaption] = useState('')
@@ -227,6 +227,19 @@ function Detail({ id, stats, year, writable, onClose, onEdit, onDelete }) {
     }
     setUploading(false)
   }
+  const [savingStatus, setSavingStatus] = useState(false)
+  const changeStatus = async status => {
+    if (status === item.status) return
+    setSavingStatus(true)
+    try {
+      const saved = (await api.put(`/success-cases/${id}`, { status })).data
+      setItem(it => ({ ...it, ...saved, photos: it.photos }))
+      onChanged?.()
+    } catch (err) {
+      await alertDialog(err.response?.data?.error || 'Erro ao mudar a situação.', { title: 'Erro', danger: true })
+    }
+    setSavingStatus(false)
+  }
   const removePhoto = async p => {
     if (!(await confirmDialog('Remover esta foto?', { title: 'Remover foto' }))) return
     await api.delete(`/success-cases/${id}/photos/${p.id}`)
@@ -241,8 +254,16 @@ function Detail({ id, stats, year, writable, onClose, onEdit, onDelete }) {
     <Modal title={item.title} onClose={onClose} width={860}>
       <div className={s.detailMeta}>
         <span className={s.pillarText} style={{ color: p.color }}>{p.icon} {p.label}</span>
-        <StatusBadge status={item.status} />
-        {item.completed_on && <span className={s.muted}>Concluído em {fmtMonth(item.completed_on)}</span>}
+        {writable ? (
+          <div className={s.statusPicker} role="group" aria-label="Situação">
+            {Object.entries(STATUSES).map(([k, v]) => (
+              <button key={k} type="button" disabled={savingStatus}
+                className={`${s.statusOption} ${item.status === k ? `${s.status} ${s[v.className]}` : ''}`}
+                onClick={() => changeStatus(k)}>{v.label}</button>
+            ))}
+          </div>
+        ) : <StatusBadge status={item.status} />}
+        {item.completed_on && <span className={s.muted}>{item.status === 'concluido' ? 'Concluído em' : 'Previsto para'} {fmtMonth(item.completed_on)}</span>}
         {item.owner && <span className={s.muted}>· {item.owner}</span>}
       </div>
       {item.headline && <p className={s.detailHeadline}>{item.headline}</p>}
@@ -549,6 +570,7 @@ export default function SuccessCasesPage() {
           onClose={() => setOpenId(null)}
           onEdit={item => { setOpenId(null); setEditing(item) }}
           onDelete={remove}
+          onChanged={load}
         />
       )}
       {editing && <Editor item={editing.id ? editing : null} year={shownYear} onClose={() => setEditing(null)} onSaved={onSaved} />}

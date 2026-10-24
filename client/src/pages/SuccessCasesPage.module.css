@@ -67,6 +67,13 @@
 .statusDoing { background: color-mix(in srgb, #EAB308 18%, transparent); color: #CA8A04; }
 
 /* ── Detalhe ── */
+.statusPicker { display: inline-flex; gap: 2px; padding: 2px; border-radius: 20px; background: var(--surface-2); }
+.statusOption {
+  font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 20px; border: none; cursor: pointer;
+  background: transparent; color: var(--text-muted); font-family: inherit;
+}
+.statusOption:hover:not(:disabled) { color: var(--text); }
+.statusOption:disabled { cursor: wait; }
 .detailMeta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
 .detailHeadline { font-size: 15px; color: var(--text); margin-bottom: 16px; line-height: 1.5; }
 .blocks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
