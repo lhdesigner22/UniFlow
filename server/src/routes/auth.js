@@ -98,6 +98,19 @@ app.post('/google', async c => {
     await autoPromote(db, c.env, user.id, user.email)
     user = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id)
 
+    // Primeiro acesso de quem não virou Super Admin: recebe o cargo padrão
+    // (Admin → Cargos). Só cargos comuns — nunca Super Admin/Auditor por padrão.
+    if (isNewUser && user.system_role === 'user' && !user.role_id) {
+      const role = await db.prepare(`
+        SELECT r.id FROM app_settings s JOIN roles r ON r.id = s.value
+        WHERE s.key = 'default_role_id' AND r.system_role = 'user'
+      `).get()
+      if (role) {
+        await db.prepare('UPDATE users SET role_id = ? WHERE id = ?').run(role.id, user.id)
+        user.role_id = role.id
+      }
+    }
+
     // 5. Emitir JWT igual ao login normal
     const token = await signJwt({ id: user.id, name: user.name, email: user.email, tv: user.token_version || 0 }, c.env.JWT_SECRET)
     return c.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, system_role: user.system_role } })

@@ -1,4 +1,5 @@
 import RolesTab from '../components/admin/RolesTab'
+import DepartmentModulesModal from '../components/admin/DepartmentModulesModal'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
@@ -134,6 +135,8 @@ export default function AdminPage() {
   const [departments, setDepartments] = useState([])
   const [roles, setRoles] = useState([])       // cargos (perfis de acesso)
   const [modules, setModules] = useState([])   // módulos do sistema (linhas da matriz de permissões)
+  const [defaultRoleId, setDefaultRoleId] = useState('role-colaborador') // cargo de quem entra pela 1ª vez
+  const [deptModules, setDeptModules] = useState(null) // departamento com "O que aparece" aberto
   const [glpiEntities, setGlpiEntities] = useState([]) // entidades vistas no GLPI (lista de escolha de cada departamento)
   const [newDept, setNewDept] = useState({ name: '', color: '#4a7cf7' })
   const [deptMsg, setDeptMsg] = useState(null)
@@ -166,6 +169,7 @@ export default function AdminPage() {
       setDepartments(d.data)
       setRoles(rl.data?.roles || [])
       setModules(rl.data?.modules || [])
+      if (rl.data?.defaultRoleId) setDefaultRoleId(rl.data.defaultRoleId)
       setSettings(set.data || {})
       setWeeklyRecipients(weekly.data || [])
       setDailyRecipients(daily.data || [])
@@ -528,7 +532,7 @@ export default function AdminPage() {
       {/* ── Tab: Cargos ── */}
       {tab === 'roles' && (
         <Reveal as="div" className={s.section}>
-          <RolesTab roles={roles} modules={modules} setRoles={setRoles} />
+          <RolesTab roles={roles} modules={modules} setRoles={setRoles} defaultRoleId={defaultRoleId} setDefaultRoleId={setDefaultRoleId} />
         </Reveal>
       )}
 
@@ -559,6 +563,18 @@ export default function AdminPage() {
                     onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
                     style={{ marginTop: 6, fontSize: 12, padding: '4px 8px', width: '100%', minWidth: 190 }}
                   />
+                  {(() => {
+                    const lim = d.module_limits || {}
+                    const hidden = Object.values(lim).filter(v => v === 'none').length
+                    const viewOnly = Object.values(lim).filter(v => v === 'view').length
+                    return (
+                      <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6, fontSize: 12, justifyContent: 'flex-start' }}
+                        disabled={isAuditor} onClick={() => setDeptModules(d)}
+                        title="Quais áreas do sistema aparecem para quem é deste departamento">
+                        👁 O que aparece{hidden || viewOnly ? ` · ${[hidden && `${hidden} oculta(s)`, viewOnly && `${viewOnly} só ver`].filter(Boolean).join(', ')}` : ' · tudo conforme o cargo'}
+                      </button>
+                    )
+                  })()}
                 </div>
                 <button className="btn btn-icon btn-sm" style={{ color:'var(--red)', marginLeft:'auto' }}
                   onClick={() => deleteDept(d.id)}>🗑️</button>
@@ -568,6 +584,17 @@ export default function AdminPage() {
               <p style={{ color:'var(--muted)', fontSize:13 }}>Nenhum departamento criado ainda.</p>
             )}
           </div>
+          {deptModules && (
+            <DepartmentModulesModal
+              dept={deptModules}
+              modules={modules}
+              onClose={() => setDeptModules(null)}
+              onSaved={data => {
+                setDepartments(prev => prev.map(x => x.id === data.id ? { ...x, module_limits: data.module_limits } : x))
+                setDeptModules(null)
+              }}
+            />
+          )}
 
           {/* Add form */}
           <div className={s.addDeptForm}>

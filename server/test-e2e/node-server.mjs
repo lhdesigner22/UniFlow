@@ -120,7 +120,30 @@ if (process.env.MOCK_GMAIL) {
     })
   }
 }
+// ── Login Google de mentira (sempre ligado neste servidor) ────────────────
+// POST /__mock/google-token {email, name} → ID token assinado por uma chave
+// local, cujo JWKS é servido no lugar de googleapis.com/oauth2/v3/certs.
+// Dá pra testar o POST /api/auth/google (1º acesso, cargo padrão) sem Google.
+const { SignJWT, exportJWK, generateKeyPair } = await import('jose')
+const googleKeys = await generateKeyPair('RS256')
+const googleJwk = { ...(await exportJWK(googleKeys.publicKey)), kid: 'mock-google', alg: 'RS256', use: 'sig' }
+env.GOOGLE_CLIENT_ID ||= 'mock-google-client'
+{
+  const prevFetch = globalThis.fetch
+  globalThis.fetch = async (input, init) => {
+    const href = typeof input === 'string' ? input : input.url
+    if (href.startsWith('https://www.googleapis.com/oauth2/v3/certs')) {
+      return new Response(JSON.stringify({ keys: [googleJwk] }), { headers: { 'Content-Type': 'application/json' } })
+    }
+    return prevFetch(input, init)
+  }
+}
+const mockGoogleToken = ({ email, name }) => new SignJWT({ email, name: name || email, email_verified: true, sub: `g-${email}` })
+  .setProtectedHeader({ alg: 'RS256', kid: 'mock-google' }).setIssuer('https://accounts.google.com')
+  .setAudience(env.GOOGLE_CLIENT_ID).setIssuedAt().setExpirationTime('10m').sign(googleKeys.privateKey)
+
 async function mockControl(req, url, body) {
+  if (url.pathname === '/__mock/google-token') return { credential: await mockGoogleToken(JSON.parse(body)) }
   if (url.pathname === '/__mock/gmail/inbox') { mock.inbox.push(JSON.parse(body)); return { ok: true } }
   if (url.pathname === '/__mock/gmail/sent') return mock.sent
   if (url.pathname === '/__mock/gmail/mode') { Object.assign(mock, JSON.parse(body)); return { ok: true } }

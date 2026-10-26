@@ -123,7 +123,28 @@ app.get('/roles', async c => {
   return c.json({
     modules: MODULES,
     roles: roles.map(r => ({ ...r, permissions: cleanPermissions(JSON.parse(r.permissions || '{}')) })),
+    defaultRoleId: await defaultRoleId(db),
   })
+})
+
+// Cargo que quem entra pela primeira vez recebe (ver auth.js)
+async function defaultRoleId(db) {
+  const row = await db.prepare(`
+    SELECT r.id FROM app_settings s JOIN roles r ON r.id = s.value
+    WHERE s.key = 'default_role_id' AND r.system_role = 'user'
+  `).get()
+  return row?.id || 'role-colaborador'
+}
+
+// PUT /roles-default { role_id } — só cargos comuns (nunca Super Admin/Auditor por padrão)
+app.put('/roles-default', async c => {
+  const db = c.get('db')
+  const { role_id } = await c.req.json()
+  const role = await db.prepare('SELECT id, system_role FROM roles WHERE id = ?').get(role_id)
+  if (!role) return c.json({ error: 'Cargo não encontrado' }, 404)
+  if (role.system_role !== 'user') return c.json({ error: 'Super Admin e Auditor não podem ser o cargo padrão de quem entra.' }, 400)
+  await db.prepare("INSERT INTO app_settings (key, value) VALUES ('default_role_id', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(role.id)
+  return c.json({ defaultRoleId: role.id })
 })
 
 // POST /roles — cria um cargo (sempre perfil técnico 'user': só os nativos são Super Admin/Auditor)
@@ -173,8 +194,12 @@ app.delete('/roles/:id', async c => {
   if (!role) return c.json({ error: 'Cargo não encontrado' }, 404)
   if (role.is_locked) return c.json({ error: 'Os cargos Super Admin e Auditor não podem ser apagados.' }, 400)
   if (role.id === 'role-colaborador') return c.json({ error: 'Colaborador é o cargo padrão de quem entra — não pode ser apagado.' }, 400)
-  await db.prepare("UPDATE users SET role_id = 'role-colaborador' WHERE role_id = ?").run(role.id)
-  await db.prepare('DELETE FROM roles WHERE id = ?').run(role.id)
+  await db.batch([
+    { sql: "UPDATE users SET role_id = 'role-colaborador' WHERE role_id = ?", args: [role.id] },
+    { sql: 'DELETE FROM roles WHERE id = ?', args: [role.id] },
+    // Era o cargo padrão de quem entra → volta a ser Colaborador
+    { sql: "UPDATE app_settings SET value = 'role-colaborador' WHERE key = 'default_role_id' AND value = ?", args: [role.id] },
+  ])
   return c.json({ ok: true })
 })
 
@@ -187,8 +212,22 @@ app.get('/departments', async c => {
     FROM departments d LEFT JOIN users u ON u.department_id = d.id
     GROUP BY d.id ORDER BY d.name
   `).all()
-  return c.json(depts)
+  return c.json(depts.map(withLimits))
 })
+
+// O que o departamento enxerga: teto por módulo ('none' | 'view'); módulo
+// ausente = "conforme o cargo". Guarda só o que restringe (null = sem limite).
+function cleanLimits(input) {
+  if (!input || typeof input !== 'object') return null
+  const out = {}
+  for (const k of MODULE_KEYS) if (input[k] === 'none' || input[k] === 'view') out[k] = input[k]
+  return Object.keys(out).length ? JSON.stringify(out) : null
+}
+function withLimits(d) {
+  let limits = {}
+  try { limits = JSON.parse(d.module_limits || '{}') || {} } catch { /* sem limite */ }
+  return { ...d, module_limits: limits }
+}
 
 app.post('/departments', async c => {
   const db = c.get('db')
@@ -200,17 +239,22 @@ app.post('/departments', async c => {
   } catch {
     return c.json({ error: 'Já existe um departamento com esse nome.' }, 409)
   }
-  return c.json(await db.prepare('SELECT * FROM departments WHERE id = ?').get(id))
+  return c.json(withLimits(await db.prepare('SELECT * FROM departments WHERE id = ?').get(id)))
 })
 
 app.put('/departments/:id', async c => {
   const db = c.get('db')
-  const { name, color, glpi_entity_name } = await c.req.json()
+  const { name, color, glpi_entity_name, module_limits } = await c.req.json()
   const dept = await db.prepare('SELECT * FROM departments WHERE id = ?').get(c.req.param('id'))
   if (!dept) return c.json({ error: 'Departamento não encontrado' }, 404)
-  await db.prepare('UPDATE departments SET name = ?, color = ?, glpi_entity_name = ? WHERE id = ?')
-    .run(name ?? dept.name, color ?? dept.color, glpi_entity_name !== undefined ? (glpi_entity_name?.trim() || null) : dept.glpi_entity_name, dept.id)
-  return c.json(await db.prepare('SELECT * FROM departments WHERE id = ?').get(dept.id))
+  await db.prepare('UPDATE departments SET name = ?, color = ?, glpi_entity_name = ?, module_limits = ? WHERE id = ?')
+    .run(
+      name ?? dept.name, color ?? dept.color,
+      glpi_entity_name !== undefined ? (glpi_entity_name?.trim() || null) : dept.glpi_entity_name,
+      module_limits !== undefined ? cleanLimits(module_limits) : dept.module_limits,
+      dept.id
+    )
+  return c.json(withLimits(await db.prepare('SELECT * FROM departments WHERE id = ?').get(dept.id)))
 })
 
 app.delete('/departments/:id', async c => {

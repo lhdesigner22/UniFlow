@@ -19,7 +19,7 @@ export const MODULES = [
   { key: 'team', label: 'Time', hint: 'Desempenho, Organograma e Jornada' },
   { key: 'tickets', label: 'Chamados (GLPI)', hint: 'Backlog e Total de Chamados' },
   { key: 'kb', label: 'Base de Conhecimento', hint: 'Artigos e anexos' },
-  { key: 'gestao', label: 'Gestão', hint: 'Documentos da Gestão' },
+  { key: 'gestao', label: 'Gestão', hint: 'Documentos, Desenvolvimentos e Cases de Sucesso' },
   { key: 'approvals', label: 'Aprovações', hint: 'Pedidos de aprovação' },
   { key: 'purchases', label: 'Solicitações de Compra', hint: 'Compras por mês' },
   { key: 'printers', label: 'Impressoras', hint: 'Cadastro e drivers' },
@@ -85,9 +85,11 @@ function allLevels(level) {
 export async function loadAccess(db, userId) {
   const u = await db.prepare(`
     SELECT u.id, u.system_role, u.department_id, u.role_id, u.token_version,
-           r.name AS role_name, r.scope AS role_scope, r.permissions AS role_permissions
+           r.name AS role_name, r.scope AS role_scope, r.permissions AS role_permissions,
+           d.module_limits AS dept_limits
     FROM users u
     LEFT JOIN roles r ON r.id = COALESCE(u.role_id, 'role-colaborador')
+    LEFT JOIN departments d ON d.id = u.department_id
     WHERE u.id = ?
   `).get(userId)
   if (!u) return null
@@ -108,6 +110,13 @@ export async function loadAccess(db, userId) {
   try { stored = JSON.parse(u.role_permissions || '{}') } catch { /* cargo com JSON inválido → sem acesso, nunca erro */ }
   const permissions = {}
   for (const k of MODULE_KEYS) permissions[k] = LEVELS.includes(stored[k]) ? stored[k] : 'none'
+  // Teto do departamento (Admin → Departamentos → "O que aparece"): vale o menor
+  // entre o cargo e o departamento — o departamento só esconde/restringe.
+  let limits = {}
+  try { limits = JSON.parse(u.dept_limits || '{}') || {} } catch { /* JSON inválido → sem limite */ }
+  for (const k of MODULE_KEYS) {
+    if (LEVELS.includes(limits[k]) && LEVELS.indexOf(limits[k]) < LEVELS.indexOf(permissions[k])) permissions[k] = limits[k]
+  }
   return { ...base, roleName: u.role_name || 'Colaborador', scope: u.role_scope === 'all' ? 'all' : 'department', permissions }
 }
 

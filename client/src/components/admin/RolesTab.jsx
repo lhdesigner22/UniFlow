@@ -17,7 +17,7 @@ const emptyDraft = modules => ({
 // Cargos (como os "perfis" do GLPI): por módulo, sem acesso / ver / editar, e se a
 // pessoa enxerga todos os departamentos ou só o dela. Super Admin e Auditor são
 // fixos (só leitura aqui).
-export default function RolesTab({ roles, modules, setRoles }) {
+export default function RolesTab({ roles, modules, setRoles, defaultRoleId, setDefaultRoleId }) {
   const [selectedId, setSelectedId] = useState(null) // id do cargo aberto | 'new'
   const [draft, setDraft] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -77,21 +77,31 @@ export default function RolesTab({ roles, modules, setRoles }) {
       await api.delete(`/admin/roles/${selected.id}`)
       setRoles(prev => prev.filter(r => r.id !== selected.id).map(r => r.id === 'role-colaborador' ? { ...r, user_count: r.user_count + selected.user_count } : r))
       setSelectedId('role-colaborador')
+      if (selected.id === defaultRoleId) setDefaultRoleId('role-colaborador')
     } catch (e) {
       await alertDialog(e.response?.data?.error || 'Erro ao apagar.', { title: 'Erro', danger: true })
+    }
+  }
+
+  const makeDefault = async () => {
+    try {
+      const { data } = await api.put('/admin/roles-default', { role_id: selected.id })
+      setDefaultRoleId(data.defaultRoleId)
+    } catch (e) {
+      await alertDialog(e.response?.data?.error || 'Erro ao definir o cargo padrão.', { title: 'Erro', danger: true })
     }
   }
 
   return (
     <div className={s.wrap}>
       <div className={s.info}>
-        <strong>🔑 Como funciona:</strong> cada cargo define, para cada área do sistema, se a pessoa <em>não vê</em>, <em>só vê</em> ou <em>pode editar</em>. O <em>escopo</em> diz se ela enxerga o conteúdo de <em>todos os departamentos</em> ou só o <em>do seu</em> (mais o que for "Geral"). Quem não tem cargo definido entra como <em>Colaborador</em>.
+        <strong>🔑 Como funciona:</strong> cada cargo define, para cada área do sistema, se a pessoa <em>não vê</em>, <em>só vê</em> ou <em>pode editar</em>. O <em>escopo</em> diz se ela enxerga o conteúdo de <em>todos os departamentos</em> ou só o <em>do seu</em> (mais o que for "Geral"). Quem entra pela primeira vez recebe o <em>cargo padrão</em> (marcado com 🚪).
       </div>
 
       <div className={s.roleList}>
         {roles.map(r => (
           <button key={r.id} type="button" className={`${s.roleChip} ${selectedId === r.id ? s.active : ''}`} onClick={() => setSelectedId(r.id)}>
-            <span className={s.roleName}>{r.system_role === 'super_admin' ? '⭐ ' : r.system_role === 'auditor' ? '👁️ ' : ''}{r.name}</span>
+            <span className={s.roleName}>{r.system_role === 'super_admin' ? '⭐ ' : r.system_role === 'auditor' ? '👁️ ' : ''}{r.name}{r.id === defaultRoleId && <span title="Cargo padrão de quem entra pela primeira vez"> 🚪</span>}</span>
             <span className={s.roleCount}>{r.user_count} {r.user_count === 1 ? 'pessoa' : 'pessoas'}</span>
           </button>
         ))}
@@ -103,6 +113,16 @@ export default function RolesTab({ roles, modules, setRoles }) {
       <div className={s.editor}>
         {locked && (
           <p className={s.lockNote}>🔒 Este cargo é nativo e tem acesso fixo — aparece aqui só para consulta.</p>
+        )}
+        {!isNew && selected && !locked && (
+          selected.id === defaultRoleId ? (
+            <p className={s.defaultNote}>🚪 <strong>Cargo padrão:</strong> quem entra no UniFlow pela primeira vez recebe este cargo.</p>
+          ) : (
+            <p className={s.defaultNote}>
+              Quem entra pela primeira vez hoje recebe <strong>{roles.find(r => r.id === defaultRoleId)?.name || 'Colaborador'}</strong>.{' '}
+              <button type="button" className="btn btn-ghost btn-sm" onClick={makeDefault}>🚪 Tornar este o cargo padrão</button>
+            </p>
+          )
         )}
 
         <div className={s.fields}>
