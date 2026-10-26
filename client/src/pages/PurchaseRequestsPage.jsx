@@ -403,6 +403,7 @@ export default function PurchaseRequestsPage() {
   const writable = canEditModule(user, 'purchases')
   const canEdit = r => writable && (r.created_by === user?.id || user?.system_role === 'super_admin')
   const exportXlsx = () => exportPurchasesXlsx({ month: monthFilter || undefined }) // o mês que a tela está mostrando
+  const exportApprovedXlsx = () => exportPurchasesXlsx({ month: monthFilter || undefined, onlyApproved: true })
 
   const openApprovers = (requests || []).find(r => r.id === approversFor)
 
@@ -417,6 +418,7 @@ export default function PurchaseRequestsPage() {
         </div>
         <div className={s.headerRight}>
           <ExportXlsxButton onExport={exportXlsx} />
+          <ExportXlsxButton onExport={exportApprovedXlsx} label="Excel só aprovados" />
           {writable && <button className="btn btn-primary" onClick={() => setEditing({})}>+ Nova solicitação</button>}
         </div>
       </div>

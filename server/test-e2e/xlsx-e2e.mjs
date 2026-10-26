@@ -104,6 +104,20 @@ expect('aprovadores com decisão', [6, 7].map(r => ws.getCell(`K${r}`).value).ev
 expect('Compras: abas de resumo', wb.worksheets.map(w => w.name).join(' | '), 'Solicitações | Por status | Por mês')
 void money
 
+// Só aprovados: a Ana (aprovadora) aprova o mouse; o monitor continua pendente
+const anaToken = await new SignJWT({ id: 'u-ana', name: 'u-ana', email: 'u-ana@colegioser.com', tv: 0 }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(new TextEncoder().encode('testsecret'))
+const mouse = (await (await fetch(`${BASE}/api/purchase-requests?month=${month}`, { headers: H })).json()).find(r => r.item_name === 'Mouse USB')
+const decided = await fetch(`${BASE}/api/purchase-requests/${mouse.id}/decide`, { method: 'POST', headers: { ...H, Authorization: `Bearer ${anaToken}` }, body: JSON.stringify({ decision: 'approved' }) })
+expect('Compras: aprovadora aprova o mouse', (await decided.json()).status, 'aprovado')
+await exportPurchasesXlsx({ month, onlyApproved: true })
+wb = await open(`solicitacoes-compra-aprovadas-${month}.xlsx`)
+ws = wb.getWorksheet('Solicitações')
+expect('Só aprovados: título', ws.getCell('A1').value, 'Solicitações de compra aprovadas')
+expect('Só aprovados: só o mouse', `${ws.getCell('B6').value}|${ws.getCell('B7').value}`, 'Mouse USB|null')
+expect('Só aprovados: status Aprovado', ws.getCell('J6').value, 'Aprovado')
+expect('Só aprovados: total só do mouse', Math.round(ws.getCell('I7').value?.result * 100) / 100, 359)
+expect('Só aprovados: sem a aba "Por status"', wb.worksheets.map(w => w.name).join(' | '), 'Solicitações | Por mês')
+
 // ── Tempo ────────────────────────────────────────────────────────────────
 await exportTimeXlsx({ from: today, to: today, boardId: board.id, boardName: 'Quadro Planilha' })
 wb = await open(`tempo-equipe-${today}-a-${today}.xlsx`)

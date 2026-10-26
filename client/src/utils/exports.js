@@ -63,9 +63,10 @@ const PURCHASE_STATUS = {
 const PURCHASE_BADGE = { Pendente: 'yellow', Aprovado: 'green', 'Enviada ao Gestor': 'blue', Reprovado: 'red', Comprado: 'purple', Entregue: 'green' }
 const DECISION = { pending: 'pendente', approved: 'aprovou', rejected: 'reprovou' }
 
-export async function exportPurchasesXlsx({ month } = {}) {
+// `onlyApproved`: só as que estão com status Aprovado (prontas pra comprar).
+export async function exportPurchasesXlsx({ month, onlyApproved = false } = {}) {
   const { data } = await api.get('/purchase-requests/export', { params: { format: 'json', ...(month ? { month } : {}) } })
-  const rows = data.rows || []
+  const rows = (data.rows || []).filter(r => !onlyApproved || r.status === 'aprovado')
   const items = rows.map(r => ({
     month: dbMonth(r.reference_month),
     item: r.item_name,
@@ -90,8 +91,8 @@ export async function exportPurchasesXlsx({ month } = {}) {
     .map(g => ({ key: dbMonth(g.key), count: g.count, total: g.total }))
 
   await downloadXlsx({
-    fileName: month ? `solicitacoes-compra-${month}` : 'solicitacoes-compra',
-    title: 'Solicitações de compra',
+    fileName: `solicitacoes-compra${onlyApproved ? '-aprovadas' : ''}${month ? `-${month}` : ''}`,
+    title: onlyApproved ? 'Solicitações de compra aprovadas' : 'Solicitações de compra',
     subtitle: month ? `Mês de referência: ${monthName(month)}` : 'Todos os meses',
     author: author(),
     sheets: [
@@ -116,7 +117,7 @@ export async function exportPurchasesXlsx({ month } = {}) {
         ],
         rows: items,
       },
-      {
+      !onlyApproved && {
         name: 'Por status', title: 'Solicitações de compra — por status', tabColor: 'FF22C55E',
         columns: [
           { header: 'Status', key: 'key', width: 22, badge: PURCHASE_BADGE },
@@ -135,7 +136,7 @@ export async function exportPurchasesXlsx({ month } = {}) {
         ],
         rows: byMonth,
       },
-    ],
+    ].filter(Boolean),
   })
 }
 
