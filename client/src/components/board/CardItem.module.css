@@ -9,7 +9,11 @@
 .card.overlay { box-shadow: var(--shadow-lg); cursor: grabbing; transform: rotate(2deg) scale(1.03); }
 
 .labels { display: flex; gap: 4px; flex-wrap: wrap; }
-.labelChip { width: 28px; height: 6px; border-radius: 4px; display: inline-block; }
+.labelChip {
+  display: inline-block; max-width: 100%; padding: 1px 8px; border-radius: 10px;
+  font-size: 10.5px; font-weight: 600; line-height: 1.5; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 .titleRow { display: flex; align-items: flex-start; gap: 8px; }
 .title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }

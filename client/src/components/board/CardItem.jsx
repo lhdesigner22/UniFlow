@@ -52,7 +52,7 @@ function CardBody({ card, onToggleProgress }) {
     <>
       {labels.length > 0 && (
         <div className={s.labels}>
-          {labels.map(l => <span key={l.id} className={s.labelChip} style={{ background: l.color }} title={l.name} />)}
+          {labels.map(l => <span key={l.id} className={s.labelChip} style={{ background: l.color }} title={l.name}>{l.name}</span>)}
         </div>
       )}
 

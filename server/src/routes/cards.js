@@ -53,6 +53,17 @@ app.get('/', async c => {
     ORDER BY cd.column_id, cd.order_index
   `).all(boardId, archived)
 
+  // Etiquetas de todos os cartões numa consulta só — o cartão fechado no quadro
+  // mostra a cor delas (antes só o cartão aberto trazia as etiquetas).
+  const labelRows = await db.prepare(`
+    SELECT cl.card_id, bl.id, bl.name, bl.color
+    FROM board_labels bl JOIN card_labels cl ON cl.label_id = bl.id
+    WHERE bl.board_id = ?
+  `).all(boardId)
+  const labelsByCard = {}
+  for (const { card_id, ...label } of labelRows) (labelsByCard[card_id] ||= []).push(label)
+  for (const card of cards) card.labels = labelsByCard[card.id] || []
+
   return c.json(cards)
 })
 

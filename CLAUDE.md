@@ -32,7 +32,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0058). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0059). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -43,7 +43,7 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Se o `wrangler dev`/`d1 --local` quebrar** com "access violation" (aconteceu em out/2026 no Windows 11 Insider 26300, qualquer
   versão do wrangler): `cd server && node test-e2e/node-server.mjs` roda o mesmo worker.js no Node com D1 em SQLite (memória,
   migrações + seeds) na porta 8799 — as suítes rodam igual. Sem tempo real nem arquivos estáticos.
-- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `security` (nesta ordem: o `security` força novo login do analista e
+- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `labels`, `security` (nesta ordem: o `security` força novo login do analista e
   invalida o token tv:0 dele). `xlsx` conta linhas — rode em banco limpo (servidor recém-subido); passe uma pasta como argumento pra
   salvar os .xlsx e abrir no Excel. `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`.
 - **Exportações são XLSX montado no navegador** (`client/src/utils/xlsxExport.js` + `exports.js`, ExcelJS por import dinâmico, fora do

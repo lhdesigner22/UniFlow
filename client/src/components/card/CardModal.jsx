@@ -331,11 +331,13 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
                 <span key={l.id} className={s.labelWrap}>
                   <button
                     className={s.labelToggle}
-                    style={{ background: active ? l.color : 'transparent', borderColor: l.color, color: active ? '#fff' : l.color }}
+                    style={active
+                      ? { background: l.color, borderColor: l.color, color: '#fff' }
+                      : { background: 'transparent', borderColor: 'var(--border2)', borderStyle: 'dashed', color: 'var(--text-muted)' }}
                     onClick={() => editingLabels ? setLabelForm({ id: l.id, name: l.name, color: l.color }) : toggleLabel(l)}
-                    title={editingLabels ? 'Renomear / trocar a cor' : active ? 'Tirar do cartão' : 'Pôr no cartão'}
+                    title={editingLabels ? 'Renomear / trocar a cor' : active ? 'Neste cartão — clique para tirar' : 'Clique para pôr neste cartão'}
                   >
-                    {editingLabels && '✏️ '}{l.name}
+                    {editingLabels ? '✏️ ' : active ? '✓ ' : <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: l.color, marginRight: 5 }} />}{l.name}
                   </button>
                   {editingLabels && <button className={s.chipRemove} title="Apagar etiqueta do quadro" onClick={() => deleteLabel(l)}>×</button>}
                 </span>
