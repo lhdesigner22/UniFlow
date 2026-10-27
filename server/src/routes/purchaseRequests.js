@@ -69,6 +69,41 @@ async function getApprovers(db, purchaseRequestId) {
   `).all(purchaseRequestId)
 }
 
+// Aprovadores (e histórico) de VÁRIAS solicitações numa consulta só. Antes a
+// lista fazia 2 consultas por solicitação, uma atrás da outra: com 21 pedidos
+// eram 43 idas ao D1 (tela lenta e perto do limite de 50 do plano Free).
+async function attachApproversAndLog(db, rows, { withLog = true } = {}) {
+  if (!rows.length) return
+  const ids = JSON.stringify(rows.map(r => r.id))
+  const [approvers, logs] = await Promise.all([
+    db.prepare(`
+      SELECT pa.purchase_request_id, pa.id, pa.user_id, pa.decision, pa.comment, pa.decided_at,
+        u.name as user_name, u.avatar as user_avatar
+      FROM purchase_request_approvers pa JOIN users u ON u.id = pa.user_id
+      WHERE pa.purchase_request_id IN (SELECT value FROM json_each(?))
+      ORDER BY pa.created_at
+    `).all(ids),
+    withLog ? db.prepare(`
+      SELECT l.purchase_request_id, l.id, l.status, l.comment, l.changed_by, l.created_at,
+        u.name as changed_by_name, u.avatar as changed_by_avatar
+      FROM purchase_request_status_log l JOIN users u ON u.id = l.changed_by
+      WHERE l.purchase_request_id IN (SELECT value FROM json_each(?))
+      ORDER BY l.created_at DESC
+    `).all(ids) : [],
+  ])
+  const group = list => {
+    const by = {}
+    for (const { purchase_request_id, ...item } of list) (by[purchase_request_id] ||= []).push(item)
+    return by
+  }
+  const approversBy = group(approvers)
+  const logsBy = group(logs)
+  for (const row of rows) {
+    row.approvers = approversBy[row.id] || []
+    if (withLog) row.status_log = logsBy[row.id] || []
+  }
+}
+
 // Histórico de mudanças manuais de status (Enviada ao Gestor/Comprado/
 // Entregue) — mais recente primeiro, pra aparecer pronto pra leitura.
 async function getStatusLog(db, purchaseRequestId) {
@@ -100,11 +135,8 @@ app.get('/', async c => {
     ORDER BY p.created_at DESC
   `).all(...vis.args)
 
-  for (const row of rows) {
-    row.approvers = await getApprovers(db, row.id)
-    row.my_decision = row.approvers.find(x => x.user_id === user.id)?.decision || null
-    row.status_log = await getStatusLog(db, row.id)
-  }
+  await attachApproversAndLog(db, rows)
+  for (const row of rows) row.my_decision = row.approvers.find(x => x.user_id === user.id)?.decision || null
 
   return c.json(rows)
 })
@@ -298,7 +330,7 @@ app.get('/export', async c => {
     WHERE 1=1${vis.sql}${month ? ' AND p.reference_month = ?' : ''}
     ORDER BY p.reference_month DESC, p.created_at DESC
   `).all(...vis.args, ...(month ? [month] : []))
-  for (const row of rows) row.approvers = await getApprovers(db, row.id)
+  await attachApproversAndLog(db, rows, { withLog: false })
   if (c.req.query('format') === 'json') return c.json({ rows, month })
 
   const headers = ['Mês', 'Nome', 'Chamado', 'Departamento', 'Descrição', 'Unidade/Sede', 'Qtd', 'Valor Unitário', 'Valor Total', 'Link', 'Observação', 'Status', 'Aprovador(es)', 'Cadastrado por', 'Criado em']
