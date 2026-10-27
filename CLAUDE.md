@@ -163,6 +163,7 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   formato compacto v2 (`encodeRaw`/`decodeRaw` em `glpiTotalSync.js`: chamado = array, origem/técnicos = índices) caiu p/ ~0,9 MB; a
   cópia `'current'` do cache cru deixou de existir (só o resumo `'current'` continua). Cresce ~110 bytes por chamado.
 - **Total de Chamados → "Chamados por origem da requisição"**: campo 9 do GLPI (Origem da requisição), só no Total (`withOrigin`);
-  ranking do período (vale o filtro De/Até) + mês a mês das 6 maiores (resto em "Outras"). Decisão do Luiz: o "setor" é a Origem da requisição.
+  ranking do período (vale o filtro De/Até) + mês a mês das 6 maiores (resto em "Outras"). Decisão do Luiz: o "setor" é a Origem da requisição;
+  botão "Só setores" (ligado por padrão) esconde os canais Helpdesk, E-Mail e Sem origem (`isChannelOrigin`, `sectorSeries`/`sectorMonthly`).
 - Ideias não feitas: cartão aberto (CardModal) ao vivo; eventos do GLPI por departamento/entidade; criptografar senhas de Wi-Fi como o Cofre;
   descobrir quem cria chamados de feriado em massa.

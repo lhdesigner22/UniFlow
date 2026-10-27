@@ -51,12 +51,23 @@ const tooltipProps = {
 // escolhido (o filtro De/Até vale aqui também) e a evolução mês a mês.
 function OriginChart({ snapshot }) {
   const [view, setView] = useState('ranking')
-  const byOrigin = snapshot.byOrigin || []
+  // "Só setores": esconde os canais (Helpdesk, E-Mail, Sem origem) — lembrado por navegador
+  const [sectorsOnly, setSectorsOnly] = useState(() => {
+    try { return localStorage.getItem('uniflow.originSectorsOnly') !== '0' } catch { return true }
+  })
+  const toggleSectors = () => setSectorsOnly(v => {
+    try { localStorage.setItem('uniflow.originSectorsOnly', v ? '0' : '1') } catch { /* sem storage */ }
+    return !v
+  })
+  const allOrigins = snapshot.byOrigin || []
+  const byOrigin = sectorsOnly ? allOrigins.filter(o => !o.channel) : allOrigins
+  const hiddenCount = allOrigins.filter(o => o.channel).reduce((n, o) => n + o.count, 0)
   const total = byOrigin.reduce((n, o) => n + o.count, 0)
   const pctOf = n => (total ? (Math.round((n / total) * 1000) / 10).toLocaleString('pt-BR') : '0')
   const ranking = byOrigin.slice(0, 15).map(o => ({ ...o, pct: pctOf(o.count) }))
-  const series = snapshot.originSeries || []
-  const monthly = (snapshot.originMonthly || []).map(m => ({ ...m, label: monthLabel(m.month) }))
+  const useSectors = sectorsOnly && snapshot.sectorSeries
+  const series = (useSectors ? snapshot.sectorSeries : snapshot.originSeries) || []
+  const monthly = ((useSectors ? snapshot.sectorMonthly : snapshot.originMonthly) || []).map(m => ({ ...m, label: monthLabel(m.month) }))
   const colored = series.filter(n => n !== 'Outras' && n !== 'Sem origem')
   const colorOf = name => (colored.includes(name) ? ORIGIN_COLORS[colored.indexOf(name) % ORIGIN_COLORS.length] : OTHER_COLOR)
 
@@ -64,15 +75,24 @@ function OriginChart({ snapshot }) {
     <Reveal className={s.chartCard}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
         <h3>Chamados por origem da requisição</h3>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className={s.viewToggle}>
+          <button type="button" className={sectorsOnly ? s.viewOn : ''} onClick={toggleSectors} aria-pressed={sectorsOnly}
+            title="Esconde Helpdesk, E-Mail e Sem origem (canais de entrada, não setores)">
+            {sectorsOnly ? '✓ ' : ''}Só setores
+          </button>
+        </div>
         <div className={s.viewToggle}>
           <button type="button" className={view === 'ranking' ? s.viewOn : ''} onClick={() => setView('ranking')}>Ranking</button>
           <button type="button" className={view === 'monthly' ? s.viewOn : ''} onClick={() => setView('monthly')}>Mês a mês</button>
+        </div>
         </div>
       </div>
       <p className={s.chartNote}>
         {view === 'ranking'
           ? 'Quem mais abriu chamado no período selecionado (use De/Até para ver um mês ou o ano).'
           : `As ${series.filter(n => n !== 'Outras').length} origens que mais abrem chamado, mês a mês (últimos 12 meses com dado).`}
+        {sectorsOnly && hiddenCount > 0 && ` Escondidos: ${hiddenCount.toLocaleString('pt-BR')} chamados de Helpdesk, E-Mail e Sem origem.`}
       </p>
       {!snapshot.byOrigin ? (
         <p className={s.chartEmpty}>A origem aparece depois da próxima atualização do Total (a cada 15 min).</p>

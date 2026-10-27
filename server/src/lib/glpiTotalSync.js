@@ -55,16 +55,14 @@ const NO_ORIGIN = 'Sem origem'
 const TOP_ORIGINS_BY_MONTH = 6
 const originOf = t => fixMojibake(String(t.origin || '').trim()) || NO_ORIGIN
 
-// "Origem da requisição" (campo 9 do GLPI): ranking do período e a evolução
-// mês a mês das origens que mais abrem chamado (as demais somadas em "Outras").
-function computeOriginStats(tickets) {
-  const counts = {}
-  for (const t of tickets) {
-    const o = originOf(t)
-    counts[o] = (counts[o] || 0) + 1
-  }
-  const byOrigin = Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
-  const top = byOrigin.slice(0, TOP_ORIGINS_BY_MONTH).map(o => o.name)
+// Origens que são CANAL de entrada, não setor (decisão do Luiz): somem no modo
+// "Só setores" do gráfico. Comparação sem caixa/acento-sensível ao hífen.
+const CHANNEL_ORIGINS = ['helpdesk', 'e-mail', 'email', NO_ORIGIN.toLowerCase()]
+export const isChannelOrigin = name => CHANNEL_ORIGINS.includes(String(name || '').trim().toLowerCase())
+
+// Mês a mês das origens que mais abrem chamado (as demais somadas em "Outras").
+function monthlyByOrigin(tickets, ranking) {
+  const top = ranking.slice(0, TOP_ORIGINS_BY_MONTH).map(o => o.name)
   const months = {}
   for (const t of tickets) {
     const month = String(t.date_creation || '').slice(0, 7)
@@ -74,9 +72,32 @@ function computeOriginStats(tickets) {
     const m = (months[month] ||= {})
     m[key] = (m[key] || 0) + 1
   }
-  const originMonthly = Object.keys(months).sort().slice(-12).map(month => ({ month, ...months[month] }))
-  const originSeries = [...top, ...(byOrigin.length > top.length ? ['Outras'] : [])]
-  return { byOrigin, originMonthly, originSeries }
+  return {
+    monthly: Object.keys(months).sort().slice(-12).map(month => ({ month, ...months[month] })),
+    series: [...top, ...(ranking.length > top.length ? ['Outras'] : [])],
+  }
+}
+
+// "Origem da requisição" (campo 9 do GLPI): ranking do período e evolução mês
+// a mês — com todas as origens e só com os setores (sem os canais).
+function computeOriginStats(tickets) {
+  const counts = {}
+  for (const t of tickets) {
+    const o = originOf(t)
+    counts[o] = (counts[o] || 0) + 1
+  }
+  const byOrigin = Object.entries(counts)
+    .map(([name, count]) => ({ name, count, ...(isChannelOrigin(name) ? { channel: true } : {}) }))
+    .sort((a, b) => b.count - a.count)
+  const all = monthlyByOrigin(tickets, byOrigin)
+  const sectors = monthlyByOrigin(tickets.filter(t => !isChannelOrigin(originOf(t))), byOrigin.filter(o => !isChannelOrigin(o.name)))
+  return {
+    byOrigin,
+    originMonthly: all.monthly,
+    originSeries: all.series,
+    sectorMonthly: sectors.monthly,
+    sectorSeries: sectors.series,
+  }
 }
 
 // Monta o snapshot completo (KPIs + gráficos + tabela) a partir de uma lista
