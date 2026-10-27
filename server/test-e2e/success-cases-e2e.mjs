@@ -54,6 +54,7 @@ r = await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_value: 900
 expect('save sem período mantém o período', r.j?.saving_period, 'mensal')
 expect('save negativo recusado', (await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_value: -5 })).s, 400)
 expect('save texto recusado', (await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_value: 'abc' })).s, 400)
+expect('save em 36 meses', (await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_period: 'meses36' })).j?.saving_period, 'meses36')
 expect('período inválido recusado', (await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_period: 'semanal' })).s, 400)
 r = await call('admin', 'POST', '/api/success-cases', { title: 'Com save', saving_value: 5000 })
 expect('save novo sem período = anual', r.j?.saving_period, 'anual')

@@ -38,11 +38,13 @@ const LIVE = {
 }
 const liveValue = (key, stats) => (key && stats && stats[key] != null ? stats[key] : null)
 
-// Save financeiro: valor digitado uma vez, por mês ou por ano — o painel soma tudo no ano
+// Save financeiro: valor por ano, em 36 meses (contrato), por mês ou uma vez.
+// O total do painel soma o valor de cada case (só o mensal vira ano: × 12).
 const SAVING_PERIODS = {
-  anual: { label: 'Por ano', short: 'Por ano', suffix: '/ano', yearFactor: 1 },
-  mensal: { label: 'Por mês', short: 'Por mês', suffix: '/mês', yearFactor: 12 },
-  unico: { label: 'Uma vez (economia única)', short: 'Uma vez', suffix: 'uma vez', yearFactor: 1 },
+  anual: { label: 'Por ano', short: 'Por ano', suffix: '/ano', totalFactor: 1 },
+  meses36: { label: 'Em 36 meses (contrato de 3 anos)', short: 'Em 36 meses', suffix: 'em 36 meses', totalFactor: 1 },
+  mensal: { label: 'Por mês', short: 'Por mês', suffix: '/mês', totalFactor: 12 },
+  unico: { label: 'Uma vez (economia única)', short: 'Uma vez', suffix: 'uma vez', totalFactor: 1 },
 }
 const fmtBRL = n => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: Number(n) % 1 ? 2 : 0 })
 // "R$ 12.500,50" / "12500,5" / "12500.50" → 12500.5 (vazio → null)
@@ -53,7 +55,7 @@ function parseBRL(text) {
   const n = Number(normalized)
   return Number.isFinite(n) ? n : NaN
 }
-const yearlySave = c => (c.saving_value ? c.saving_value * (SAVING_PERIODS[c.saving_period]?.yearFactor || 1) : 0)
+const countedSave = c => (c.saving_value ? c.saving_value * (SAVING_PERIODS[c.saving_period]?.totalFactor || 1) : 0)
 
 // O número em destaque do case: o digitado vale mais que o ao vivo
 function resultOf(c, stats, year) {
@@ -150,7 +152,7 @@ function Editor({ item, year, onClose, onSaved }) {
             <p className={s.savePreview}>
               {form.saving_period === 'mensal'
                 ? <>Equivale a <strong>{fmtBRL(savingValue * 12)}</strong> no ano.</>
-                : <>Conta <strong>{fmtBRL(savingValue)}</strong> no total do ano.</>}
+                : <>Conta <strong>{fmtBRL(savingValue)}</strong> no total do Save financeiro.</>}
             </p>
           )}
           <div className="form-group">
@@ -342,7 +344,7 @@ function Detail({ id, stats, year, writable, onClose, onEdit, onDelete, onChange
         <div className={s.saveBox}>
           <span className={s.blockLabel}>💰 Save financeiro</span>
           <strong>{fmtBRL(item.saving_value)} <small>{SAVING_PERIODS[item.saving_period]?.suffix}</small></strong>
-          {item.saving_period === 'mensal' && <span className={s.muted}>= {fmtBRL(yearlySave(item))} no ano</span>}
+          {item.saving_period === 'mensal' && <span className={s.muted}>= {fmtBRL(countedSave(item))} no ano</span>}
           {item.saving_note && <p className={s.blockText}>{item.saving_note}</p>}
         </div>
       )}
@@ -437,7 +439,7 @@ function Presentation({ cases, stats, year, onClose }) {
 
   const c = index > 0 ? cases[index - 1] : null
   const done = cases.filter(x => x.status === 'concluido').length
-  const totalSave = cases.reduce((n, x) => n + yearlySave(x), 0)
+  const totalSave = cases.reduce((n, x) => n + countedSave(x), 0)
   const pillarCounts = Object.keys(PILLARS).map(k => [k, cases.filter(x => x.pillar === k).length]).filter(([, n]) => n)
 
   return (
@@ -450,8 +452,8 @@ function Presentation({ cases, stats, year, onClose }) {
           <div className={s.presKpis}>
             <div><strong>{cases.length}</strong><span>entregas no ano</span></div>
             <div><strong>{done}</strong><span>concluídas</span></div>
-            {totalSave > 0 && <div><strong className={s.presSave}>{fmtBRL(totalSave)}</strong><span>de save financeiro no ano</span></div>}
             {stats?.glpi_tickets != null && <div><strong>{fmtNum(stats.glpi_tickets)}</strong><span>chamados registrados no GLPI</span></div>}
+            {totalSave > 0 && <div><strong className={s.presSave}>{fmtBRL(totalSave)}</strong><span>de save financeiro</span></div>}
           </div>
           <div className={s.presPillars}>
             {pillarCounts.map(([k, n]) => <span key={k}>{PILLARS[k].icon} {PILLARS[k].label} · {n}</span>)}
@@ -562,8 +564,8 @@ export default function SuccessCasesPage() {
   if (!data) return <div className={s.loading}>Carregando cases...</div>
 
   const done = cases.filter(c => c.status === 'concluido').length
-  const withSave = cases.filter(c => c.saving_value > 0).sort((a, b) => yearlySave(b) - yearlySave(a))
-  const totalSave = withSave.reduce((n, c) => n + yearlySave(c), 0)
+  const withSave = cases.filter(c => c.saving_value > 0).sort((a, b) => countedSave(b) - countedSave(a))
+  const totalSave = withSave.reduce((n, c) => n + countedSave(c), 0)
 
   return (
     <div className={s.page}>
@@ -590,7 +592,7 @@ export default function SuccessCasesPage() {
         <div className={s.kpi}><span>Chamados no GLPI <em>ao vivo</em></span><strong>{stats?.glpi_tickets != null ? fmtNum(stats.glpi_tickets) : '—'}</strong></div>
         <div className={s.kpi}><span>Empréstimos em {shownYear} <em>ao vivo</em></span><strong>{stats?.loans_year != null ? fmtNum(stats.loans_year) : '—'}</strong></div>
         <button type="button" className={`${s.kpi} ${s.kpiSave}`} onClick={() => setView('save')} title="Ver o save de cada case">
-          <span>💰 Save financeiro no ano</span>
+          <span>💰 Save financeiro</span>
           <strong>{fmtBRL(totalSave)}</strong>
           <small>{withSave.length} de {cases.length} cases com valor</small>
         </button>
@@ -611,7 +613,7 @@ export default function SuccessCasesPage() {
           ) : (
             <table>
               <thead>
-                <tr><th>Case</th><th>Pilar</th><th className={s.num}>Valor</th><th>Período</th><th className={s.num}>No ano</th><th>Como chegamos nesse valor</th></tr>
+                <tr><th>Case</th><th>Pilar</th><th className={s.num}>Valor</th><th>Período</th><th className={s.num}>Conta no total</th><th>Como chegamos nesse valor</th></tr>
               </thead>
               <tbody>
                 {withSave.map(c => {
@@ -622,14 +624,14 @@ export default function SuccessCasesPage() {
                       <td><span className={s.pillarText} style={{ color: p.color }}>{p.icon} {p.label}</span></td>
                       <td className={s.num}>{fmtBRL(c.saving_value)}</td>
                       <td>{SAVING_PERIODS[c.saving_period]?.short || '—'}</td>
-                      <td className={`${s.num} ${s.saveYear}`}>{fmtBRL(yearlySave(c))}</td>
+                      <td className={`${s.num} ${s.saveYear}`}>{fmtBRL(countedSave(c))}</td>
                       <td className={s.saveNote}>{c.saving_note || '—'}</td>
                     </tr>
                   )
                 })}
               </tbody>
               <tfoot>
-                <tr><td colSpan={4}>Total no ano · {withSave.length} {withSave.length === 1 ? 'case' : 'cases'}</td><td className={`${s.num} ${s.saveYear}`}>{fmtBRL(totalSave)}</td><td /></tr>
+                <tr><td colSpan={4}>Total ·{withSave.length} {withSave.length === 1 ? 'case' : 'cases'}</td><td className={`${s.num} ${s.saveYear}`}>{fmtBRL(totalSave)}</td><td /></tr>
               </tfoot>
             </table>
           )}

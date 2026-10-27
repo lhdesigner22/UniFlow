@@ -15,8 +15,9 @@ export const PILLARS = ['conectividade', 'seguranca', 'gestao', 'operacao']
 export const STATUSES = ['concluido', 'piloto', 'andamento']
 // Números ao vivo que um case pode mostrar (calculados em GET /stats)
 export const LIVE_METRICS = ['glpi_tickets', 'loans_year', 'incidents_resolved', 'uniflow_modules']
-// Save financeiro: o valor é uma vez só, por mês ou por ano (o painel soma tudo no ano)
-export const SAVING_PERIODS = ['unico', 'mensal', 'anual']
+// Save financeiro: o valor é uma vez só, por mês, por ano ou em 36 meses (contrato);
+// o painel soma o valor de cada case (só o mensal vira ano: × 12)
+export const SAVING_PERIODS = ['unico', 'mensal', 'anual', 'meses36']
 const MAX_PHOTOS = 6
 const PHOTO_RE = /^data:image\/(jpeg|webp|png);base64,[A-Za-z0-9+/=]+$/
 const MAX_PHOTO_CHARS = 1_600_000
