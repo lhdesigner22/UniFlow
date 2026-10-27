@@ -47,6 +47,7 @@ const RESOURCE_MODULE = {
   kb: 'kb', // Gestão usa a mesma rota com category=gestao — ver moduleForRequest
   developments: 'gestao', // Gestão → Desenvolvimentos
   'success-cases': 'gestao', // Gestão → Cases de Sucesso
+  'machine-standards': 'kb', // Base de Conhecimento → Padronização de máquinas
   'lab-incidents': 'incidents',
   approvals: 'approvals',
   'purchase-requests': 'purchases',

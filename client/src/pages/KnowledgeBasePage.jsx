@@ -11,6 +11,10 @@ import s from './KnowledgeBasePage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
 import { safeHref } from '../utils/safeHref'
+import MachineStandards from '../components/kb/MachineStandards'
+
+// Aba com tela própria (não é categoria de artigo): ver components/kb/MachineStandards.jsx
+const MACHINES_TAB = 'maquinas'
 
 // O anexo vai pro Google Drive (storage externo — ver server/src/lib/driveClient.js),
 // não mais pro banco. Teto de 95 MB — o máximo seguro dentro do limite real
@@ -167,14 +171,18 @@ export default function KnowledgeBasePage() {
   const [editing, setEditing] = useState(null) // null = fechado, {} = novo, artigo = editar
   const [copiedId, setCopiedId] = useState(null)
 
+  const [machines, setMachines] = useState([])
+
   useLiveRefresh(['kb'], () => load())
+  useLiveRefresh(['machine-standards'], () => loadMachines())
   const load = () => {
     api.get('/kb')
       .then(r => setArticles(r.data || []))
       .catch(() => setArticles([]))
       .finally(() => setLoading(false))
   }
-  useEffect(() => { load() }, [])
+  const loadMachines = () => api.get('/machine-standards').then(r => setMachines(r.data || [])).catch(() => {})
+  useEffect(() => { load(); loadMachines() }, [])
 
   const filtered = useMemo(() => {
     if (!articles) return []
@@ -232,7 +240,7 @@ export default function KnowledgeBasePage() {
       <div className={s.header}>
         <div>
           <h1 className={s.title}>Base de Conhecimento</h1>
-          <p className={s.sub}>Textos prontos de chamado, políticas e outros materiais de referência da equipe.</p>
+          <p className={s.sub}>Textos prontos de chamado, políticas, padronização de máquinas e outros materiais de referência da equipe.</p>
         </div>
         {writable && <button className="btn btn-primary" onClick={() => setEditing({})}>+ Novo artigo</button>}
       </div>
@@ -247,11 +255,18 @@ export default function KnowledgeBasePage() {
               {c.icon} {c.label} <span className={s.tabCount}>{countByCategory[c.key] || 0}</span>
             </button>
           ))}
+          <button className={`${s.tab} ${categoryFilter === MACHINES_TAB ? s.tabActive : ''}`} onClick={() => setCategoryFilter(MACHINES_TAB)}>
+            🖥️ Padronização de máquinas <span className={s.tabCount}>{machines.length}</span>
+          </button>
         </div>
-        <input className={s.search} value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por título ou conteúdo..." />
+        {categoryFilter !== MACHINES_TAB && (
+          <input className={s.search} value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por título ou conteúdo..." />
+        )}
       </div>
 
-      {filtered.length === 0 ? (
+      {categoryFilter === MACHINES_TAB ? (
+        <MachineStandards items={machines} setItems={setMachines} writable={writable} />
+      ) : filtered.length === 0 ? (
         <div className={s.empty}>
           <h3>Nenhum artigo ainda</h3>
           <p>

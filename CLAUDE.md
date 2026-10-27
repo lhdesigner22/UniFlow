@@ -32,7 +32,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0059). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0060). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -43,7 +43,7 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Se o `wrangler dev`/`d1 --local` quebrar** com "access violation" (aconteceu em out/2026 no Windows 11 Insider 26300, qualquer
   versão do wrangler): `cd server && node test-e2e/node-server.mjs` roda o mesmo worker.js no Node com D1 em SQLite (memória,
   migrações + seeds) na porta 8799 — as suítes rodam igual. Sem tempo real nem arquivos estáticos.
-- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `labels`, `security` (nesta ordem: o `security` força novo login do analista e
+- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `labels`, `machine-standards`, `security` (nesta ordem: o `security` força novo login do analista e
   invalida o token tv:0 dele). `xlsx` conta linhas — rode em banco limpo (servidor recém-subido); passe uma pasta como argumento pra
   salvar os .xlsx e abrir no Excel. `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`.
 - **Exportações são XLSX montado no navegador** (`client/src/utils/xlsxExport.js` + `exports.js`, ExcelJS por import dinâmico, fora do
@@ -52,7 +52,7 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 ## Armadilhas do ambiente (Windows)
 - Shell Bash do Claude: **evite `node -e`/heredocs com crases e `${}`** e `sed` com texto complexo — grave scripts Node em arquivo e rode,
   ou use a ferramenta de edição. Barras invertidas (`\d`, `\-`) se perdem em heredoc→JS: regex só pela ferramenta de edição.
-  Não há Python instalado nesta máquina (o `python` do PATH é um stub da Store).
+  Python 3.15 em `/c/Python315/python` (o `python3` do PATH é um stub da Store); python-pptx instalado. Sem LibreOffice: renderizar .pptx pelo PowerPoint via COM (PowerShell).
 - `npm audit fix` no `server/` sobe o wrangler — não use; atualize só o pacote necessário (ex: `npm install hono@x`).
 - `cd` no Bash persiste entre comandos e muda o diretório de trabalho — use caminhos absolutos ou `cd` explícito.
 - `wrangler d1 execute --command` com várias linhas falha em silêncio → use `--file`.
@@ -146,6 +146,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   Número em destaque: o digitado vale mais que o "ao vivo" (`GET /stats`: chamados do GLPI, empréstimos do ano...). Até 6 fotos (como
   Incidentes). "Modo apresentação": tela cheia, capa + um case por tela, setas do teclado. Os 12 cases de 2026 vieram na migração 0057
   (textos iniciais deduzidos pelo nome — o Luiz ajusta pela tela). Catracas: o servidor passou a ser **local e administrado pela TI**.
+- **Base de Conhecimento → Padronização de máquinas** (`routes/machineStandards.js`, `components/kb/MachineStandards.jsx`, aba própria
+  dentro de `KnowledgeBasePage`, recurso `/api/machine-standards` no módulo `kb`, sem departamento): processador/RAM/extra mínimos por
+  **cargo** e exceções por **setor** (o setor vale para qualquer cargo dele). Os 5 perfis da apresentação vieram na migração 0060.
 
 ## Desempenho do banco (estudo de out/2026)
 - Banco pequeno (~9 MB, ~8,5 mil linhas), mas lia **~2 milhões de linhas/dia** (40% do limite Free de 5 M/dia) por falta de índice —
