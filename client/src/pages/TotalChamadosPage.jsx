@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList, Legend } from 'recharts'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { useVisiblePolling } from '../hooks/useVisiblePolling'
@@ -35,6 +35,80 @@ function timeAgo(iso) {
   const hours = Math.round(mins / 60)
   if (hours < 24) return `há ${hours}h`
   return `há ${Math.round(hours / 24)}d`
+}
+
+const ORIGIN_COLORS = ['#3B82F6', '#22C55E', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4']
+const OTHER_COLOR = '#94A3B8'
+const MONTHS_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+const monthLabel = ym => `${MONTHS_PT[Number(ym.slice(5, 7)) - 1]}/${ym.slice(2, 4)}`
+const tooltipProps = {
+  contentStyle: { background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 },
+  labelStyle: { color: 'var(--text)', fontWeight: 600, marginBottom: 4 },
+  itemStyle: { color: 'var(--text)' },
+}
+
+// "Origem da requisição" do GLPI: ranking de quem mais abre chamado no período
+// escolhido (o filtro De/Até vale aqui também) e a evolução mês a mês.
+function OriginChart({ snapshot }) {
+  const [view, setView] = useState('ranking')
+  const byOrigin = snapshot.byOrigin || []
+  const total = byOrigin.reduce((n, o) => n + o.count, 0)
+  const pctOf = n => (total ? (Math.round((n / total) * 1000) / 10).toLocaleString('pt-BR') : '0')
+  const ranking = byOrigin.slice(0, 15).map(o => ({ ...o, pct: pctOf(o.count) }))
+  const series = snapshot.originSeries || []
+  const monthly = (snapshot.originMonthly || []).map(m => ({ ...m, label: monthLabel(m.month) }))
+  const colored = series.filter(n => n !== 'Outras' && n !== 'Sem origem')
+  const colorOf = name => (colored.includes(name) ? ORIGIN_COLORS[colored.indexOf(name) % ORIGIN_COLORS.length] : OTHER_COLOR)
+
+  return (
+    <Reveal className={s.chartCard}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <h3>Chamados por origem da requisição</h3>
+        <div className={s.viewToggle}>
+          <button type="button" className={view === 'ranking' ? s.viewOn : ''} onClick={() => setView('ranking')}>Ranking</button>
+          <button type="button" className={view === 'monthly' ? s.viewOn : ''} onClick={() => setView('monthly')}>Mês a mês</button>
+        </div>
+      </div>
+      <p className={s.chartNote}>
+        {view === 'ranking'
+          ? 'Quem mais abriu chamado no período selecionado (use De/Até para ver um mês ou o ano).'
+          : `As ${series.filter(n => n !== 'Outras').length} origens que mais abrem chamado, mês a mês (últimos 12 meses com dado).`}
+      </p>
+      {!snapshot.byOrigin ? (
+        <p className={s.chartEmpty}>A origem aparece depois da próxima atualização do Total (a cada 15 min).</p>
+      ) : view === 'ranking' ? (
+        ranking.length === 0 ? <p className={s.chartEmpty}>Nenhum chamado no período.</p> : (
+          <ResponsiveContainer width="100%" height={Math.max(160, ranking.length * 34)}>
+            <BarChart data={ranking} layout="vertical" margin={{ top: 5, right: 70, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" horizontal={false} />
+              <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <YAxis type="category" dataKey="name" width={170} interval={0} tick={{ fill: 'var(--text)', fontSize: 12 }} />
+              <Tooltip {...tooltipProps} formatter={(v, _n, item) => [`${v} chamado(s) · ${item.payload.pct}%`, 'Abertos']} />
+              <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                {ranking.map(o => <Cell key={o.name} fill={colorOf(o.name)} />)}
+                <LabelList dataKey="count" position="right" formatter={v => `${v} · ${pctOf(v)}%`} style={{ fill: 'var(--text)', fontSize: 12, fontWeight: 700 }} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )
+      ) : (
+        monthly.length === 0 ? <p className={s.chartEmpty}>Sem dados suficientes ainda.</p> : (
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={monthly} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
+              <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <YAxis allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <Tooltip {...tooltipProps} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              {series.map((name, i) => (
+                <Bar key={name} dataKey={name} stackId="origem" fill={colorOf(name)} radius={i === series.length - 1 ? [4, 4, 0, 0] : 0} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        )
+      )}
+    </Reveal>
+  )
 }
 
 export default function TotalChamadosPage() {
@@ -312,6 +386,9 @@ export default function TotalChamadosPage() {
               </ResponsiveContainer>
             </Reveal>
           </div>
+
+          {/* ── Origem da requisição (campo 9 do GLPI): quem mais abre chamado ── */}
+          <OriginChart snapshot={snapshot} />
 
           {/* ── Por técnico ── */}
           <Reveal className={s.chartCard}>

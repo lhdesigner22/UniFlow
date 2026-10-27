@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { auth } from '../middleware/auth.js'
-import { runGlpiTotalSync, buildTotalSnapshot } from '../lib/glpiTotalSync.js'
+import { runGlpiTotalSync, buildTotalSnapshot, decodeRaw } from '../lib/glpiTotalSync.js'
 import { accessOf } from '../lib/permissions.js'
 import { isGlpiPaused, PAUSED_MESSAGE } from '../lib/glpiPause.js'
 import { resolveRequestEntity, entityKey, DEFAULT_ENTITY, loadHiddenTechs, saveHiddenTechs } from '../lib/glpiEntities.js'
@@ -31,7 +31,7 @@ app.get('/', async c => {
     let rawRow = await db.prepare('SELECT data, updated_at FROM glpi_total_raw WHERE id = ?').get(key)
     if (!rawRow && legacy) rawRow = await db.prepare("SELECT data, updated_at FROM glpi_total_raw WHERE id = 'current'").get()
     if (!rawRow) return c.json({ empty: true, entity, entities })
-    const { tickets, assigneeNamesByTicket } = JSON.parse(rawRow.data)
+    const { tickets, assigneeNamesByTicket } = decodeRaw(rawRow.data)
     const filtered = tickets.filter(t => {
       const created = String(t.date_creation || '').slice(0, 10)
       if (!created) return false

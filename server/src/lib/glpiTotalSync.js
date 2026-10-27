@@ -7,7 +7,7 @@
 // fazem sentido quando o conjunto inclui chamados já fechados.
 import { glpiFetchTickets, resolveAssignees, ALL_STATUS_CODES } from './glpiClient.js'
 import { loadGlpiTechCache } from './glpiTechCache.js'
-import { computeBacklogSnapshot } from './glpiBacklogSync.js'
+import { computeBacklogSnapshot, fixMojibake } from './glpiBacklogSync.js'
 import { configuredEntities, matchesEntity, entityKey, DEFAULT_ENTITY, distinctEntityPaths, loadSeenEntities, saveSeenEntities } from './glpiEntities.js'
 
 const RESOLVED_CODE = 5
@@ -51,6 +51,34 @@ function computeResolutionStats(tickets) {
   }
 }
 
+const NO_ORIGIN = 'Sem origem'
+const TOP_ORIGINS_BY_MONTH = 6
+const originOf = t => fixMojibake(String(t.origin || '').trim()) || NO_ORIGIN
+
+// "Origem da requisição" (campo 9 do GLPI): ranking do período e a evolução
+// mês a mês das origens que mais abrem chamado (as demais somadas em "Outras").
+function computeOriginStats(tickets) {
+  const counts = {}
+  for (const t of tickets) {
+    const o = originOf(t)
+    counts[o] = (counts[o] || 0) + 1
+  }
+  const byOrigin = Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
+  const top = byOrigin.slice(0, TOP_ORIGINS_BY_MONTH).map(o => o.name)
+  const months = {}
+  for (const t of tickets) {
+    const month = String(t.date_creation || '').slice(0, 7)
+    if (!/^\d{4}-\d{2}$/.test(month)) continue
+    const o = originOf(t)
+    const key = top.includes(o) ? o : 'Outras'
+    const m = (months[month] ||= {})
+    m[key] = (m[key] || 0) + 1
+  }
+  const originMonthly = Object.keys(months).sort().slice(-12).map(month => ({ month, ...months[month] }))
+  const originSeries = [...top, ...(byOrigin.length > top.length ? ['Outras'] : [])]
+  return { byOrigin, originMonthly, originSeries }
+}
+
 // Monta o snapshot completo (KPIs + gráficos + tabela) a partir de uma lista
 // de chamados já filtrada — reaproveitado tanto pelo sync (todo o período)
 // quanto pela rota de filtro por data (ver glpiTotal.js), que recalcula isso
@@ -62,8 +90,44 @@ export function buildTotalSnapshot(tickets, assigneeNamesByTicket) {
     ...base,
     totalTickets: tickets.length,
     ...resolution,
+    ...computeOriginStats(tickets),
     updatedAt: new Date().toISOString(),
   }
+}
+
+// Cache "cru" compacto (v2): o D1 aceita no máx. 2 MB por linha e o formato
+// antigo (objetos com nomes de campo + entidade repetida em cada chamado) já
+// passava de 1,9 MB no SERVICE DESK. Agora cada chamado é um array, e a origem
+// e os técnicos viram índices numa lista. `decodeRaw` lê os dois formatos.
+const RAW_FIELDS = ['id', 'name', 'status', 'priority', 'date_creation', 'date_mod']
+export function encodeRaw(tickets, assigneeNamesByTicket) {
+  const origins = []
+  const originIdx = new Map()
+  const techs = []
+  const techIdx = new Map()
+  const idx = (list, map, v) => {
+    if (!map.has(v)) { map.set(v, list.length); list.push(v) }
+    return map.get(v)
+  }
+  const rows = tickets.map(t => [...RAW_FIELDS.map(f => t[f] ?? null), t.origin ? idx(origins, originIdx, t.origin) : null])
+  const assignees = {}
+  for (const [id, names] of Object.entries(assigneeNamesByTicket || {})) {
+    if (names?.length) assignees[id] = names.map(n => idx(techs, techIdx, n))
+  }
+  return JSON.stringify({ v: 2, rows, origins, techs, assignees })
+}
+export function decodeRaw(json) {
+  const data = JSON.parse(json)
+  if (data.v !== 2) return { tickets: data.tickets || [], assigneeNamesByTicket: data.assigneeNamesByTicket || {} }
+  const tickets = data.rows.map(r => {
+    const t = {}
+    RAW_FIELDS.forEach((f, i) => { t[f] = r[i] })
+    t.origin = r[RAW_FIELDS.length] == null ? null : data.origins[r[RAW_FIELDS.length]]
+    return t
+  })
+  const assigneeNamesByTicket = {}
+  for (const [id, list] of Object.entries(data.assignees || {})) assigneeNamesByTicket[id] = list.map(i => data.techs[i])
+  return { tickets, assigneeNamesByTicket }
 }
 
 const upsert = (table, id, data) => ({
@@ -83,7 +147,7 @@ export async function runGlpiTotalSync(env, db) {
   // Cada departamento tem a sua entidade do GLPI (ver glpiEntities.js): baixa tudo
   // uma vez e gera um resumo + um cache "cru" por entidade configurada.
   const [allTickets, techCache] = await Promise.all([
-    glpiFetchTickets(env, { entityName: null, statusCodes: ALL_STATUS_CODES }),
+    glpiFetchTickets(env, { entityName: null, statusCodes: ALL_STATUS_CODES, withOrigin: true }),
     loadGlpiTechCache(db),
   ])
   // Entidades vistas em TODOS os status (o Backlog só vê as que têm chamado aberto) — lista de escolha do Admin
@@ -99,14 +163,16 @@ export async function runGlpiTotalSync(env, db) {
     // Cache "cru" (todos os chamados, sem o corte de 500 da tabela) — usado
     // pela rota de filtro por data pra recalcular os KPIs sob um período
     // arbitrário sem precisar buscar no GLPI de novo a cada filtro aplicado.
-    const rawJson = JSON.stringify({ tickets, assigneeNamesByTicket })
+    const rawJson = encodeRaw(tickets, assigneeNamesByTicket)
     const statements = [
       upsert('glpi_total_snapshot', entityKey(entity), snapshotJson),
       upsert('glpi_total_raw', entityKey(entity), rawJson),
     ]
-    // 'current' continua existindo (SERVICE DESK) pra qualquer leitor antigo
+    // 'current' continua existindo (SERVICE DESK) pra qualquer leitor antigo do
+    // resumo. O cache cru 'current' era uma 2ª cópia de ~2 MB: sai (quem lê já
+    // usa a chave da entidade).
     if (entity === DEFAULT_ENTITY || (!main && entity === entities[0])) {
-      statements.push(upsert('glpi_total_snapshot', 'current', snapshotJson), upsert('glpi_total_raw', 'current', rawJson))
+      statements.push(upsert('glpi_total_snapshot', 'current', snapshotJson), { sql: "DELETE FROM glpi_total_raw WHERE id = 'current'", args: [] })
       main = snapshot
     }
     await db.batch(statements) // um lote por entidade (cada cache cru pode ser grande)

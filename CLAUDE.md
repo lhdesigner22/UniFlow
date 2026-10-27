@@ -159,6 +159,10 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 ## Estado / pendências conhecidas
 - Tudo acima está em produção. Ainda **sem uso real confirmado pelo Luiz**: limpeza de duplicatas em massa de feriados, cargos/departamentos
   (cadastrar o 2º departamento e mover pessoas), entidades por departamento (Admin → Departamentos → "Entidade do GLPI").
-- Limite a vigiar: cache cru do Total (`glpi_total_raw`) ~1,3 MB p/ SERVICE DESK (limite de linha do D1: 2 MB).
+- Limite a vigiar: cache cru do Total (`glpi_total_raw`, limite de linha do D1: 2 MB). Chegou a 1,95 MB (8,6 mil chamados) em out/2026 →
+  formato compacto v2 (`encodeRaw`/`decodeRaw` em `glpiTotalSync.js`: chamado = array, origem/técnicos = índices) caiu p/ ~0,9 MB; a
+  cópia `'current'` do cache cru deixou de existir (só o resumo `'current'` continua). Cresce ~110 bytes por chamado.
+- **Total de Chamados → "Chamados por origem da requisição"**: campo 9 do GLPI (Origem da requisição), só no Total (`withOrigin`);
+  ranking do período (vale o filtro De/Até) + mês a mês das 6 maiores (resto em "Outras"). Decisão do Luiz: o "setor" é a Origem da requisição.
 - Ideias não feitas: cartão aberto (CardModal) ao vivo; eventos do GLPI por departamento/entidade; criptografar senhas de Wi-Fi como o Cofre;
   descobrir quem cria chamados de feriado em massa.

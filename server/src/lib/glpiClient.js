@@ -300,12 +300,16 @@ async function glpiListSearchOptions(env, sessionToken, itemtype) {
 // `withCategory`: traz também a categoria (campo 7, "Pai > Filho") — só o
 // Backlog pede (poucos chamados, abertos); o Total não, porque o cache cru dele
 // já fica perto do limite de 2 MB por linha do D1.
-export async function glpiFetchTickets(env, { entityName, statusCodes, withCategory = false }) {
+// `withOrigin`: traz a "Origem da requisição" (campo 9) — só o Total pede, pro
+// gráfico de qual origem/setor mais abre chamado.
+export async function glpiFetchTickets(env, { entityName, statusCodes, withCategory = false, withOrigin = false }) {
   const sessionToken = await glpiInitSession(env)
   try {
-    const searchRows = await glpiSearchTicketsByStatus(env, sessionToken, entityName, statusCodes, withCategory ? ['7'] : [])
+    const extra = [...(withCategory ? ['7'] : []), ...(withOrigin ? ['9'] : [])]
+    const searchRows = await glpiSearchTicketsByStatus(env, sessionToken, entityName, statusCodes, extra)
     return searchRows.map(row => ({
       ...(withCategory ? { category: row['7'] || null } : {}),
+      ...(withOrigin ? { origin: row['9'] || null } : {}),
       id: Number(row['2']),
       name: row['1'],
       status: row['12'],
