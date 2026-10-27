@@ -32,7 +32,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0060). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0061). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -146,6 +146,8 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   Número em destaque: o digitado vale mais que o "ao vivo" (`GET /stats`: chamados do GLPI, empréstimos do ano...). Até 6 fotos (como
   Incidentes). "Modo apresentação": tela cheia, capa + um case por tela, setas do teclado. Os 12 cases de 2026 vieram na migração 0057
   (textos iniciais deduzidos pelo nome — o Luiz ajusta pela tela). Catracas: o servidor passou a ser **local e administrado pela TI**.
+  **Save financeiro** (migração 0061: `saving_value` em R$, `saving_period` unico|mensal|anual, `saving_note`): aba no editor do case,
+  aba "💰 Save financeiro" na página (tabela + total) e KPI no painel = soma no ano (mensal × 12). Aparece na capa da apresentação.
 - **Base de Conhecimento → Padronização de máquinas** (`routes/machineStandards.js`, `components/kb/MachineStandards.jsx`, aba própria
   dentro de `KnowledgeBasePage`, recurso `/api/machine-standards` no módulo `kb`, sem departamento): processador/RAM/extra mínimos por
   **cargo** e exceções por **setor** (o setor vale para qualquer cargo dele). Os 5 perfis da apresentação vieram na migração 0060.

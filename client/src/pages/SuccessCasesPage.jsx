@@ -38,6 +38,23 @@ const LIVE = {
 }
 const liveValue = (key, stats) => (key && stats && stats[key] != null ? stats[key] : null)
 
+// Save financeiro: valor digitado uma vez, por mês ou por ano — o painel soma tudo no ano
+const SAVING_PERIODS = {
+  anual: { label: 'Por ano', short: 'Por ano', suffix: '/ano', yearFactor: 1 },
+  mensal: { label: 'Por mês', short: 'Por mês', suffix: '/mês', yearFactor: 12 },
+  unico: { label: 'Uma vez (economia única)', short: 'Uma vez', suffix: 'uma vez', yearFactor: 1 },
+}
+const fmtBRL = n => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: Number(n) % 1 ? 2 : 0 })
+// "R$ 12.500,50" / "12500,5" / "12500.50" → 12500.5 (vazio → null)
+function parseBRL(text) {
+  const t = String(text ?? '').replace(/[^\d,.-]/g, '').trim()
+  if (!t) return null
+  const normalized = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t
+  const n = Number(normalized)
+  return Number.isFinite(n) ? n : NaN
+}
+const yearlySave = c => (c.saving_value ? c.saving_value * (SAVING_PERIODS[c.saving_period]?.yearFactor || 1) : 0)
+
 // O número em destaque do case: o digitado vale mais que o ao vivo
 function resultOf(c, stats, year) {
   if (c.result_value) return { value: c.result_value, label: c.result_label }
@@ -78,19 +95,27 @@ function Editor({ item, year, onClose, onSaved }) {
     completed_on: item?.completed_on || '',
     owner: item?.owner || 'Equipe de TI',
     year: item?.year || year,
+    saving_text: item?.saving_value != null ? String(item.saving_value).replace('.', ',') : '',
+    saving_period: item?.saving_period || 'anual',
+    saving_note: item?.saving_note || '',
   })
+  const [tab, setTab] = useState('case')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const savingValue = parseBRL(form.saving_text)
 
   const save = async () => {
     if (!form.title.trim()) return
+    if (Number.isNaN(savingValue) || savingValue < 0) { setTab('save'); setError('Valor do save inválido — use só números, ex: 12.500,00'); return }
     setSaving(true)
     setError('')
     try {
+      const { saving_text, ...rest } = form
+      const body = { ...rest, saving_value: savingValue }
       const saved = item
-        ? (await api.put(`/success-cases/${item.id}`, form)).data
-        : (await api.post('/success-cases', form)).data
+        ? (await api.put(`/success-cases/${item.id}`, body)).data
+        : (await api.post('/success-cases', body)).data
       onSaved(saved)
     } catch (e) {
       setError(e.response?.data?.error || 'Erro ao salvar. Tenta de novo?')
@@ -100,6 +125,45 @@ function Editor({ item, year, onClose, onSaved }) {
 
   return (
     <Modal title={item ? 'Editar case' : 'Novo case'} onClose={onClose} width={640}>
+      <div className={s.editorTabs}>
+        <button type="button" className={tab === 'case' ? s.editorTabOn : ''} onClick={() => setTab('case')}>📝 Case</button>
+        <button type="button" className={tab === 'save' ? s.editorTabOn : ''} onClick={() => setTab('save')}>
+          💰 Save financeiro{savingValue ? ` · ${fmtBRL(savingValue)}` : ''}
+        </button>
+      </div>
+      {tab === 'save' ? (
+        <>
+          <p className={s.saveHint}>Quanto esta entrega economizou para a instituição. Entra no total “Save financeiro” do painel e na apresentação.</p>
+          <div className={s.formRow}>
+            <div className="form-group">
+              <label className="label">Valor economizado (R$)</label>
+              <input autoFocus inputMode="decimal" value={form.saving_text} onChange={e => set('saving_text', e.target.value)} placeholder="Ex: 12.500,00" />
+            </div>
+            <div className="form-group">
+              <label className="label">Esse valor é</label>
+              <select value={form.saving_period} onChange={e => set('saving_period', e.target.value)}>
+                {Object.entries(SAVING_PERIODS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+          </div>
+          {savingValue > 0 && (
+            <p className={s.savePreview}>
+              {form.saving_period === 'mensal'
+                ? <>Equivale a <strong>{fmtBRL(savingValue * 12)}</strong> no ano.</>
+                : <>Conta <strong>{fmtBRL(savingValue)}</strong> no total do ano.</>}
+            </p>
+          )}
+          <div className="form-group">
+            <label className="label">Como chegamos nesse valor (opcional)</label>
+            <textarea rows={4} value={form.saving_note} maxLength={500} onChange={e => set('saving_note', e.target.value)}
+              placeholder="Ex: Licença do sistema anterior custava R$ 1.200/mês; o GLPI é open source, sem custo de licença." />
+          </div>
+          {item?.saving_value != null && (
+            <button type="button" className="btn btn-ghost btn-sm" style={{ marginBottom: 12 }} onClick={() => set('saving_text', '')}>Remover o save deste case</button>
+          )}
+        </>
+      ) : (
+      <>
       <div className="form-group">
         <label className="label">Título (em linguagem simples)</label>
         <input autoFocus value={form.title} maxLength={100} onChange={e => set('title', e.target.value)} placeholder="Ex: Wi-Fi padronizado em todos os prédios" />
@@ -165,6 +229,8 @@ function Editor({ item, year, onClose, onSaved }) {
         <label className="label">Detalhe técnico (fica recolhido — não coloque IPs nem senhas)</label>
         <textarea rows={2} value={form.technical} maxLength={2000} onChange={e => set('technical', e.target.value)} />
       </div>
+      </>
+      )}
       {error && <p className={s.error}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.title.trim() || saving} onClick={save}>
         {saving ? 'Salvando...' : 'Salvar'}
@@ -272,6 +338,14 @@ function Detail({ id, stats, year, writable, onClose, onEdit, onDelete, onChange
         <div className={s.block}><span className={s.blockLabel}>O que fizemos</span><p className={s.blockText}>{item.solution_text || '—'}</p></div>
         <ResultBox result={result} />
       </div>
+      {item.saving_value > 0 && (
+        <div className={s.saveBox}>
+          <span className={s.blockLabel}>💰 Save financeiro</span>
+          <strong>{fmtBRL(item.saving_value)} <small>{SAVING_PERIODS[item.saving_period]?.suffix}</small></strong>
+          {item.saving_period === 'mensal' && <span className={s.muted}>= {fmtBRL(yearlySave(item))} no ano</span>}
+          {item.saving_note && <p className={s.blockText}>{item.saving_note}</p>}
+        </div>
+      )}
 
       {(item.photos.length > 0 || writable) && (
         <div className={s.photosSection}>
@@ -363,6 +437,7 @@ function Presentation({ cases, stats, year, onClose }) {
 
   const c = index > 0 ? cases[index - 1] : null
   const done = cases.filter(x => x.status === 'concluido').length
+  const totalSave = cases.reduce((n, x) => n + yearlySave(x), 0)
   const pillarCounts = Object.keys(PILLARS).map(k => [k, cases.filter(x => x.pillar === k).length]).filter(([, n]) => n)
 
   return (
@@ -375,6 +450,7 @@ function Presentation({ cases, stats, year, onClose }) {
           <div className={s.presKpis}>
             <div><strong>{cases.length}</strong><span>entregas no ano</span></div>
             <div><strong>{done}</strong><span>concluídas</span></div>
+            {totalSave > 0 && <div><strong className={s.presSave}>{fmtBRL(totalSave)}</strong><span>de save financeiro no ano</span></div>}
             {stats?.glpi_tickets != null && <div><strong>{fmtNum(stats.glpi_tickets)}</strong><span>chamados registrados no GLPI</span></div>}
           </div>
           <div className={s.presPillars}>
@@ -391,6 +467,7 @@ function Presentation({ cases, stats, year, onClose }) {
               <span className={s.presPillar} style={{ color: p.color }}>{p.icon} {p.label}</span>
               <StatusBadge status={c.status} />
               {c.completed_on && <span className={s.presMuted}>{fmtMonth(c.completed_on)}</span>}
+              {c.saving_value > 0 && <span className={s.presSaveChip}>💰 {fmtBRL(c.saving_value)} {SAVING_PERIODS[c.saving_period]?.suffix}</span>}
             </div>
             <h2 className={s.presTitle}>{c.title}</h2>
             {c.headline && <p className={s.presHeadline}>{c.headline}</p>}
@@ -436,6 +513,7 @@ export default function SuccessCasesPage() {
   const [openId, setOpenId] = useState(null)
   const [editing, setEditing] = useState(null) // null = fechado, {} = novo, case = editar
   const [presenting, setPresenting] = useState(false)
+  const [view, setView] = useState('cases') // cases | save
   const writable = canEditModule(user, 'gestao')
 
   const load = useCallback(() => {
@@ -484,6 +562,8 @@ export default function SuccessCasesPage() {
   if (!data) return <div className={s.loading}>Carregando cases...</div>
 
   const done = cases.filter(c => c.status === 'concluido').length
+  const withSave = cases.filter(c => c.saving_value > 0).sort((a, b) => yearlySave(b) - yearlySave(a))
+  const totalSave = withSave.reduce((n, c) => n + yearlySave(c), 0)
 
   return (
     <div className={s.page}>
@@ -509,8 +589,56 @@ export default function SuccessCasesPage() {
         <div className={s.kpi}><span>Concluídas</span><strong>{done}</strong></div>
         <div className={s.kpi}><span>Chamados no GLPI <em>ao vivo</em></span><strong>{stats?.glpi_tickets != null ? fmtNum(stats.glpi_tickets) : '—'}</strong></div>
         <div className={s.kpi}><span>Empréstimos em {shownYear} <em>ao vivo</em></span><strong>{stats?.loans_year != null ? fmtNum(stats.loans_year) : '—'}</strong></div>
+        <button type="button" className={`${s.kpi} ${s.kpiSave}`} onClick={() => setView('save')} title="Ver o save de cada case">
+          <span>💰 Save financeiro no ano</span>
+          <strong>{fmtBRL(totalSave)}</strong>
+          <small>{withSave.length} de {cases.length} cases com valor</small>
+        </button>
       </div>
 
+      <div className={s.viewTabs}>
+        <button type="button" className={view === 'cases' ? s.viewTabOn : ''} onClick={() => setView('cases')}>📋 Cases</button>
+        <button type="button" className={view === 'save' ? s.viewTabOn : ''} onClick={() => setView('save')}>💰 Save financeiro</button>
+      </div>
+
+      {view === 'save' ? (
+        <div className={s.saveTable}>
+          {withSave.length === 0 ? (
+            <div className={s.empty}>
+              <h3>Nenhum save cadastrado em {shownYear}</h3>
+              <p>{writable ? 'Abra um case, clique em ✏️ Editar e use a aba “💰 Save financeiro” para informar quanto ele economizou.' : 'A equipe de TI ainda não informou o save dos cases.'}</p>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr><th>Case</th><th>Pilar</th><th className={s.num}>Valor</th><th>Período</th><th className={s.num}>No ano</th><th>Como chegamos nesse valor</th></tr>
+              </thead>
+              <tbody>
+                {withSave.map(c => {
+                  const p = PILLARS[c.pillar] || PILLARS.gestao
+                  return (
+                    <tr key={c.id} onClick={() => setOpenId(c.id)}>
+                      <td className={s.saveCase}>{c.title}</td>
+                      <td><span className={s.pillarText} style={{ color: p.color }}>{p.icon} {p.label}</span></td>
+                      <td className={s.num}>{fmtBRL(c.saving_value)}</td>
+                      <td>{SAVING_PERIODS[c.saving_period]?.short || '—'}</td>
+                      <td className={`${s.num} ${s.saveYear}`}>{fmtBRL(yearlySave(c))}</td>
+                      <td className={s.saveNote}>{c.saving_note || '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr><td colSpan={4}>Total no ano · {withSave.length} {withSave.length === 1 ? 'case' : 'cases'}</td><td className={`${s.num} ${s.saveYear}`}>{fmtBRL(totalSave)}</td><td /></tr>
+              </tfoot>
+            </table>
+          )}
+          {cases.length > withSave.length && withSave.length > 0 && (
+            <p className={s.muted} style={{ marginTop: 10 }}>Sem valor informado: {cases.filter(c => !(c.saving_value > 0)).map(c => c.title).join(' · ')}</p>
+          )}
+        </div>
+      ) : (
+      <>
       <div className={s.chips}>
         <button className={`${s.chip} ${!pillar ? s.chipActive : ''}`} onClick={() => setPillar('')}>Todos · {cases.length}</button>
         {Object.entries(PILLARS).map(([k, p]) => {
@@ -546,6 +674,9 @@ export default function SuccessCasesPage() {
                     {result.value && (
                       <p className={s.cardResult}><strong>{result.value}</strong> {result.label}</p>
                     )}
+                    {c.saving_value > 0 && (
+                      <span className={s.cardSave}>💰 {fmtBRL(c.saving_value)} {SAVING_PERIODS[c.saving_period]?.suffix}</span>
+                    )}
                   </div>
                 </button>
                 {writable && !pillar && (
@@ -558,6 +689,8 @@ export default function SuccessCasesPage() {
             )
           })}
         </div>
+      )}
+      </>
       )}
 
       {openId && (

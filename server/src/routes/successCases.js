@@ -15,6 +15,8 @@ export const PILLARS = ['conectividade', 'seguranca', 'gestao', 'operacao']
 export const STATUSES = ['concluido', 'piloto', 'andamento']
 // Números ao vivo que um case pode mostrar (calculados em GET /stats)
 export const LIVE_METRICS = ['glpi_tickets', 'loans_year', 'incidents_resolved', 'uniflow_modules']
+// Save financeiro: o valor é uma vez só, por mês ou por ano (o painel soma tudo no ano)
+export const SAVING_PERIODS = ['unico', 'mensal', 'anual']
 const MAX_PHOTOS = 6
 const PHOTO_RE = /^data:image\/(jpeg|webp|png);base64,[A-Za-z0-9+/=]+$/
 const MAX_PHOTO_CHARS = 1_600_000
@@ -23,6 +25,7 @@ const MAX_THUMB_CHARS = 150_000
 const COLUMNS = `
   c.id, c.year, c.title, c.pillar, c.headline, c.before_text, c.solution_text, c.result_value, c.result_label,
   c.technical, c.status, c.completed_on, c.owner, c.live_metric, c.order_index, c.created_at, c.updated_at,
+  c.saving_value, c.saving_period, c.saving_note,
   (SELECT p.thumb FROM success_case_photos p WHERE p.case_id = c.id ORDER BY p.created_at LIMIT 1) as cover,
   (SELECT COUNT(*) FROM success_case_photos p WHERE p.case_id = c.id) as photo_count
 `
@@ -44,6 +47,16 @@ function clean(body, current = {}) {
   if (completed_on && !/^\d{4}-(0[1-9]|1[0-2])$/.test(completed_on)) return { error: 'Mês de conclusão inválido' }
   const live_metric = body.live_metric !== undefined ? (body.live_metric || null) : (current.live_metric ?? null)
   if (live_metric && !LIVE_METRICS.includes(live_metric)) return { error: 'Número ao vivo inválido' }
+  let saving_value = current.saving_value ?? null
+  if (body.saving_value !== undefined) {
+    const raw = body.saving_value
+    // A tela já manda número (R$ 1.234,56 → 1234.56)
+    saving_value = raw === null || raw === '' ? null : Number(raw)
+    if (saving_value !== null && (!Number.isFinite(saving_value) || saving_value < 0 || saving_value > 1e9)) return { error: 'Valor do save inválido' }
+    if (saving_value !== null) saving_value = Math.round(saving_value * 100) / 100
+  }
+  const saving_period = body.saving_period !== undefined ? (body.saving_period || null) : (current.saving_period ?? null)
+  if (saving_period && !SAVING_PERIODS.includes(saving_period)) return { error: 'Período do save inválido' }
   const year = body.year !== undefined ? Number(body.year) : (current.year || new Date().getFullYear())
   if (!Number.isInteger(year) || year < 2000 || year > 2100) return { error: 'Ano inválido' }
   return {
@@ -55,6 +68,9 @@ function clean(body, current = {}) {
     result_label: pick('result_label', 160),
     technical: pick('technical', 2000),
     owner: pick('owner', 120),
+    saving_value,
+    saving_period: saving_value === null ? null : (saving_period || 'anual'),
+    saving_note: pick('saving_note', 500),
   }
 }
 
@@ -107,10 +123,10 @@ app.post('/', async c => {
   const last = await db.scalar('SELECT MAX(order_index) FROM success_cases WHERE year = ?', v.year)
   await db.prepare(`
     INSERT INTO success_cases (id, year, title, pillar, headline, before_text, solution_text, result_value, result_label,
-      technical, status, completed_on, owner, live_metric, order_index, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      technical, status, completed_on, owner, live_metric, order_index, created_by, saving_value, saving_period, saving_note)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(id, v.year, v.title, v.pillar, v.headline, v.before_text, v.solution_text, v.result_value, v.result_label,
-    v.technical, v.status, v.completed_on, v.owner, v.live_metric, (last ?? -1) + 1, c.get('user').id)
+    v.technical, v.status, v.completed_on, v.owner, v.live_metric, (last ?? -1) + 1, c.get('user').id, v.saving_value, v.saving_period, v.saving_note)
   return c.json(await getCase(db, id))
 })
 
@@ -132,10 +148,10 @@ app.put('/:id', async c => {
   await db.prepare(`
     UPDATE success_cases SET year = ?, title = ?, pillar = ?, headline = ?, before_text = ?, solution_text = ?,
       result_value = ?, result_label = ?, technical = ?, status = ?, completed_on = ?, owner = ?, live_metric = ?,
-      updated_at = datetime('now')
+      saving_value = ?, saving_period = ?, saving_note = ?, updated_at = datetime('now')
     WHERE id = ?
   `).run(v.year, v.title, v.pillar, v.headline, v.before_text, v.solution_text, v.result_value, v.result_label,
-    v.technical, v.status, v.completed_on, v.owner, v.live_metric, row.id)
+    v.technical, v.status, v.completed_on, v.owner, v.live_metric, v.saving_value, v.saving_period, v.saving_note, row.id)
   return c.json(await getCase(db, row.id))
 })
 

@@ -44,6 +44,24 @@ expect('Auditor não cadastra', (await call('aud', 'POST', '/api/success-cases',
 
 expect('editar mantém o resto', (await call('admin', 'PUT', `/api/success-cases/${novo}`, { status: 'piloto' })).j?.result_value, '40')
 
+// Save financeiro
+r = await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_value: 1250.555, saving_period: 'mensal', saving_note: 'Licença antiga' })
+expect('save: valor com 2 casas', r.j?.saving_value, 1250.56)
+expect('save: período mensal', r.j?.saving_period, 'mensal')
+expect('save: como calculamos', r.j?.saving_note, 'Licença antiga')
+expect('save: editar outra coisa mantém o save', (await call('admin', 'PUT', `/api/success-cases/${novo}`, { headline: 'x' })).j?.saving_value, 1250.56)
+r = await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_value: 900 })
+expect('save sem período mantém o período', r.j?.saving_period, 'mensal')
+expect('save negativo recusado', (await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_value: -5 })).s, 400)
+expect('save texto recusado', (await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_value: 'abc' })).s, 400)
+expect('período inválido recusado', (await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_period: 'semanal' })).s, 400)
+r = await call('admin', 'POST', '/api/success-cases', { title: 'Com save', saving_value: 5000 })
+expect('save novo sem período = anual', r.j?.saving_period, 'anual')
+await call('admin', 'DELETE', `/api/success-cases/${r.j?.id}`)
+r = await call('admin', 'PUT', `/api/success-cases/${novo}`, { saving_value: null })
+expect('remover o save limpa valor e período', `${r.j?.saving_value}|${r.j?.saving_period}`, 'null|null')
+expect('Auditor não muda o save', (await call('aud', 'PUT', `/api/success-cases/${novo}`, { saving_value: 1 })).s, 403)
+
 r = await call('admin', 'POST', `/api/success-cases/${novo}/photos`, { data: PNG, thumb: PNG, caption: 'Depois' })
 expect('foto enviada', r.s, 200)
 const photo = r.j?.id
