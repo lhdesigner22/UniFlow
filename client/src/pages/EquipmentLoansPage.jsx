@@ -254,10 +254,10 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
           </datalist>
         </div>
         <div className="form-group" style={{ flex: 1, position: 'relative' }}>
-          <label htmlFor="equipment-loans-patrimonio" className="label">Patrimônio (opcional)</label>
+          <label htmlFor="equipment-loans-emprestimo-patrimonio" className="label">Patrimônio (opcional)</label>
           <div style={{ display: 'flex', gap: 6 }}>
             <input
-              id="equipment-loans-patrimonio"
+              id="equipment-loans-emprestimo-patrimonio"
               value={form.patrimony}
               onChange={e => setForm(f => ({ ...f, patrimony: e.target.value, equipment_inventory_id: null }))}
               placeholder="Ex: 5028"

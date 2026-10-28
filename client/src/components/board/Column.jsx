@@ -23,6 +23,13 @@ export default function Column({ column, cards, onOpenCard, onAddCard, onToggleP
   const [nameDraft, setNameDraft] = useState(column.name)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
+  const nameRef = useRef(null)
+  // Saiu do renomear por Enter/Esc: o foco volta pro nome (senão caía no topo
+  // da página). Saindo por clique fora (blur), o foco fica onde a pessoa foi.
+  const refocusName = useRef(false)
+  useEffect(() => {
+    if (!editingName && refocusName.current) { refocusName.current = false; nameRef.current?.focus() }
+  }, [editingName])
 
   useEffect(() => {
     try { localStorage.setItem(`uniflow-hide-done-${column.id}`, hideCompleted ? '1' : '0') } catch {}
@@ -81,10 +88,13 @@ export default function Column({ column, cards, onOpenCard, onAddCard, onToggleP
             value={nameDraft}
             onChange={e => setNameDraft(e.target.value)}
             onBlur={saveName}
-            onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') { setNameDraft(column.name); setEditingName(false) } }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { refocusName.current = true; saveName() }
+              if (e.key === 'Escape') { refocusName.current = true; setNameDraft(column.name); setEditingName(false) }
+            }}
           />
         ) : (
-          <span className={s.name} {...pressable(() => { setNameDraft(column.name); setEditingName(true) })} title="Clique para renomear" aria-label={`Renomear a coluna ${column.name}`}>{column.name}</span>
+          <span ref={nameRef} className={s.name} {...pressable(() => { setNameDraft(column.name); setEditingName(true) })} title="Clique para renomear" aria-label={`Renomear a coluna ${column.name}`}>{column.name}</span>
         )}
         <span className={s.count}>{cards.length}</span>
         <div className={s.menuWrap} ref={menuRef}>

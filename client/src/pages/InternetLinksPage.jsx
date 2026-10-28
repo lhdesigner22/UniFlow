@@ -11,7 +11,7 @@ import s from './InternetLinksPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
 import LineIcon from '../components/common/LineIcon'
-import { useSortableSensors, sortableAccessibility } from '../utils/sortableA11y'
+import { useSortableSensors, sortableAccessibility, useSerialSave, refocusMoveButton } from '../utils/sortableA11y'
 
 const LOCATIONS = [
   { key: 'sede', label: 'SEDE' },
@@ -172,8 +172,8 @@ function LinkCard({ link: l, index, total, draggable, canEdit, onEdit, onDelete,
         {canEdit(l) && (
           <div className={s.cardActions}>
             {draggable && <>
-              <button type="button" className={s.iconBtn} title="Mover para antes" aria-label={`Mover ${l.provider} para antes`} disabled={index === 0} onClick={() => onMove(index, index - 1)}><LineIcon name="chevronLeft" /></button>
-              <button type="button" className={s.iconBtn} title="Mover para depois" aria-label={`Mover ${l.provider} para depois`} disabled={index === total - 1} onClick={() => onMove(index, index + 1)}><LineIcon name="chevronRight" /></button>
+              <button type="button" className={s.iconBtn} title="Mover para antes" aria-label={`Mover ${l.provider} para antes`} data-move={`${l.id}:-1`} disabled={index === 0} onClick={() => { onMove(index, index - 1); refocusMoveButton(l.id, -1) }}><LineIcon name="chevronLeft" /></button>
+              <button type="button" className={s.iconBtn} title="Mover para depois" aria-label={`Mover ${l.provider} para depois`} data-move={`${l.id}:1`} disabled={index === total - 1} onClick={() => { onMove(index, index + 1); refocusMoveButton(l.id, 1) }}><LineIcon name="chevronRight" /></button>
             </>}
             <button className={s.iconBtn} title="Editar" onClick={() => onEdit(l)}>✏️</button>
             <button className={s.iconBtn} title="Excluir" onClick={() => onDelete(l)}>🗑️</button>
@@ -253,6 +253,7 @@ export default function InternetLinksPage() {
   const canEdit = l => l.created_by === user?.id || user?.system_role === 'super_admin'
   const canReorder = user?.system_role === 'super_admin'
   const sensors = useSortableSensors()
+  const saveOrder = useSerialSave(ids => api.put('/internet-links/reorder', { ids }))
 
   // Arrastar-e-soltar pra reordenar dentro do local atual — atualiza a tela
   // na hora e persiste a nova ordem; se falhar, refaz a busca pra desfazer.
@@ -268,7 +269,7 @@ export default function InternetLinksPage() {
     const reordered = arrayMove(filtered, oldIndex, newIndex)
     setLinks(prev => [...(prev || []).filter(l => l.location !== locationTab), ...reordered])
     try {
-      await api.put('/internet-links/reorder', { ids: reordered.map(l => l.id) })
+      await saveOrder(reordered.map(l => l.id))
     } catch {
       load()
     }

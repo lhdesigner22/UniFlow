@@ -16,7 +16,7 @@ import { defaultDepartment } from '../store/departmentStore'
 import { safeHref } from '../utils/safeHref'
 import PrinterSupplyHistory from '../components/common/PrinterSupplyHistory'
 import LineIcon from '../components/common/LineIcon'
-import { useSortableSensors, sortableAccessibility } from '../utils/sortableA11y'
+import { useSortableSensors, sortableAccessibility, useSerialSave, refocusMoveButton } from '../utils/sortableA11y'
 
 // Mesmo teto aplicado no servidor — 95 MB, o máximo seguro dentro do limite
 // real de corpo de requisição da Cloudflare (100 MB no plano atual, um teto
@@ -214,6 +214,7 @@ export default function PrintersPage() {
   const canEdit = p => p.created_by === user?.id || user?.system_role === 'super_admin'
   const canReorder = user?.system_role === 'super_admin'
   const sensors = useSortableSensors()
+  const saveOrder = useSerialSave(ids => api.put('/printers/reorder', { ids }))
 
   // Arrastar-e-soltar dentro do local atual: atualiza a tela na hora e salva
   // a nova ordem; se falhar, refaz a busca pra desfazer.
@@ -229,7 +230,7 @@ export default function PrintersPage() {
     const reordered = arrayMove(filtered, oldIndex, newIndex)
     setPrinters(prev => [...(prev || []).filter(p => p.location !== locationTab), ...reordered])
     try {
-      await api.put('/printers/reorder', { ids: reordered.map(p => p.id) })
+      await saveOrder(reordered.map(p => p.id))
     } catch {
       load()
     }
@@ -271,8 +272,8 @@ export default function PrintersPage() {
                         {canEdit(p) && (
                           <div className={s.cardActions}>
                             {canReorder && <>
-                              <button type="button" className={s.iconBtn} title="Mover para antes" aria-label={`Mover ${p.model} para antes`} disabled={i === 0} onClick={() => moveTo(i, i - 1)}><LineIcon name="chevronLeft" /></button>
-                              <button type="button" className={s.iconBtn} title="Mover para depois" aria-label={`Mover ${p.model} para depois`} disabled={i === filtered.length - 1} onClick={() => moveTo(i, i + 1)}><LineIcon name="chevronRight" /></button>
+                              <button type="button" className={s.iconBtn} title="Mover para antes" aria-label={`Mover ${p.model} para antes`} data-move={`${p.id}:-1`} disabled={i === 0} onClick={() => { moveTo(i, i - 1); refocusMoveButton(p.id, -1) }}><LineIcon name="chevronLeft" /></button>
+                              <button type="button" className={s.iconBtn} title="Mover para depois" aria-label={`Mover ${p.model} para depois`} data-move={`${p.id}:1`} disabled={i === filtered.length - 1} onClick={() => { moveTo(i, i + 1); refocusMoveButton(p.id, 1) }}><LineIcon name="chevronRight" /></button>
                             </>}
                             <button className={s.iconBtn} title="Editar" onClick={() => setEditing(p)}>✏️</button>
                             <button className={s.iconBtn} title="Excluir" onClick={() => deletePrinter(p)}>🗑️</button>
