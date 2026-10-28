@@ -39,8 +39,10 @@ step('Deploy')
 if (!run('npx wrangler deploy').ok) fail('deploy falhou')
 
 step('Conferindo produção')
-const local = fs.readFileSync(path.join(ROOT, 'client', 'dist', 'index.html'), 'utf8').match(/assets\/index-[\w-]+\.js/)?.[0]
-const prod = (await (await fetch(`${PROD_URL}/?v=${Date.now()}`)).text()).match(/assets\/index-[\w-]+\.js/)?.[0]
+// o 1º script do index.html (o nome muda com a config do Vite: index-*, main-*...)
+const SCRIPT = /assets\/[\w-]+\.js/
+const local = fs.readFileSync(path.join(ROOT, 'client', 'dist', 'index.html'), 'utf8').match(SCRIPT)?.[0]
+const prod = (await (await fetch(`${PROD_URL}/?v=${Date.now()}`)).text()).match(SCRIPT)?.[0]
 if (!local || local !== prod) fail(`produção ainda não serve a versão nova (local ${local}, produção ${prod}) — confira em alguns segundos`)
 console.log(`✔ no ar: ${PROD_URL} (${prod})`)
 console.log('\nLembrete: avise para fechar e reabrir a aba (o app guarda a versão antiga).')
