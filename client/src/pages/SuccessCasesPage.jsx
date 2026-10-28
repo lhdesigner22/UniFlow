@@ -14,11 +14,26 @@ import s from './SuccessCasesPage.module.css'
 // instituição ganhou. "Modo apresentação" mostra um case por tela (setas do
 // teclado, tela cheia). O detalhe técnico fica recolhido de propósito.
 
+// Ícones de linha dos pilares (traço de 1.75, tamanho = 1em, cor = currentColor).
+// Antes eram emojis — o que mais tirava o ar "premium" da página.
+const GLYPHS = {
+  conectividade: <><path d="M5 12.55a11 11 0 0 1 14.08 0" /><path d="M1.42 9a16 16 0 0 1 21.16 0" /><path d="M8.53 16.11a6 6 0 0 1 6.95 0" /><path d="M12 20h.01" /></>,
+  seguranca: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></>,
+  gestao: <><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 12h6M9 16h4" /></>,
+  operacao: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" /></>,
+}
+function Glyph({ name }) {
+  return (
+    <svg className={s.glyph} width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{GLYPHS[name]}</svg>
+  )
+}
+
 const PILLARS = {
-  conectividade: { label: 'Conectividade', icon: '📶', color: '#3B82F6' },
-  seguranca: { label: 'Segurança', icon: '🛡️', color: '#8B5CF6' },
-  gestao: { label: 'Gestão e processos', icon: '📋', color: '#22C55E' },
-  operacao: { label: 'Operação', icon: '⚙️', color: '#F59E0B' },
+  conectividade: { label: 'Conectividade', icon: <Glyph name="conectividade" />, color: '#3B82F6' },
+  seguranca: { label: 'Segurança', icon: <Glyph name="seguranca" />, color: '#8B5CF6' },
+  gestao: { label: 'Gestão e processos', icon: <Glyph name="gestao" />, color: '#22C55E' },
+  operacao: { label: 'Operação', icon: <Glyph name="operacao" />, color: '#F59E0B' },
 }
 const STATUSES = {
   concluido: { label: 'Concluído', className: 'statusDone' },
@@ -71,7 +86,7 @@ function resultOf(c, stats, year) {
 function PillarIcon({ pillar, size = 44 }) {
   const p = PILLARS[pillar] || PILLARS.gestao
   return (
-    <span className={s.pillarIcon} style={{ width: size, height: size, fontSize: size * 0.5, background: `color-mix(in srgb, ${p.color} 16%, transparent)` }}>
+    <span className={s.pillarIcon} style={{ width: size, height: size, fontSize: size * 0.46, color: p.color }}>
       {p.icon}
     </span>
   )
@@ -128,9 +143,9 @@ function Editor({ item, year, onClose, onSaved }) {
   return (
     <Modal title={item ? 'Editar case' : 'Novo case'} onClose={onClose} width={640}>
       <div className={s.editorTabs}>
-        <button type="button" className={tab === 'case' ? s.editorTabOn : ''} onClick={() => setTab('case')}>📝 Case</button>
+        <button type="button" className={tab === 'case' ? s.editorTabOn : ''} onClick={() => setTab('case')}>Case</button>
         <button type="button" className={tab === 'save' ? s.editorTabOn : ''} onClick={() => setTab('save')}>
-          💰 Save financeiro{savingValue ? ` · ${fmtBRL(savingValue)}` : ''}
+          Save financeiro{savingValue ? ` · ${fmtBRL(savingValue)}` : ''}
         </button>
       </div>
       {tab === 'save' ? (
@@ -178,7 +193,7 @@ function Editor({ item, year, onClose, onSaved }) {
         <div className="form-group">
           <label className="label">Pilar</label>
           <select value={form.pillar} onChange={e => set('pillar', e.target.value)}>
-            {Object.entries(PILLARS).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+            {Object.entries(PILLARS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
         </div>
         <div className="form-group">
@@ -342,7 +357,7 @@ function Detail({ id, stats, year, writable, onClose, onEdit, onDelete, onChange
       </div>
       {item.saving_value > 0 && (
         <div className={s.saveBox}>
-          <span className={s.blockLabel}>💰 Save financeiro</span>
+          <span className={s.blockLabel}>Save financeiro</span>
           <strong>{fmtBRL(item.saving_value)} <small>{SAVING_PERIODS[item.saving_period]?.suffix}</small></strong>
           {item.saving_period === 'mensal' && <span className={s.muted}>= {fmtBRL(countedSave(item))} no ano</span>}
           {item.saving_note && <p className={s.blockText}>{item.saving_note}</p>}
@@ -382,8 +397,8 @@ function Detail({ id, stats, year, writable, onClose, onEdit, onDelete, onChange
 
       {writable && (
         <div className={s.detailActions}>
-          <button className="btn btn-ghost btn-sm" onClick={() => onDelete(item)}>🗑️ Excluir</button>
-          <button className="btn btn-primary btn-sm" onClick={() => onEdit(item)}>✏️ Editar</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => onDelete(item)}>Excluir</button>
+          <button className="btn btn-primary btn-sm" onClick={() => onEdit(item)}>Editar</button>
         </div>
       )}
       {viewing && <PhotoViewer caseId={item.id} photo={viewing} onClose={() => setViewing(null)} />}
@@ -469,7 +484,7 @@ function Presentation({ cases, stats, year, onClose }) {
               <span className={s.presPillar} style={{ color: p.color }}>{p.icon} {p.label}</span>
               <StatusBadge status={c.status} />
               {c.completed_on && <span className={s.presMuted}>{fmtMonth(c.completed_on)}</span>}
-              {c.saving_value > 0 && <span className={s.presSaveChip}>💰 {fmtBRL(c.saving_value)} {SAVING_PERIODS[c.saving_period]?.suffix}</span>}
+              {c.saving_value > 0 && <span className={s.presSaveChip}>{fmtBRL(c.saving_value)} {SAVING_PERIODS[c.saving_period]?.suffix}</span>}
             </div>
             <h2 className={s.presTitle}>{c.title}</h2>
             {c.headline && <p className={s.presHeadline}>{c.headline}</p>}
@@ -592,15 +607,15 @@ export default function SuccessCasesPage() {
         <div className={s.kpi}><span>Chamados no GLPI <em>ao vivo</em></span><strong>{stats?.glpi_tickets != null ? fmtNum(stats.glpi_tickets) : '—'}</strong></div>
         <div className={s.kpi}><span>Empréstimos em {shownYear} <em>ao vivo</em></span><strong>{stats?.loans_year != null ? fmtNum(stats.loans_year) : '—'}</strong></div>
         <button type="button" className={`${s.kpi} ${s.kpiSave}`} onClick={() => setView('save')} title="Ver o save de cada case">
-          <span>💰 Save financeiro</span>
+          <span>Save financeiro</span>
           <strong>{fmtBRL(totalSave)}</strong>
           <small>{withSave.length} de {cases.length} cases com valor</small>
         </button>
       </div>
 
       <div className={s.viewTabs}>
-        <button type="button" className={view === 'cases' ? s.viewTabOn : ''} onClick={() => setView('cases')}>📋 Cases</button>
-        <button type="button" className={view === 'save' ? s.viewTabOn : ''} onClick={() => setView('save')}>💰 Save financeiro</button>
+        <button type="button" className={view === 'cases' ? s.viewTabOn : ''} onClick={() => setView('cases')}>Cases</button>
+        <button type="button" className={view === 'save' ? s.viewTabOn : ''} onClick={() => setView('save')}>Save financeiro</button>
       </div>
 
       {view === 'save' ? (
@@ -608,7 +623,7 @@ export default function SuccessCasesPage() {
           {withSave.length === 0 ? (
             <div className={s.empty}>
               <h3>Nenhum save cadastrado em {shownYear}</h3>
-              <p>{writable ? 'Abra um case, clique em ✏️ Editar e use a aba “💰 Save financeiro” para informar quanto ele economizou.' : 'A equipe de TI ainda não informou o save dos cases.'}</p>
+              <p>{writable ? 'Abra um case, clique em Editar e use a aba “Save financeiro” para informar quanto ele economizou.' : 'A equipe de TI ainda não informou o save dos cases.'}</p>
             </div>
           ) : (
             <table>
@@ -665,7 +680,7 @@ export default function SuccessCasesPage() {
                 <button className={s.cardBtn} onClick={() => setOpenId(c.id)}>
                   {c.cover
                     ? <img className={s.cover} src={c.cover} alt="" />
-                    : <div className={s.coverIcon} style={{ background: `color-mix(in srgb, ${p.color} 10%, transparent)` }}><PillarIcon pillar={c.pillar} size={56} /></div>}
+                    : <div className={s.coverIcon} style={{ '--pillar': p.color }}><PillarIcon pillar={c.pillar} size={52} /></div>}
                   <div className={s.cardBody}>
                     <div className={s.cardTop}>
                       <span className={s.pillarText} style={{ color: p.color }}>{p.icon} {p.label}</span>
@@ -677,7 +692,7 @@ export default function SuccessCasesPage() {
                       <p className={s.cardResult}><strong>{result.value}</strong> {result.label}</p>
                     )}
                     {c.saving_value > 0 && (
-                      <span className={s.cardSave}>💰 {fmtBRL(c.saving_value)} {SAVING_PERIODS[c.saving_period]?.suffix}</span>
+                      <span className={s.cardSave}>{fmtBRL(c.saving_value)} {SAVING_PERIODS[c.saving_period]?.suffix}</span>
                     )}
                   </div>
                 </button>

@@ -153,11 +153,14 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   dentro de `KnowledgeBasePage`, recurso `/api/machine-standards` no módulo `kb`, sem departamento): processador/RAM/extra mínimos por
   **cargo** e exceções por **setor** (o setor vale para qualquer cargo dele). Os 5 perfis da apresentação vieram na migração 0060.
 
-## Visual (tema escuro "edge", out/2026)
-- Referência pedida pelo Luiz: site da Gcore (fundo quase preto + brilho no canto), **mantendo as cores do UniFlow** (azul `--brand` + verde).
-  Só CSS: tokens do `[data-theme="dark"]` em `index.css` (fundo `#070A12`, bordas neutras finas), brilho azul no `body` (o `.main`, a
-  Topbar e o menu ficam transparentes/no mesmo fundo no escuro), botões `.btn` em pílula (todos os temas) e login no mesmo estilo
-  (`Auth.module.css`). O tema claro não mudou. Prints locais com o Playwright CLI (`%APPDATA%\npm\playwright-cli.cmd`).
+## Visual "premium" (out/2026)
+- Referências: site da Gcore (pedida pelo Luiz) + Linear (skill awesome-design-md), **mantendo as cores do UniFlow** (azul `--brand` + verde).
+  Tema escuro em **grafite** (`--bg #111318`; o quase-preto ele achou escuro demais), bordas brancas a 9%, brilho azul no `body` (`.main`,
+  Topbar e menu transparentes/no mesmo fundo), item ativo do menu = degrau de cinza (sem azul), títulos h1/h2 peso 600 com tracking negativo,
+  botões `.btn` em pílula (todos os temas), login no estilo Gcore (`Auth.module.css`).
+- **Cases de Sucesso é a página-modelo**: ícones de linha (SVG) no lugar de emoji, KPIs num painel só dividido por linhas, cartões neutros
+  (bloco "Acabamento premium" no fim do `.module.css`). As outras telas ainda têm emojis/pílulas saturadas — aplicar o mesmo tela a tela.
+  Prints locais com o Playwright CLI (`%APPDATA%\npm\playwright-cli.cmd`: `open`, `localstorage-set token ...`, `goto`, `screenshot --filename`).
 
 ## Desempenho do banco (estudo de out/2026)
 - Banco pequeno (~9 MB, ~8,5 mil linhas), mas lia **~2 milhões de linhas/dia** (40% do limite Free de 5 M/dia) por falta de índice —

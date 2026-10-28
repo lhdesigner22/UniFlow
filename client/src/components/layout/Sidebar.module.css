@@ -45,6 +45,16 @@
   animation: growIn .2s var(--ease);
 }
 @keyframes growIn { from { height: 0; } to { height: 55%; } }
+/* Escuro premium: item ativo vira só um degrau de cinza com texto branco
+   (sem fundo azul nem barrinha), o resto do menu em cinza. */
+:global([data-theme="dark"]) .navItem.active { background: rgba(255,255,255,.07); color: var(--text); }
+:global([data-theme="dark"]) .navItem.active::before { display: none; }
+:global([data-theme="dark"]) .navItem.active .navIcon { color: var(--brand); }
+:global([data-theme="dark"]) .navItem:hover { background: rgba(255,255,255,.04); transform: none; }
+:global([data-theme="dark"]) .navGroupHeader:hover { background: rgba(255,255,255,.04); }
+:global([data-theme="dark"]) .navGroupHeader.active { color: var(--text); }
+:global([data-theme="dark"]) .navSubItem.active { background: rgba(255,255,255,.07); color: var(--text); }
+:global([data-theme="dark"]) .navSubGroupHeader.active { color: var(--text); }
 .navItem:hover .navIcon { transform: scale(1.12); }
 .navIcon { display: flex; align-items: center; justify-content: center; width: 18px; flex-shrink: 0; transition: transform .16s var(--ease-spring); }
 
