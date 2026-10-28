@@ -24,6 +24,8 @@ importante mudar. Documentação técnica longa: `docs/` (comece por
 - Banco D1 chama `uniflow`. Conta Cloudflare correta: **luiz.sanchez@colegioser.com** (account `8c6d…`).
 
 ### Deploy (sempre nesta ordem)
+**`npm run release`** faz tudo abaixo com checagens (conta, git limpo, backup + migração, build, deploy, confere produção).
+**`npm run backup`**: export do D1 para `Documentos\UniFlow-backups` (fora do repo, 12 mais novos). Passo a passo manual:
 ```bash
 npx wrangler whoami                         # CONFERIR a conta (já trocou sozinha pra outras contas 2x!)
 npx wrangler d1 migrations apply uniflow --remote   # migração ANTES do deploy
@@ -43,8 +45,8 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Se o `wrangler dev`/`d1 --local` quebrar** com "access violation" (aconteceu em out/2026 no Windows 11 Insider 26300, qualquer
   versão do wrangler): `cd server && node test-e2e/node-server.mjs` roda o mesmo worker.js no Node com D1 em SQLite (memória,
   migrações + seeds) na porta 8799 — as suítes rodam igual. Sem tempo real nem arquivos estáticos.
-- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `labels`, `machine-standards`, `audit`, `security` (nesta ordem: o `security` força novo login do analista e
-  invalida o token tv:0 dele). `xlsx` conta linhas — rode em banco limpo (servidor recém-subido); passe uma pasta como argumento pra
+- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `labels`, `machine-standards`, `audit`, `security`, `download-ticket` (nesta ordem: o `security` força novo login do analista e
+  invalida o token tv:0 dele; o `download-ticket` faz o mesmo com o colaborador). `xlsx` conta linhas — rode em banco limpo (servidor recém-subido); passe uma pasta como argumento pra
   salvar os .xlsx e abrir no Excel. `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`.
 - **Exportações são XLSX montado no navegador** (`client/src/utils/xlsxExport.js` + `exports.js`, ExcelJS por import dinâmico, fora do
   pré-cache do PWA); o servidor só devolve `/export?format=json` (gerar no Worker estouraria os 10 ms de CPU). O CSV antigo ainda responde.
@@ -76,8 +78,10 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   em arquivo de `public/`. Domínio externo novo (fetch, iframe, fonte) precisa entrar na CSP do `_headers`.
 - Links digitados viram `<a href>`: validar no servidor (`lib/safeUrl.js`: `normalizeLink`, ou `isScriptLink` no Cofre) e no front
   (`utils/safeHref.js`). CSV exportado usa `lib/csv.js` (neutraliza fórmula). Portão do KB: com id na rota vale a categoria do artigo.
-- Pendente (não feito): token na URL dos downloads (`?token=`) → trocar por ticket curto; rate limit; `react-router` 7 / `vite` 8
-  (avisos do `npm audit` são do servidor de desenvolvimento).
+- Downloads de anexo: **ticket de 60s** em `?ticket=` (`lib/requestToken.js`, `POST /api/auth/download-ticket`, preso ao caminho, só GET);
+  `?token=` com o token de login NÃO é mais aceito (out/2026).
+- Pendente (não feito): rate limit (1 regra grátis no painel do Cloudflare); `react-router` 7 (corrige o redirecionamento aberto do audit) /
+  `vite` 8. Avisos "altos" do `npm audit` no servidor vêm do `@cloudflare/puppeteer` (pacotes Node que não rodam no Worker).
 
 ## Permissões (cargos × departamentos) — decisões do Luiz
 - **Cargos configuráveis** (tabela `roles`, Admin → aba Cargos): por módulo `none|view|edit` + escopo `all|department`.

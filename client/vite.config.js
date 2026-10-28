@@ -54,9 +54,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:3001', changeOrigin: true },
-      '/uploads': { target: 'http://localhost:3001', changeOrigin: true },
-      '/socket.io': { target: 'http://localhost:3001', ws: true, changeOrigin: true }
+      // ws: o tempo real (/api/live/ws) também passa por aqui
+      '/api': { target: 'http://localhost:3001', changeOrigin: true, ws: true }
     }
   }
 })

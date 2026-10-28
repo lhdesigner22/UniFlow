@@ -5,6 +5,8 @@
     "build": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "install:all": "cd server && npm install && cd ../client && npm install"
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "release": "node scripts/release.mjs",
+    "backup": "node scripts/backup.mjs"
   }
 }

@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { createDb } from './db.js'
-import { verifyJwt } from './lib/jwt.js'
+import { tokenPayload } from './lib/requestToken.js'
 import { loadAccess, levelOf, moduleForRequest } from './lib/permissions.js'
 
 import authRoutes from './routes/auth.js'
@@ -127,15 +127,13 @@ app.use('/api/*', async (c, next) => {
   const resource = c.req.path.split('/')[2]
   if (!resource || NO_ACCESS_CHECK.has(resource)) return await next()
 
-  const header = c.req.header('Authorization')
-  const token = header ? header.split(' ')[1] : c.req.query('token')
-  if (!token) return await next() // sem token — a auth de cada rota resolve com 401
   let payload
   try {
-    payload = await verifyJwt(token, c.env.JWT_SECRET)
+    payload = await tokenPayload(c)
   } catch {
     return await next() // token inválido — a auth de cada rota resolve com 401
   }
+  if (!payload) return await next() // sem token — a auth de cada rota resolve com 401
 
   const db = c.get('db')
   const access = await loadAccess(db, payload.id)

@@ -40,8 +40,9 @@ próprio Cloudflare, configurado em `wrangler.jsonc`:
   diretamente — é assim que dá pra trocar de banco no futuro sem tocar em
   cada rota.
 - **`middleware/auth.js`** — lê o JWT do header `Authorization: Bearer ...`
-  (ou `?token=` na query string, usado só pra download de anexo, onde um
-  `<a href>` não manda header customizado) e injeta `c.set('user', payload)`.
+  (ou um ticket de download em `?ticket=` — 60s, só GET, preso ao caminho do
+  anexo, pedido em `POST /api/auth/download-ticket`; ver `lib/requestToken.js` —
+  porque um `<a href>` não manda header customizado) e injeta `c.set('user', payload)`.
   O payload do JWT é só `{ id, name, email }` — **nunca** o `system_role`,
   de propósito: o papel do usuário é sempre resolvido com uma consulta fresca
   no banco a cada rota, então mudar o papel de alguém no Admin tem efeito

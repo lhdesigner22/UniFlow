@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { signJwt } from '../lib/jwt.js'
 import { verifyGoogleIdToken, decodeJwtPayload } from '../lib/googleAuth.js'
 import { auth } from '../middleware/auth.js'
+import { signDownloadTicket } from '../lib/requestToken.js'
 import { loadAccess } from '../lib/permissions.js'
 import { auditInBackground } from '../lib/audit.js'
 
@@ -135,6 +136,16 @@ app.post('/google', async c => {
     }
     return c.json({ error: userError }, 401)
   }
+})
+
+// POST /download-ticket {path} — ticket de 60s para baixar UM anexo por <a href>
+// (ver lib/requestToken.js). Só caminhos de anexo; o acesso ao arquivo é
+// checado de novo quando o navegador baixa.
+const DOWNLOAD_PATH = /^\/api\/[a-z-]+\/[\w-]+\/attachment$/
+app.post('/download-ticket', auth, async c => {
+  const { path } = await c.req.json().catch(() => ({}))
+  if (typeof path !== 'string' || !DOWNLOAD_PATH.test(path)) return c.json({ error: 'Caminho de download inválido' }, 400)
+  return c.json({ ticket: await signDownloadTicket(c.env, c.get('user'), path) })
 })
 
 app.get('/me', auth, async c => {

@@ -2,6 +2,23 @@
 
 ## Deploy normal (já existe o projeto, só publicar uma mudança)
 
+**Use `npm run release`** (na raiz, `scripts/release.mjs`): confere a conta do
+Cloudflare, recusa alteração não commitada, faz backup e aplica migração se
+houver, build, deploy e confere se produção já serve a versão nova — parando no
+primeiro erro.
+
+## Backup do banco
+
+`npm run backup` (`scripts/backup.mjs`): exporta o D1 de produção em SQL
+compactado para `Documentos\UniFlow-backups` (fora do repositório — tem dados
+sensíveis; outra pasta: variável `UNIFLOW_BACKUP_DIR`) e mantém os 12 mais
+novos. O `release` faz um sozinho antes de aplicar migração. Os crons do
+Cloudflare estão todos ocupados, então o backup periódico roda nesta máquina.
+Restaurar: descompactar e `npx wrangler d1 execute <banco> --remote --file arquivo.sql`
+(de preferência num banco novo, conferir, e só então trocar).
+
+## Passo a passo manual (o que o `release` faz)
+
 ```bash
 cd client && npm run build    # gera client/dist
 cd .. && npx wrangler deploy
