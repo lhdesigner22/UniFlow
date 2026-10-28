@@ -32,6 +32,7 @@ node test-e2e/dept-e2e.mjs      # departamentos (rode antes: dept-seed.sql, que 
 node test-e2e/entity-e2e.mjs    # Chamados por entidade do GLPI (precisa do mock)
 node test-e2e/dup-e2e.mjs       # importação em lote + duplicatas + fila em segundo plano (precisa do mock)
 node test-e2e/live-e2e.mjs      # tempo real (WebSocket)
+node test-e2e/audit-e2e.mjs     # logs de auditoria + Cofre (banco recém-subido: conta linhas)
 node test-e2e/test-dups3.mjs    # unitário das regras de duplicata
 ```
 Entre as suítes, limpe o que a anterior deixou (ex.: `DELETE FROM events; DELETE FROM glpi_duplicate_tickets; ...`

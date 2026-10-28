@@ -1,7 +1,8 @@
 import RolesTab from '../components/admin/RolesTab'
+import AuditLogTab from '../components/admin/AuditLogTab'
 import DepartmentModulesModal from '../components/admin/DepartmentModulesModal'
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import MemberPicker from '../components/common/MemberPicker'
@@ -130,7 +131,9 @@ function GlpiPauseCard() {
 export default function AdminPage() {
   const navigate = useNavigate()
   const { user: me } = useAuthStore()
-  const [tab, setTab] = useState('users')
+  // ?tab=logs&category=vault: link do aviso no sininho e do botão do Cofre.
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState(searchParams.get('tab') === 'logs' ? 'logs' : 'users')
   const [users, setUsers] = useState([])
   const [departments, setDepartments] = useState([])
   const [roles, setRoles] = useState([])       // cargos (perfis de acesso)
@@ -453,7 +456,13 @@ export default function AdminPage() {
         <button className={`${s.tab} ${tab === 'glpi' ? s.active : ''}`} onClick={() => setTab('glpi')}>
           🖥️ GLPI {unparsedTickets.length > 0 && <span className={s.badge}>{unparsedTickets.length}</span>}
         </button>
+        <button className={`${s.tab} ${tab === 'logs' ? s.active : ''}`} onClick={() => setTab('logs')}>
+          🕵️ Logs
+        </button>
       </div>
+
+      {/* ── Tab: Logs de auditoria ── */}
+      {tab === 'logs' && <AuditLogTab initialCategory={searchParams.get('category') || ''} />}
 
       {/* ── Tab: Usuários ── */}
       {tab === 'users' && (

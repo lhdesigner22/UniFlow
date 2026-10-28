@@ -4,6 +4,7 @@ import { signJwt } from '../lib/jwt.js'
 import { verifyGoogleIdToken, decodeJwtPayload } from '../lib/googleAuth.js'
 import { auth } from '../middleware/auth.js'
 import { loadAccess } from '../lib/permissions.js'
+import { auditInBackground } from '../lib/audit.js'
 
 const app = new Hono()
 
@@ -67,6 +68,7 @@ app.post('/google', async c => {
     }
     const emailDomain = String(email || '').split('@')[1]?.toLowerCase()
     if (!ALLOWED_LOGIN_DOMAINS.includes(emailDomain)) {
+      auditInBackground(c, { category: 'auth', action: 'auth.denied', severity: 'warning', status: 403, user: { id: null, name: name || null, email: email || null }, targetLabel: 'domínio não permitido' })
       return c.json({ error: `Acesso restrito a contas ${ALLOWED_LOGIN_DOMAINS.map(d => '@' + d).join(', ')}. Use seu e-mail corporativo.` }, 403)
     }
 
@@ -113,6 +115,7 @@ app.post('/google', async c => {
 
     // 5. Emitir JWT igual ao login normal
     const token = await signJwt({ id: user.id, name: user.name, email: user.email, tv: user.token_version || 0 }, c.env.JWT_SECRET)
+    auditInBackground(c, { category: 'auth', action: 'auth.login', user: { id: user.id, name: user.name, email: user.email }, details: isNewUser ? { primeiro_acesso: true } : undefined })
     return c.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, system_role: user.system_role } })
 
   } catch (e) {

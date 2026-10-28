@@ -13,6 +13,8 @@ export const useAuthStore = create((set) => ({
   },
 
   logout: () => {
+    // Log de auditoria "saiu" — o pedido sai com o token antes de ele ser apagado.
+    api.post('/audit/logout').catch(() => {})
     localStorage.removeItem('token')
     set({ user: null, token: null })
     window.google?.accounts?.id?.disableAutoSelect()

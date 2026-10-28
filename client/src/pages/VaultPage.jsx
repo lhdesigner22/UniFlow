@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { useLiveRefresh } from '../hooks/useLiveRefresh'
 import { useAuthStore } from '../store/authStore'
@@ -172,12 +173,19 @@ function EntryCard({ entry, canManage, onEdit, onDelete }) {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const fetchPassword = async () => {
-    if (password !== null) return password
+  // A senha não fica guardada na tela: cada "Mostrar" e cada "Copiar" pede de
+  // novo ao servidor, que registra no log de auditoria qual dos dois foi.
+  // Mostrada, ela se esconde sozinha depois de 30 s.
+  useEffect(() => {
+    if (!revealed) return
+    const t = setTimeout(() => { setRevealed(false); setPassword(null) }, 30000)
+    return () => clearTimeout(t)
+  }, [revealed])
+
+  const fetchPassword = async (purpose) => {
     setLoading(true)
     try {
-      const { data } = await api.get(`/vault/${entry.id}/reveal`)
-      setPassword(data.password)
+      const { data } = await api.get(`/vault/${entry.id}/reveal`, { params: { purpose } })
       return data.password
     } catch {
       await alertDialog('Erro ao revelar a senha. Tenta de novo?', { title: 'Erro', danger: true })
@@ -188,13 +196,13 @@ function EntryCard({ entry, canManage, onEdit, onDelete }) {
   }
 
   const toggleReveal = async () => {
-    if (revealed) { setRevealed(false); return }
-    const pwd = await fetchPassword()
-    if (pwd !== null) setRevealed(true)
+    if (revealed) { setRevealed(false); setPassword(null); return }
+    const pwd = await fetchPassword('show')
+    if (pwd !== null) { setPassword(pwd); setRevealed(true) }
   }
 
   const copyPassword = async () => {
-    const pwd = await fetchPassword()
+    const pwd = await fetchPassword('copy')
     if (pwd === null) return
     try {
       await navigator.clipboard.writeText(pwd)
@@ -240,6 +248,7 @@ function EntryCard({ entry, canManage, onEdit, onDelete }) {
 
 export default function VaultPage() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const [entries, setEntries] = useState(null)
   const [loading, setLoading] = useState(true)
   const [denied, setDenied] = useState(false)
@@ -318,7 +327,10 @@ export default function VaultPage() {
         </div>
         <div className={s.headerRight}>
           {user?.system_role === 'super_admin' && (
-            <button className="btn btn-ghost" onClick={() => setShowAccess(true)}>🔑 Gerenciar acesso</button>
+            <>
+              <button className="btn btn-ghost" onClick={() => navigate('/admin?tab=logs&category=vault')}>🕵️ Histórico de acesso</button>
+              <button className="btn btn-ghost" onClick={() => setShowAccess(true)}>🔑 Gerenciar acesso</button>
+            </>
           )}
           <button className="btn btn-primary" onClick={() => setEditing({})}>+ Novo item</button>
         </div>

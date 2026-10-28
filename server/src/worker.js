@@ -40,7 +40,9 @@ import labIncidentsRoutes from './routes/labIncidents.js'
 import successCasesRoutes from './routes/successCases.js'
 import machineStandardsRoutes from './routes/machineStandards.js'
 import printerSuppliesRoutes from './routes/printerSupplies.js'
+import auditRoutes from './routes/audit.js'
 import { broadcastLive } from './lib/liveHub.js'
+import { auditInBackground, purgeAuditLogs } from './lib/audit.js'
 
 // O Durable Object precisa ser exportado do módulo principal do Worker.
 export { LiveHub } from './lib/liveHub.js'
@@ -80,6 +82,32 @@ app.use('/api/*', async (c, next) => {
   h.set('Strict-Transport-Security', 'max-age=31536000')
   h.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; sandbox")
   if (!h.has('Cache-Control')) h.set('Cache-Control', 'no-store')
+})
+
+// Logs de auditoria (lib/audit.js): toda alteração (POST/PUT/PATCH/DELETE) —
+// inclusive as recusadas por falta de permissão — e toda exportação (GET em
+// .../export). Sem corpo da requisição: só quem, quando, de onde e qual caminho.
+// Ficam de fora: o Cofre (registra com mais detalhe na própria rota), o login
+// (idem, em auth.js), os próprios logs, avisos de leitura e o tempo real.
+const AUDIT_SKIP_RESOURCES = new Set(['live', 'auth', 'notifications', 'audit', 'vault'])
+const AUDIT_VERBS = { POST: 'create', PUT: 'update', PATCH: 'update', DELETE: 'delete' }
+app.use('/api/*', async (c, next) => {
+  await next()
+  const parts = c.req.path.split('/') // ['', 'api', recurso, id?, ...]
+  const resource = parts[2]
+  if (!resource || AUDIT_SKIP_RESOURCES.has(resource)) return
+  const isExport = c.req.method === 'GET' && parts.includes('export')
+  const verb = AUDIT_VERBS[c.req.method]
+  if (!verb && !isExport) return
+  if (!c.get('user')) return // sem login: a rota já respondeu 401, nada a atribuir
+  const status = c.res.status
+  auditInBackground(c, {
+    category: 'change',
+    action: `${resource}.${isExport ? 'export' : verb}`,
+    severity: status === 401 || status === 403 ? 'warning' : 'info',
+    status,
+    targetId: parts[3] || null,
+  })
 })
 
 // ACESSO POR CARGO — um único portão para o sistema inteiro (em vez de repetir
@@ -126,7 +154,8 @@ app.use('/api/*', async (c, next) => {
   const method = c.req.method
   const isRead = method === 'GET' || method === 'HEAD' || method === 'OPTIONS'
 
-  if (!isRead && access.systemRole === 'auditor' && resource !== 'kb') {
+  // 'audit': o Auditor também registra as telas que abre (POST /api/audit/view).
+  if (!isRead && access.systemRole === 'auditor' && resource !== 'kb' && resource !== 'audit') {
     return c.json({ error: 'Este perfil (Auditor) tem acesso só de leitura — a única exceção é a Base de Conhecimento.' }, 403)
   }
 
@@ -160,7 +189,7 @@ app.use('/api/*', async (c, next) => {
 // das rotas, então vale pra todas sem precisar mexer em cada uma. Sai em
 // segundo plano (waitUntil), não atrasa a resposta. O X-Client-Id deixa o
 // aparelho que fez a alteração ignorar o próprio aviso (ele já se atualizou).
-const LIVE_SKIP_RESOURCES = new Set(['live', 'auth', 'notifications'])
+const LIVE_SKIP_RESOURCES = new Set(['live', 'auth', 'notifications', 'audit'])
 app.use('/api/*', async (c, next) => {
   await next()
   const method = c.req.method
@@ -215,6 +244,7 @@ app.route('/api/lab-incidents', labIncidentsRoutes)
 app.route('/api/success-cases', successCasesRoutes)
 app.route('/api/machine-standards', machineStandardsRoutes)
 app.route('/api/printer-supplies', printerSuppliesRoutes)
+app.route('/api/audit', auditRoutes)
 
 async function processGlpiQueues(env, db) {
   const flags = await db.prepare("SELECT key, value FROM app_settings WHERE key IN ('glpi_import_pending', 'glpi_dup_autosolve', 'glpi_dup_auto')").all()
@@ -307,6 +337,11 @@ export default {
         .then(r => { if (r?.created > 0) return broadcastLive(env, { r: 'events' }) }) // eventos novos na Agenda → atualiza quem estiver olhando
         .catch(e => console.error('GLPI events sync error', e.message))
       await flushOutbox(env, db).catch(e => console.error('Flush outbox error', e.message))
+      // Uma vez por dia (06:00 UTC = 03:00 de Brasília): logs de auditoria vencidos.
+      const when = new Date(event.scheduledTime || Date.now())
+      if (when.getUTCHours() === 6 && when.getUTCMinutes() < 15) {
+        await purgeAuditLogs(db).catch(e => console.error('Audit purge error', e.message))
+      }
     }
 
     // "5,20,35,50 * * * *" — refresh do cache de técnicos: baixa TODA a

@@ -54,12 +54,18 @@ function SsidRow({ ssid }) {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const fetchPassword = async () => {
-    if (password !== null) return password
+  // Como no Cofre: sem guardar a senha na tela — cada "Mostrar"/"Copiar" passa
+  // pelo servidor (log de auditoria) e a senha mostrada some sozinha em 30 s.
+  useEffect(() => {
+    if (!revealed) return
+    const t = setTimeout(() => { setRevealed(false); setPassword(null) }, 30000)
+    return () => clearTimeout(t)
+  }, [revealed])
+
+  const fetchPassword = async (purpose) => {
     setLoading(true)
     try {
-      const { data } = await api.get(`/vlans/ssids/${ssid.id}/reveal`)
-      setPassword(data.password)
+      const { data } = await api.get(`/vlans/ssids/${ssid.id}/reveal`, { params: { purpose } })
       return data.password
     } catch {
       return null
@@ -69,12 +75,13 @@ function SsidRow({ ssid }) {
   }
 
   const toggle = async () => {
-    if (revealed) { setRevealed(false); return }
-    if ((await fetchPassword()) !== null) setRevealed(true)
+    if (revealed) { setRevealed(false); setPassword(null); return }
+    const pwd = await fetchPassword('show')
+    if (pwd !== null) { setPassword(pwd); setRevealed(true) }
   }
 
   const copy = async () => {
-    const pwd = await fetchPassword()
+    const pwd = await fetchPassword('copy')
     if (!pwd) return
     try {
       await navigator.clipboard.writeText(pwd)

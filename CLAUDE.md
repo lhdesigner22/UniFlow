@@ -32,7 +32,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0061). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0062). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -43,7 +43,7 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Se o `wrangler dev`/`d1 --local` quebrar** com "access violation" (aconteceu em out/2026 no Windows 11 Insider 26300, qualquer
   versão do wrangler): `cd server && node test-e2e/node-server.mjs` roda o mesmo worker.js no Node com D1 em SQLite (memória,
   migrações + seeds) na porta 8799 — as suítes rodam igual. Sem tempo real nem arquivos estáticos.
-- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `labels`, `machine-standards`, `security` (nesta ordem: o `security` força novo login do analista e
+- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `labels`, `machine-standards`, `audit`, `security` (nesta ordem: o `security` força novo login do analista e
   invalida o token tv:0 dele). `xlsx` conta linhas — rode em banco limpo (servidor recém-subido); passe uma pasta como argumento pra
   salvar os .xlsx e abrir no Excel. `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`.
 - **Exportações são XLSX montado no navegador** (`client/src/utils/xlsxExport.js` + `exports.js`, ExcelJS por import dinâmico, fora do
@@ -170,6 +170,19 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   (etiquetas `.badge-*` usam); `--font-mono` definido. Pendentes: ~185 cores fixas no CSS (pares claro/escuro por tela) e 119 no JSX; aliases duplicados (`--white`/`--text`, `--blue`/`--brand`,
   `--navy2`/`--surface`); componentes repetidos por tela (KPI ×5, tabela ×6, chips ×6, vazio ×28).
   Prints locais com o Playwright CLI (`%APPDATA%\npm\playwright-cli.cmd`: `open`, `localstorage-set token ...`, `goto`, `screenshot --filename`).
+
+## Logs de auditoria (out/2026) — pedido do Luiz: controle maior do Cofre
+- Tabela `audit_logs` (migração 0062), `lib/audit.js`, `routes/audit.js`, tela **Admin → 🕵️ Logs** (`components/admin/AuditLogTab.jsx`;
+  textos em `utils/auditLabels.js`; Excel em `exports.js → exportAuditXlsx`). Ler: só Super Admin e Auditor. **Não existe editar/apagar log.**
+- O que entra: (1) middleware no worker.js ANTES do portão de acesso — toda escrita (POST/PUT/PATCH/DELETE), inclusive as recusadas
+  (401/403 = "Atenção"), e GET de `.../export`; (2) cada tela aberta (`POST /api/audit/view` do `AppLayout`, 30 s sem repetir; o Auditor
+  pode, é exceção do só-leitura); (3) login/negado (`auth.js`) e saída (`POST /api/audit/logout`); (4) **Cofre e VLANs com detalhe**: abrir
+  (1 a cada 5 min), ver e copiar senha (`?purpose=show|copy`, gravado com await ANTES de decifrar — sem log, sem senha), criar/editar
+  (só NOMES dos campos)/excluir, dar/tirar acesso, tentativa sem autorização ("Crítico").
+- Alertas no sininho dos Super Admins: 10 senhas vistas/copiadas por uma pessoa em 10 min (1 aviso por rajada); tentativa sem acesso ao
+  Cofre (1 por pessoa por hora). No Cofre/VLANs a senha não fica guardada na tela e se esconde sozinha em 30 s.
+- Nunca grava senha nem corpo de requisição. Retenção (cron de 15 min às 03:00 de Brasília): telas 90 dias; alterações/logins/exportações
+  1 ano; Cofre nunca apaga. IP vem de `CF-Connecting-IP` (local fica "—"). `audit` fica fora do tempo real (LIVE_SKIP).
 
 ## Desempenho do banco (estudo de out/2026)
 - Banco pequeno (~9 MB, ~8,5 mil linhas), mas lia **~2 milhões de linhas/dia** (40% do limite Free de 5 M/dia) por falta de índice —

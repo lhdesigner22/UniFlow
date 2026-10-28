@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { startLive, stopLive } from '../../services/live'
+import api from '../../services/api'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
@@ -16,6 +17,17 @@ export default function AppLayout() {
     startLive()
     return stopLive
   }, [])
+
+  // Log de auditoria: cada tela aberta (Admin → Logs). Só o caminho, sem a
+  // ?busca; a mesma tela de novo em menos de 30 s não repete o registro.
+  const lastView = useRef({ path: null, at: 0 })
+  useEffect(() => {
+    const path = location.pathname
+    const now = Date.now()
+    if (lastView.current.path === path && now - lastView.current.at < 30000) return
+    lastView.current = { path, at: now }
+    api.post('/audit/view', { path }).catch(() => {})
+  }, [location.pathname])
 
   return (
     <div className={styles.layout}>

@@ -71,6 +71,7 @@ const env = {
   JWT_SECRET: 'testsecret',
   GOOGLE_CLIENT_ID: 'test-client-id',
   GLPI_BASE_URL: 'http://127.0.0.1:8798', GLPI_APP_TOKEN: 't', GLPI_USER_TOKEN: 't',
+  VAULT_ENCRYPTION_KEY: 'dGVzdGUtZG8tY29mcmUtdW5pZmxvdy0zMi1ieXRlcyE=', // chave de TESTE (32 bytes), só local
 }
 const ctx = { waitUntil() {}, passThroughOnException() {} }
 

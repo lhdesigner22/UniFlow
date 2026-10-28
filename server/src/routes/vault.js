@@ -3,12 +3,17 @@ import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
 import { isScriptLink, LINK_ERROR } from '../lib/safeUrl.js'
 import { encryptSecret, decryptSecret } from '../lib/vaultCrypto.js'
+import { writeAudit, checkRevealBurst, auditVaultDenied, auditVaultOpen } from '../lib/audit.js'
 
 // Cofre de senhas — acesso (ver e editar) NÃO segue o system_role normal:
 // é uma lista própria (vault_access) que só Super Admin concede/revoga
 // pessoa por pessoa. Super Admin sempre tem acesso, mesmo sem estar na
 // lista. A senha em si nunca trafega em bulk — só via GET /:id/reveal,
 // chamado sob demanda quando a pessoa clica em "Mostrar"/"Copiar".
+//
+// Tudo aqui gera log de auditoria (categoria 'vault', ver lib/audit.js): abrir,
+// mostrar/copiar senha (gravado ANTES de a senha sair — sem log, sem senha),
+// criar/editar/excluir, conceder/revogar acesso e tentativa sem autorização.
 const app = new Hono()
 app.use('*', auth)
 
@@ -27,6 +32,7 @@ app.use('*', async (c, next) => {
   const db = c.get('db')
   const user = c.get('user')
   if (!(await hasVaultAccess(db, user.id))) {
+    await auditVaultDenied(c, 'o Cofre de Senhas')
     return c.json({ error: 'Sem acesso ao Cofre de Senhas. Peça pra um Super Admin te autorizar.' }, 403)
   }
   await next()
@@ -34,6 +40,7 @@ app.use('*', async (c, next) => {
 
 const requireSuperAdmin = async (c, next) => {
   if (!(await isSuperAdmin(c.get('db'), c.get('user').id))) {
+    await auditVaultDenied(c, 'a lista de quem acessa o Cofre')
     return c.json({ error: 'Só Super Admin pode gerenciar quem acessa o cofre.' }, 403)
   }
   await next()
@@ -68,15 +75,20 @@ app.post('/access', requireSuperAdmin, async c => {
 
   const id = uuid()
   await db.prepare('INSERT INTO vault_access (id, user_id, granted_by) VALUES (?, ?, ?)').run(id, user_id, user.id)
-  return c.json(await db.prepare(`
+  const granted = await db.prepare(`
     SELECT va.id, va.user_id, va.granted_at, u.name as user_name, u.email as user_email
     FROM vault_access va JOIN users u ON u.id = va.user_id WHERE va.id = ?
-  `).get(id))
+  `).get(id)
+  await writeAudit(c, { category: 'vault', action: 'vault.access_grant', severity: 'warning', targetId: user_id, targetLabel: granted.user_name || granted.user_email })
+  return c.json(granted)
 })
 
 app.delete('/access/:userId', requireSuperAdmin, async c => {
   const db = c.get('db')
-  await db.prepare('DELETE FROM vault_access WHERE user_id = ?').run(c.req.param('userId'))
+  const userId = c.req.param('userId')
+  const target = await db.prepare('SELECT name, email FROM users WHERE id = ?').get(userId)
+  await db.prepare('DELETE FROM vault_access WHERE user_id = ?').run(userId)
+  await writeAudit(c, { category: 'vault', action: 'vault.access_revoke', severity: 'warning', targetId: userId, targetLabel: target?.name || target?.email || userId })
   return c.json({ ok: true })
 })
 
@@ -85,18 +97,23 @@ app.delete('/access/:userId', requireSuperAdmin, async c => {
 // GET / — lista tudo, sem a senha
 app.get('/', async c => {
   const db = c.get('db')
+  await auditVaultOpen(c, 'vault.open', 'Cofre de Senhas')
   return c.json(await db.prepare(`
     SELECT ${LIST_COLUMNS} FROM vault_entries v LEFT JOIN users u ON u.id = v.created_by
     ORDER BY v.title
   `).all())
 })
 
-// GET /:id/reveal — decifra e devolve só a senha desse item
+// GET /:id/reveal?purpose=show|copy — decifra e devolve só a senha desse item.
+// O log (com o motivo: mostrar na tela ou copiar) é gravado antes de decifrar.
 app.get('/:id/reveal', async c => {
   const db = c.get('db')
   const id = c.req.param('id')
-  const row = await db.prepare('SELECT password_enc, password_iv FROM vault_entries WHERE id = ?').get(id)
+  const row = await db.prepare('SELECT title, password_enc, password_iv FROM vault_entries WHERE id = ?').get(id)
   if (!row) return c.json({ error: 'Item não encontrado' }, 404)
+  const action = c.req.query('purpose') === 'copy' ? 'vault.copy' : 'vault.reveal'
+  await writeAudit(c, { category: 'vault', action, severity: 'warning', status: 200, targetId: id, targetLabel: row.title })
+  await checkRevealBurst(c)
   try {
     const password = await decryptSecret(c.env, row.password_enc, row.password_iv)
     return c.json({ password })
@@ -123,6 +140,7 @@ app.post('/', async c => {
     id, title.trim(), category?.trim() || null, username?.trim() || null,
     ciphertext, iv, url?.trim() || null, notes?.trim() || null, user.id
   )
+  await writeAudit(c, { category: 'vault', action: 'vault.create', targetId: id, targetLabel: title.trim() })
 
   return c.json(await db.prepare(`SELECT ${LIST_COLUMNS} FROM vault_entries v LEFT JOIN users u ON u.id = v.created_by WHERE v.id = ?`).get(id))
 })
@@ -157,6 +175,18 @@ app.put('/:id', async c => {
     notes !== undefined ? (notes?.trim() || null) : row.notes,
     id
   )
+  // Quais campos mudaram (só os nomes — nunca os valores).
+  const changed = []
+  if (title?.trim() && title.trim() !== row.title) changed.push('título')
+  if (category !== undefined && (category?.trim() || null) !== row.category) changed.push('categoria')
+  if (username !== undefined && (username?.trim() || null) !== row.username) changed.push('usuário')
+  if (password) changed.push('senha')
+  if (url !== undefined && (url?.trim() || null) !== row.url) changed.push('link')
+  if (notes !== undefined && (notes?.trim() || null) !== row.notes) changed.push('observações')
+  await writeAudit(c, {
+    category: 'vault', action: 'vault.update', severity: password ? 'warning' : 'info',
+    targetId: id, targetLabel: title?.trim() || row.title, details: { campos: changed },
+  })
 
   return c.json(await db.prepare(`SELECT ${LIST_COLUMNS} FROM vault_entries v LEFT JOIN users u ON u.id = v.created_by WHERE v.id = ?`).get(id))
 })
@@ -165,9 +195,10 @@ app.put('/:id', async c => {
 app.delete('/:id', async c => {
   const db = c.get('db')
   const id = c.req.param('id')
-  const row = await db.prepare('SELECT id FROM vault_entries WHERE id = ?').get(id)
+  const row = await db.prepare('SELECT id, title FROM vault_entries WHERE id = ?').get(id)
   if (!row) return c.json({ error: 'Item não encontrado' }, 404)
   await db.prepare('DELETE FROM vault_entries WHERE id = ?').run(id)
+  await writeAudit(c, { category: 'vault', action: 'vault.delete', severity: 'warning', targetId: id, targetLabel: row.title })
   return c.json({ ok: true })
 })
 

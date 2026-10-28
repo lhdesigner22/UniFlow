@@ -4,6 +4,7 @@
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { downloadXlsx, groupSum, dbDate, dbDateTime, dbMonth, secondsToDays } from './xlsxExport'
+import { describe, browserName, CATEGORY_LABEL, SEVERITY_LABEL } from './auditLabels'
 
 const author = () => useAuthStore.getState().user?.name
 const br = iso => (iso ? iso.split('-').reverse().join('/') : '')
@@ -403,6 +404,77 @@ export async function exportLoansXlsx() {
         ],
         rows: byEquipment,
       },
+    ],
+  })
+}
+
+// ── Logs de auditoria (Admin → Logs) ───────────────────────────────────────
+// Usa os mesmos filtros da tela; o servidor devolve até 5000 linhas e registra
+// a própria exportação no log.
+const AUDIT_SEVERITY_BADGE = { Normal: 'gray', Atenção: 'yellow', Crítico: 'red' }
+const AUDIT_CATEGORY_BADGE = { 'Cofre de Senhas': 'purple', Alteração: 'blue', 'Tela aberta': 'gray', 'Entrada e saída': 'green', Logs: 'yellow' }
+
+export async function exportAuditXlsx(filters = {}) {
+  const { data } = await api.get('/audit', { params: { ...filters, export: 1 } })
+  const rows = data.rows || []
+  const items = rows.map(r => {
+    const d = describe(r)
+    return {
+      when: dbDateTime(r.created_at),
+      who: r.user_name || r.user_email || '—',
+      email: r.user_email || null,
+      category: CATEGORY_LABEL[r.category] || r.category,
+      what: d.what,
+      target: d.target || null,
+      note: d.note || null,
+      severity: SEVERITY_LABEL[r.severity] || r.severity,
+      ip: r.ip || null,
+      browser: browserName(r.user_agent),
+      path: r.path || null,
+    }
+  })
+  const vault = rows.filter(r => r.category === 'vault')
+  const byPerson = groupSum(vault, r => r.user_name || r.user_email || '—', {
+    reveals: r => r.action.endsWith('.reveal'),
+    copies: r => r.action.endsWith('.copy'),
+    denied: r => r.action === 'vault.denied',
+  }).sort((a, b) => b.count - a.count)
+
+  await downloadXlsx({
+    fileName: `logs-uniflow-${new Date().toISOString().slice(0, 10)}`,
+    title: 'Logs de auditoria',
+    subtitle: `${rows.length} registro(s)${rows.length >= 5000 ? ' (limite de 5000 — refine os filtros para ver o resto)' : ''}`,
+    author: author(),
+    sheets: [
+      {
+        name: 'Logs',
+        columns: [
+          { header: 'Data e hora', key: 'when', width: 17, type: 'datetime' },
+          { header: 'Pessoa', key: 'who', width: 22 },
+          { header: 'E-mail', key: 'email', width: 28 },
+          { header: 'Área', key: 'category', width: 16, badge: AUDIT_CATEGORY_BADGE },
+          { header: 'O que fez', key: 'what', width: 30, wrap: true },
+          { header: 'Em quê', key: 'target', width: 30, wrap: true },
+          { header: 'Detalhe', key: 'note', width: 26, wrap: true },
+          { header: 'Nível', key: 'severity', width: 10, badge: AUDIT_SEVERITY_BADGE, total: 'count' },
+          { header: 'IP', key: 'ip', width: 16 },
+          { header: 'Navegador', key: 'browser', width: 18 },
+          { header: 'Caminho', key: 'path', width: 34 },
+        ],
+        rows: items,
+      },
+      ...(vault.length ? [{
+        name: 'Cofre por pessoa',
+        title: 'Cofre de Senhas — por pessoa',
+        columns: [
+          { header: 'Pessoa', key: 'key', width: 26 },
+          { header: 'Registros no Cofre', key: 'count', width: 18, type: 'int', total: 'sum' },
+          { header: 'Senhas vistas', key: 'reveals', width: 14, type: 'int', total: 'sum' },
+          { header: 'Senhas copiadas', key: 'copies', width: 16, type: 'int', total: 'sum' },
+          { header: 'Tentativas sem acesso', key: 'denied', width: 20, type: 'int', total: 'sum' },
+        ],
+        rows: byPerson,
+      }] : []),
     ],
   })
 }

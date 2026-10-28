@@ -1,15 +1,18 @@
 import { Hono } from 'hono'
 import { auth } from '../middleware/auth.js'
 import { hasVaultAccess } from './vault.js'
+import { writeAudit, checkRevealBurst, auditVaultDenied, auditVaultOpen } from '../lib/audit.js'
 
 // Segmentação de VLANs (Gestão). Contém as senhas de Wi-Fi, então o acesso
 // segue o MESMO controle do Cofre de Senhas (Super Admin ou lista vault_access).
 // A senha de cada SSID nunca vai na listagem — só sob demanda em
 // GET /ssids/:id/reveal, quando a pessoa clica em "Mostrar"/"Copiar".
+// Gera log de auditoria como o Cofre (categoria 'vault'): abrir, mostrar/copiar, acesso negado.
 const app = new Hono()
 app.use('*', auth)
 app.use('*', async (c, next) => {
   if (!(await hasVaultAccess(c.get('db'), c.get('user').id))) {
+    await auditVaultDenied(c, 'a Segmentação de VLANs')
     return c.json({ error: 'Sem acesso. Peça pra um Super Admin te autorizar (mesmo acesso do Cofre de Senhas).' }, 403)
   }
   await next()
@@ -31,13 +34,18 @@ app.get('/', async c => {
     SELECT id, ssid, vlan_id, note, CASE WHEN password IS NOT NULL AND password != '' THEN 1 ELSE 0 END as has_password
     FROM vlan_ssids WHERE site = ? ORDER BY order_index
   `).all(site)
+  await auditVaultOpen(c, 'vlan.open', `VLANs — ${site}`)
   return c.json({ networks, ssids })
 })
 
 // GET /ssids/:id/reveal — só a senha desse SSID
 app.get('/ssids/:id/reveal', async c => {
-  const row = await c.get('db').prepare('SELECT password FROM vlan_ssids WHERE id = ?').get(c.req.param('id'))
+  const id = c.req.param('id')
+  const row = await c.get('db').prepare('SELECT ssid, site, password FROM vlan_ssids WHERE id = ?').get(id)
   if (!row) return c.json({ error: 'SSID não encontrado' }, 404)
+  const action = c.req.query('purpose') === 'copy' ? 'vlan.copy' : 'vlan.reveal'
+  await writeAudit(c, { category: 'vault', action, severity: 'warning', status: 200, targetId: id, targetLabel: `Wi-Fi ${row.ssid} (${row.site})` })
+  await checkRevealBurst(c)
   return c.json({ password: row.password || '' })
 })
 
