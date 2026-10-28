@@ -35,8 +35,10 @@ export default defineConfig({
         // As bibliotecas das planilhas (ExcelJS, ~900 KB) e da apresentação
         // (pptxgenjs, pdf-lib) só são baixadas quando
         // alguém exporta — não entram no pacote que todo aparelho pré-baixa.
-        globIgnores: ['**/exceljs*', '**/pptxgen*', '**/pdf-lib*', '**/casesDeck*'],
-        // /parisfe: telão dos valores (public/parisfe.html), página própria fora do app
+        // O telão PARISFE (parisfe.html + Three.js, ~700 KB) também fica de fora:
+        // é aberto numa TV, não precisa estar no celular de todo mundo.
+        globIgnores: ['**/exceljs*', '**/pptxgen*', '**/pdf-lib*', '**/casesDeck*', '**/three*', '**/parisfe*'],
+        // /parisfe: telão dos valores (parisfe.html), página própria fora do app
         navigateFallbackDenylist: [/^\/api\//, /^\/parisfe/],
       },
     }),
@@ -45,9 +47,12 @@ export default defineConfig({
   // e entraria no pré-cache; com nome próprio o globIgnores acima o deixa de fora.
   build: {
     rollupOptions: {
+      // Duas páginas: o app (index.html) e o telão PARISFE (parisfe.html → /parisfe)
+      input: { main: 'index.html', parisfe: 'parisfe.html' },
       output: {
         manualChunks(id) {
           if (/node_modules[\\/](pdf-lib|@pdf-lib|pako)[\\/]/.test(id)) return 'pdf-lib'
+          if (/node_modules[\\/]three[\\/]/.test(id)) return 'three'
         },
       },
     },

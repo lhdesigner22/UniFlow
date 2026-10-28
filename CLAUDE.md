@@ -150,6 +150,11 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   prédio** em `printer_supply_stock` (não soma o histórico), histórico em `printer_supply_movements` (entrada, troca NA impressora,
   transferência, ajuste). Movimento grava saldo + histórico na mesma transação com trava otimista (`quantity = esperado` + `changes()`):
   concorrência dá 409, nunca saldo negativo. Consumo = trocas dos últimos 90 dias ÷ 3; cartão da impressora tem "🧴 Histórico de insumos".
+- **Telão PARISFE** (`/parisfe`, pública, sem login — pra TV): 2ª entrada do Vite (`client/parisfe.html` + `src/parisfe/`), fora do app
+  React e do pré-cache do PWA (Three.js ~580 KB). Logo UniFECAF em 3D (`logo3d.js`, Three.js + bloom, desenhada do mesmo caminho SVG)
+  gira e troca de lado com a rolagem; abertura + 7 valores + encerramento, uma tela cada. Modo TV: sem ninguém mexer, 9 s por seção e
+  volta ao início; espaço pausa, F tela cheia. Textos = `PRINCIPLES` do `DashboardPage.jsx` (mudou lá, mudar em `main.js`). Botão
+  "Abrir no telão" no Início. Prints: o painel do navegador para de desenhar com o app em 2º plano — usar Playwright (chrome headless).
 - **Gestão → Cases de Sucesso** (`routes/successCases.js`, `SuccessCasesPage.jsx`, rota `/gestao/cases-de-sucesso`, módulo `gestao`, sem
   separação por departamento): vitrine das entregas da TI no ano **para apresentar à diretoria (C-Level)** — linguagem simples, cada case =
   antes → o que fizemos → resultado; detalhe técnico recolhido (nada de IP/senha). Pilares: conectividade, segurança, gestão, operação.

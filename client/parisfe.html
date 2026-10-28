@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04080d">
+<title>PARISFE UniFECAF</title>
+<link rel="icon" href="/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Hanken+Grotesk:wght@400;500;600&display=swap">
+</head>
+<body>
+<!--
+  Telão PARISFE (/parisfe) — página própria, fora do app React e sem login, feita para
+  ficar aberta numa TV. A logo da UniFECAF em 3D (Three.js, src/parisfe/logo3d.js) gira
+  conforme a rolagem; cada valor é uma seção. Parada, a página rola sozinha (modo TV).
+-->
+<canvas id="scene" aria-hidden="true"></canvas>
+<svg class="fallback-logo" id="fallback" viewBox="0 -17 160 160" aria-hidden="true" hidden>
+  <g fill="#014b79"><path id="fbL" d="M24 0H128L108 20H38V88L14 112V10Q14 0 24 0Z"/><use href="#fbL" transform="rotate(180 79 62)"/></g>
+  <rect x="57" y="40" width="44" height="44" fill="#1bb266"/>
+</svg>
+
+<header class="bar">
+  <a class="brand" href="#abertura" aria-label="Voltar ao início">
+    <svg viewBox="0 -17 160 160" aria-hidden="true"><g fill="#0f6aa8"><path id="brL" d="M24 0H128L108 20H38V88L14 112V10Q14 0 24 0Z"/><use href="#brL" transform="rotate(180 79 62)"/></g><rect x="57" y="40" width="44" height="44" fill="#1bb266"/></svg>
+    <span>UniFECAF</span>
+  </a>
+  <nav class="letters" id="letters" aria-label="Valores PARISFE"></nav>
+  <div class="tools">
+    <button type="button" id="auto" aria-pressed="true" title="Rolar sozinho (modo TV)">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+    </button>
+    <button type="button" id="full" aria-label="Tela cheia" title="Tela cheia (F)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="story">
+  <section class="intro" id="abertura" data-pose="center">
+    <div class="intro-copy">
+      <h1 class="word-mark">PARISFE</h1>
+      <p class="lede">Os sete valores que guiam o atendimento na UniFECAF.</p>
+    </div>
+    <p class="scroll-cue" id="cue">Role para conhecer cada um</p>
+  </section>
+  <!-- seções dos 7 valores: montadas pelo main.js a partir de VALUES -->
+  <section class="outro" id="encerramento" data-pose="center">
+    <p class="outro-line">Seu sonho, nossa meta!</p>
+    <p class="outro-word" aria-hidden="true">P A R I S F E</p>
+  </section>
+</main>
+
+<footer class="foot">
+  <span class="count" id="count"></span>
+  <div class="rail" aria-hidden="true"><span id="railFill"></span></div>
+</footer>
+<p class="hint" id="hint">Setas ou rolagem para navegar. Espaço pausa, F deixa em tela cheia.</p>
+
+<script type="module" src="/src/parisfe/main.js"></script>
+</body>
+</html>
