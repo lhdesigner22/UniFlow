@@ -7,6 +7,7 @@ import { confirmDialog, alertDialog } from '../store/dialogStore'
 import { photoPair } from '../utils/imageResize'
 import Modal from '../components/common/Modal'
 import Reveal from '../components/common/Reveal'
+import LineIcon from '../components/common/LineIcon'
 import s from './SuccessCasesPage.module.css'
 
 // Gestão → Cases de Sucesso: as entregas da TI no ano, para apresentar à
@@ -406,6 +407,84 @@ function Detail({ id, stats, year, writable, onClose, onEdit, onDelete, onChange
   )
 }
 
+// Cores da situação nos arquivos baixados (fundo escuro, como a apresentação)
+const DECK_STATUS = {
+  concluido: { color: '4ADE80', bg: '153322' },
+  piloto: { color: '93C5FD', bg: '172A4A' },
+  andamento: { color: 'FBBF24', bg: '3A2C10' },
+}
+
+// Monta os dados da apresentação para baixar (utils/casesDeck.js desenha o
+// PPTX e o PDF). Mesmo conteúdo do "Modo apresentação": capa + um case por
+// slide, na ordem e com o filtro de pilar da tela. Fotos: as miniaturas.
+async function buildDeckModel(cases, stats, year) {
+  const photosById = {}
+  await Promise.all(cases.filter(c => c.photo_count > 0).map(c =>
+    api.get(`/success-cases/${c.id}`).then(r => { photosById[c.id] = (r.data.photos || []).map(p => p.thumb) }).catch(() => {})))
+  const done = cases.filter(c => c.status === 'concluido').length
+  const totalSave = cases.reduce((n, c) => n + countedSave(c), 0)
+  const kpis = [
+    { value: String(cases.length), label: 'entregas no ano' },
+    { value: String(done), label: 'concluídas' },
+  ]
+  if (stats?.glpi_tickets != null) kpis.push({ value: fmtNum(stats.glpi_tickets), label: 'chamados registrados no GLPI' })
+  if (totalSave > 0) kpis.push({ value: fmtBRL(totalSave), label: 'de save financeiro', accent: true })
+  return {
+    year,
+    generatedAt: new Date().toLocaleDateString('pt-BR'),
+    kpis,
+    pillars: Object.entries(PILLARS)
+      .map(([k, p]) => ({ label: p.label, color: p.color.slice(1), count: cases.filter(c => c.pillar === k).length }))
+      .filter(p => p.count),
+    slides: cases.map(c => {
+      const p = PILLARS[c.pillar] || PILLARS.gestao
+      const st = STATUSES[c.status] || STATUSES.concluido
+      const result = resultOf(c, stats, year)
+      return {
+        title: c.title,
+        headline: c.headline,
+        pillarLabel: p.label,
+        pillarColor: p.color.slice(1),
+        status: { label: st.label, ...(DECK_STATUS[c.status] || DECK_STATUS.concluido) },
+        month: c.completed_on ? fmtMonth(c.completed_on) : '',
+        save: c.saving_value > 0 ? `Save ${fmtBRL(c.saving_value)} ${SAVING_PERIODS[c.saving_period]?.suffix || ''}`.trim() : '',
+        before: c.before_text,
+        solution: c.solution_text,
+        result,
+        photos: photosById[c.id] || [],
+        notes: [c.headline, c.saving_note && `Save financeiro: ${c.saving_note}`, c.owner && `Responsáveis: ${c.owner}`].filter(Boolean).join('\n'),
+      }
+    }),
+  }
+}
+
+// Botão "Baixar PPTX / PDF" (as bibliotecas só carregam no clique)
+function DeckDownload({ cases, stats, year }) {
+  const [busy, setBusy] = useState(null)
+  const run = async format => {
+    setBusy(format)
+    try {
+      const [model, deck] = await Promise.all([buildDeckModel(cases, stats, year), import('../utils/casesDeck')])
+      await (format === 'pptx' ? deck.exportCasesPptx(model) : deck.exportCasesPdf(model))
+    } catch (e) {
+      console.error(e)
+      await alertDialog('Não deu pra gerar o arquivo. Tenta de novo?', { title: 'Erro ao baixar', danger: true })
+    } finally {
+      setBusy(null)
+    }
+  }
+  return (
+    <>
+      <button className="btn btn-ghost" disabled={!!busy} onClick={() => run('pptx')} title="Baixar a apresentação em PowerPoint (.pptx)">
+        <LineIcon name="download" /> {busy === 'pptx' ? 'Gerando...' : 'PPTX'}
+      </button>
+      <button className="btn btn-ghost" disabled={!!busy} onClick={() => run('pdf')} title="Baixar a apresentação em PDF">
+        <LineIcon name="download" /> {busy === 'pdf' ? 'Gerando...' : 'PDF'}
+      </button>
+    </>
+  )
+}
+
 // Um case por tela, para a reunião. Slide 0 = capa com os números do ano.
 function Presentation({ cases, stats, year, onClose }) {
   const [index, setIndex] = useState(0)
@@ -597,6 +676,7 @@ export default function SuccessCasesPage() {
             </select>
           )}
           {writable && <button className="btn btn-ghost" onClick={() => setEditing({})}>+ Novo case</button>}
+          {filtered.length > 0 && <DeckDownload cases={filtered} stats={stats} year={shownYear} />}
           {cases.length > 0 && <button className="btn btn-primary" onClick={() => setPresenting(true)}>▶ Modo apresentação</button>}
         </div>
       </div>

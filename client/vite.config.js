@@ -32,13 +32,25 @@ export default defineConfig({
       // do build (JS/CSS/HTML/ícones); nada em runtimeCaching aponta pra /api.
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        // A biblioteca das planilhas (ExcelJS, ~900 KB) só é baixada quando
-        // alguém exporta — não entra no pacote que todo aparelho pré-baixa.
-        globIgnores: ['**/exceljs*'],
+        // As bibliotecas das planilhas (ExcelJS, ~900 KB) e da apresentação
+        // (pptxgenjs, pdf-lib) só são baixadas quando
+        // alguém exporta — não entram no pacote que todo aparelho pré-baixa.
+        globIgnores: ['**/exceljs*', '**/pptxgen*', '**/pdf-lib*', '**/casesDeck*'],
         navigateFallbackDenylist: [/^\/api\//],
       },
     }),
   ],
+  // O pdf-lib (e o pako que vem com ele) sairia num pedaço chamado "index-*.js"
+  // e entraria no pré-cache; com nome próprio o globIgnores acima o deixa de fora.
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (/node_modules[\\/](pdf-lib|@pdf-lib|pako)[\\/]/.test(id)) return 'pdf-lib'
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

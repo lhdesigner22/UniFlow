@@ -149,6 +149,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   **Save financeiro** (migração 0061: `saving_value` em R$, `saving_period` unico|mensal|anual|meses36, `saving_note`): aba no editor do case,
   aba "💰 Save financeiro" na página (tabela + total) e KPI "Save financeiro" = soma dos valores (só o mensal × 12; "Em 36 meses" =
   valor do contrato inteiro, sem dividir). Aparece por último na capa da apresentação (depois dos chamados).
+  **Baixar PPTX/PDF** (botões no topo): `utils/casesDeck.js` monta no navegador (pptxgenjs + pdf-lib, import dinâmico, fora do
+  pré-cache — `manualChunks` dá nome ao `pdf-lib` pro `globIgnores` pegar). Um layout só em polegadas (16:9) desenhado pelos dois
+  formatos; Arial/Helvetica, texto longo cortado com "…", mesmos cases/filtro do modo apresentação, fotos = miniaturas.
 - **Base de Conhecimento → Padronização de máquinas** (`routes/machineStandards.js`, `components/kb/MachineStandards.jsx`, aba própria
   dentro de `KnowledgeBasePage`, recurso `/api/machine-standards` no módulo `kb`, sem departamento): processador/RAM/extra mínimos por
   **cargo** e exceções por **setor** (o setor vale para qualquer cargo dele). Os 5 perfis da apresentação vieram na migração 0060.
