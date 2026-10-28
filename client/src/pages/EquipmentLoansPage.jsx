@@ -202,18 +202,18 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
     <Modal title={loan ? 'Editar empréstimo' : 'Novo empréstimo de equipamento'} onClose={onClose} width={520}>
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Nome do solicitante</label>
-          <input autoFocus value={form.requester_name} onChange={e => setForm(f => ({ ...f, requester_name: e.target.value }))} placeholder="Ex: Maria Silva" />
+          <label htmlFor="equipment-loans-nome-do-solicitante" className="label">Nome do solicitante</label>
+          <input id="equipment-loans-nome-do-solicitante" autoFocus value={form.requester_name} onChange={e => setForm(f => ({ ...f, requester_name: e.target.value }))} placeholder="Ex: Maria Silva" />
         </div>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Data do empréstimo</label>
-          <input type="date" value={form.loan_date} onChange={e => setForm(f => ({ ...f, loan_date: e.target.value }))} />
+          <label htmlFor="equipment-loans-data-do-emprestimo" className="label">Data do empréstimo</label>
+          <input id="equipment-loans-data-do-emprestimo" type="date" value={form.loan_date} onChange={e => setForm(f => ({ ...f, loan_date: e.target.value }))} />
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Email (opcional)</label>
-        <input type="email" value={form.requester_email} onChange={e => setForm(f => ({ ...f, requester_email: e.target.value }))} placeholder="nome@colegioser.com" />
-        {emailInvalid && <p className={s.fileError}>{LOAN_EMAIL_ERROR}</p>}
+        <label htmlFor="equipment-loans-email-opcional" className="label">Email (opcional)</label>
+        <input id="equipment-loans-email-opcional" type="email" value={form.requester_email} onChange={e => setForm(f => ({ ...f, requester_email: e.target.value }))} placeholder="nome@colegioser.com" />
+        {emailInvalid && <p role="alert" className={s.fileError}>{LOAN_EMAIL_ERROR}</p>}
         {emailLookup === 'loading' && <p className={s.roomHint}><LineIcon name="search" /> Buscando e-mail no diretório...</p>}
         {emailLookup === 'not_found' && <p className={s.roomHint}>Não achei esse nome no diretório — preenche manual.</p>}
         {!loan && (
@@ -242,8 +242,8 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Equipamento</label>
-          <input
+          <label htmlFor="equipment-loans-equipamento" className="label">Equipamento</label>
+          <input id="equipment-loans-equipamento"
             list="equipment-loan-model-list"
             value={form.equipment_model}
             onChange={e => setForm(f => ({ ...f, equipment_model: e.target.value }))}
@@ -254,9 +254,10 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
           </datalist>
         </div>
         <div className="form-group" style={{ flex: 1, position: 'relative' }}>
-          <label className="label">Patrimônio (opcional)</label>
+          <label htmlFor="equipment-loans-patrimonio" className="label">Patrimônio (opcional)</label>
           <div style={{ display: 'flex', gap: 6 }}>
             <input
+              id="equipment-loans-patrimonio"
               value={form.patrimony}
               onChange={e => setForm(f => ({ ...f, patrimony: e.target.value, equipment_inventory_id: null }))}
               placeholder="Ex: 5028"
@@ -317,14 +318,14 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
       )}
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Prédio</label>
-          <select value={form.building} onChange={e => setForm(f => ({ ...f, building: e.target.value }))}>
+          <label htmlFor="equipment-loans-predio" className="label">Prédio</label>
+          <select id="equipment-loans-predio" value={form.building} onChange={e => setForm(f => ({ ...f, building: e.target.value }))}>
             {BUILDINGS.map(b => <option key={b.key} value={b.key}>{b.label}</option>)}
           </select>
         </div>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Sala / Localidade (opcional)</label>
-          <input
+          <label htmlFor="equipment-loans-sala-localidade-opcional" className="label">Sala / Localidade (opcional)</label>
+          <input id="equipment-loans-sala-localidade-opcional"
             list="equipment-loan-room-list"
             value={form.location}
             onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
@@ -361,12 +362,12 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Observação (opcional)</label>
-        <textarea rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Detalhes, condição do equipamento..." />
+        <label htmlFor="equipment-loans-observacao-opcional" className="label">Observação (opcional)</label>
+        <textarea id="equipment-loans-observacao-opcional" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Detalhes, condição do equipamento..." />
       </div>
       <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
 
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
       <button
         className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
         disabled={!form.requester_name.trim() || !form.equipment_model.trim() || extras.some(x => !x.equipment_model.trim()) || emailInvalid || saving}
@@ -460,9 +461,9 @@ function MessageModal({ loan, onClose, onEmailSaved }) {
         <p className={s.roomHint} style={{ marginBottom: 8 }}>Para: {loan.requester_email}</p>
       ) : (
         <div className="form-group">
-          <label className="label">{loan.requester_email ? `E-mail válido do solicitante (${loan.requester_email} não é permitido)` : 'E-mail do solicitante (esse empréstimo não tem)'}</label>
-          <input type="email" value={to} onChange={e => setTo(e.target.value)} placeholder="nome@colegioser.com" />
-          {toInvalid && <p className={s.fileError}>{LOAN_EMAIL_ERROR}</p>}
+          <label htmlFor="equipment-loans-nao-e-permitido-e-mail-d" className="label">{loan.requester_email ? `E-mail válido do solicitante (${loan.requester_email} não é permitido)` : 'E-mail do solicitante (esse empréstimo não tem)'}</label>
+          <input id="equipment-loans-nao-e-permitido-e-mail-d" type="email" value={to} onChange={e => setTo(e.target.value)} placeholder="nome@colegioser.com" />
+          {toInvalid && <p role="alert" className={s.fileError}>{LOAN_EMAIL_ERROR}</p>}
         </div>
       )}
 
@@ -477,7 +478,7 @@ function MessageModal({ loan, onClose, onEmailSaved }) {
         <textarea rows={3} value={message} onChange={e => setMessage(e.target.value)} placeholder="Escreva a mensagem ou escolha uma pronta acima..." autoFocus />
       </div>
 
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
       <button
         className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
         disabled={!message.trim() || !target || toInvalid || sending}
@@ -536,23 +537,23 @@ function InventoryModal({ building, onClose }) {
     <Modal title={`Inventário — ${BUILDING_MAP[building].label}`} onClose={onClose} width={480}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div className="form-group" style={{ flex: 1, minWidth: 120, marginBottom: 0 }}>
-          <label className="label">Equipamento</label>
-          <input list="equipment-loan-model-list" value={form.equipment_model} onChange={e => setForm(f => ({ ...f, equipment_model: e.target.value }))} placeholder="Ex: Chromebook" />
+          <label htmlFor="equipment-loans-equipamento-2" className="label">Equipamento</label>
+          <input id="equipment-loans-equipamento-2" list="equipment-loan-model-list" value={form.equipment_model} onChange={e => setForm(f => ({ ...f, equipment_model: e.target.value }))} placeholder="Ex: Chromebook" />
           <datalist id="equipment-loan-model-list">
             {EQUIPMENT_SUGGESTIONS.map(m => <option key={m} value={m} />)}
           </datalist>
         </div>
         <div className="form-group" style={{ flex: 1, minWidth: 100, marginBottom: 0 }}>
-          <label className="label">Variante</label>
-          <input value={form.variant} onChange={e => setForm(f => ({ ...f, variant: e.target.value }))} placeholder="Ex: Samsung preto" />
+          <label htmlFor="equipment-loans-variante" className="label">Variante</label>
+          <input id="equipment-loans-variante" value={form.variant} onChange={e => setForm(f => ({ ...f, variant: e.target.value }))} placeholder="Ex: Samsung preto" />
         </div>
         <div className="form-group" style={{ flex: 1, minWidth: 90, marginBottom: 0 }}>
-          <label className="label">Patrimônio</label>
-          <input value={form.patrimony} onChange={e => setForm(f => ({ ...f, patrimony: e.target.value }))} placeholder="Ex: 14602" />
+          <label htmlFor="equipment-loans-patrimonio" className="label">Patrimônio</label>
+          <input id="equipment-loans-patrimonio" value={form.patrimony} onChange={e => setForm(f => ({ ...f, patrimony: e.target.value }))} placeholder="Ex: 14602" />
         </div>
         <button className="btn btn-primary btn-sm" disabled={!form.equipment_model.trim() || saving} onClick={add}>+ Adicionar</button>
       </div>
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
 
       <div className={s.section}>
         {items === null ? (

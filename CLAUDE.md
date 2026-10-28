@@ -172,6 +172,10 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`
   (etiquetas `.badge-*` usam); `--font-mono` definido. Pendentes: ~185 cores fixas no CSS (pares claro/escuro por tela) e 119 no JSX; aliases duplicados (`--white`/`--text`, `--blue`/`--brand`,
   `--navy2`/`--surface`); componentes repetidos por tela (KPI ×5, tabela ×6, chips ×6, vazio ×28).
+  **Varredura ui-ux-pro-max (out/2026)**: rótulo `.label` sempre com `htmlFor` + `id` no campo (componente reutilizado usa `useId`);
+  `div`/`span` clicável = `{...pressable(fn)}` (`utils/pressable.js`, Enter/Espaço); lista arrastável = `useSortableSensors()` +
+  `accessibility={sortableAccessibility(...)}` (`utils/sortableA11y.js`) + botões ‹ › de mover; mensagem de erro `role="alert"`, de status `role="status"`.
+  Pendentes da varredura: título da aba fixo "UniFlow", 2 `window.confirm` no Admin, escala de fonte (21 tamanhos), alvos < 24px, `transition: all`.
   Prints locais com o Playwright CLI (`%APPDATA%\npm\playwright-cli.cmd`: `open`, `localstorage-set token ...`, `goto`, `screenshot --filename`).
   Ele roda pelo cmd: `&` na URL corta o resto e `=>` num `eval` vira redirecionamento (cria arquivos lixo na pasta) — use URLs sem `&`
   e `snapshot` pra esperar. Auditoria a11y local: `npm install --no-save axe-core` no client (some quando o npm reinstala).

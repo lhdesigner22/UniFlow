@@ -108,25 +108,25 @@ function Editor({ dev, onClose, onSaved }) {
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Nome</label>
-        <input autoFocus value={form.name} maxLength={80} onChange={e => set('name', e.target.value)} placeholder="Ex: UniFlow" />
+        <label htmlFor="developments-nome" className="label">Nome</label>
+        <input id="developments-nome" autoFocus value={form.name} maxLength={80} onChange={e => set('name', e.target.value)} placeholder="Ex: UniFlow" />
       </div>
       <div className="form-group">
-        <label className="label">Para que serve</label>
-        <textarea rows={5} value={form.purpose} maxLength={2000} onChange={e => set('purpose', e.target.value)} placeholder="Ex: Quadros, chamados do GLPI, empréstimo de equipamentos e gestão da equipe de TI." />
+        <label htmlFor="developments-para-que-serve" className="label">Para que serve</label>
+        <textarea id="developments-para-que-serve" rows={5} value={form.purpose} maxLength={2000} onChange={e => set('purpose', e.target.value)} placeholder="Ex: Quadros, chamados do GLPI, empréstimo de equipamentos e gestão da equipe de TI." />
       </div>
       <div className="form-group">
-        <label className="label">Link (opcional)</label>
-        <input value={form.url} onChange={e => set('url', e.target.value)} placeholder="Ex: https://uniflow.serfecaf.workers.dev" />
+        <label htmlFor="developments-link-opcional" className="label">Link (opcional)</label>
+        <input id="developments-link-opcional" value={form.url} onChange={e => set('url', e.target.value)} placeholder="Ex: https://uniflow.serfecaf.workers.dev" />
       </div>
       <div className="form-group">
-        <label className="label">Situação</label>
-        <select value={form.status} onChange={e => set('status', e.target.value)}>
+        <label htmlFor="developments-situacao" className="label">Situação</label>
+        <select id="developments-situacao" value={form.status} onChange={e => set('status', e.target.value)}>
           {Object.entries(STATUSES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
       </div>
       <DepartmentSelect value={form.department_id} onChange={v => set('department_id', v)} label="Visível para" />
-      {error && <p className={s.error}>{error}</p>}
+      {error && <p role="alert" className={s.error}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.name.trim() || saving} onClick={save}>
         {saving ? 'Salvando...' : 'Salvar'}
       </button>

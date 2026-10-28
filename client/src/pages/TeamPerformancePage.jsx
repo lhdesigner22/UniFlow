@@ -134,8 +134,8 @@ function GiveKudosModal({ member, type, onClose, onGiven }) {
   return (
     <Modal title={`${isLike ? 'Dar 👍' : 'Dar 👎'} — ${member.user_name}`} onClose={onClose} width={440}>
       <div className="form-group">
-        <label className="label">Motivo (opcional)</label>
-        <textarea
+        <label htmlFor="team-performance-motivo-opcional" className="label">Motivo (opcional)</label>
+        <textarea id="team-performance-motivo-opcional"
           autoFocus
           rows={3}
           value={comment}

@@ -51,21 +51,21 @@ function Editor({ node, defaultParentId, nodes, onClose, onSaved }) {
   return (
     <Modal title={node ? 'Editar cargo' : 'Novo cargo'} onClose={onClose} width={480}>
       <div className="form-group">
-        <label className="label">Nome</label>
-        <input autoFocus value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: João Paulo, ou só 'Estágio' pra vaga genérica" />
+        <label htmlFor="org-chart-nome" className="label">Nome</label>
+        <input id="org-chart-nome" autoFocus value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: João Paulo, ou só 'Estágio' pra vaga genérica" />
       </div>
       <div className="form-group">
-        <label className="label">Cargo</label>
-        <input value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} placeholder="Ex: Gerente TI, Analista, Auxiliar..." />
+        <label htmlFor="org-chart-cargo" className="label">Cargo</label>
+        <input id="org-chart-cargo" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} placeholder="Ex: Gerente TI, Analista, Auxiliar..." />
       </div>
       <div className="form-group">
-        <label className="label">Reporta para</label>
-        <select value={form.parent_id} onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))}>
+        <label htmlFor="org-chart-reporta-para" className="label">Reporta para</label>
+        <select id="org-chart-reporta-para" value={form.parent_id} onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))}>
           <option value="">— Nenhum (topo da hierarquia)</option>
           {parentOptions.map(n => <option key={n.id} value={n.id}>{n.name}{n.role ? ` — ${n.role}` : ''}</option>)}
         </select>
       </div>
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.name.trim() || saving} onClick={save}>
         {saving ? 'Salvando...' : 'Salvar'}
       </button>
@@ -449,7 +449,7 @@ export default function OrgChartPage() {
           <button className="btn btn-ghost btn-sm" onClick={() => resetPosition(draggingNode)}>↺ Repor no lugar original</button>
         </div>
       )}
-      {linkError && <p className={s.fileError}>{linkError}</p>}
+      {linkError && <p role="alert" className={s.fileError}>{linkError}</p>}
 
       {roots.length === 0 ? (
         <div className={s.empty}>

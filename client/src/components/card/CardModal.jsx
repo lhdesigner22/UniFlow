@@ -368,7 +368,7 @@ export default function CardModal({ boardId, cardId, board, currentUser, onClose
                   />
                 ))}
               </div>
-              {labelError && <span className={s.labelError}>{labelError}</span>}
+              {labelError && <span role="alert" className={s.labelError}>{labelError}</span>}
               <div className={s.labelFormActions}>
                 <button className="btn btn-primary btn-sm" disabled={!labelForm.name.trim()} onClick={saveLabelForm}>{labelForm.id ? 'Salvar' : 'Criar etiqueta'}</button>
                 <button className="btn btn-ghost btn-sm" onClick={() => setLabelForm(null)}>Cancelar</button>

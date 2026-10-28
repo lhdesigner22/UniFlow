@@ -53,12 +53,12 @@ function Editor({ entry, existingCategories, onClose, onSaved }) {
   return (
     <Modal title={entry ? 'Editar item' : 'Novo item do cofre'} onClose={onClose} width={480}>
       <div className="form-group">
-        <label className="label">Título</label>
-        <input autoFocus value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Wi-Fi SEDE, Painel admin GLPI..." />
+        <label htmlFor="vault-titulo" className="label">Título</label>
+        <input id="vault-titulo" autoFocus value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Wi-Fi SEDE, Painel admin GLPI..." />
       </div>
       <div className="form-group">
-        <label className="label">Categoria</label>
-        <input
+        <label htmlFor="vault-categoria" className="label">Categoria</label>
+        <input id="vault-categoria"
           list="vault-category-list"
           value={form.category}
           onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
@@ -69,22 +69,22 @@ function Editor({ entry, existingCategories, onClose, onSaved }) {
         </datalist>
       </div>
       <div className="form-group">
-        <label className="label">Usuário (opcional)</label>
-        <input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="Login/usuário, se houver" />
+        <label htmlFor="vault-usuario-opcional" className="label">Usuário (opcional)</label>
+        <input id="vault-usuario-opcional" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="Login/usuário, se houver" />
       </div>
       <div className="form-group">
-        <label className="label">Senha{entry ? ' (deixe em branco pra manter a atual)' : ''}</label>
-        <input type="password" autoComplete="new-password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={entry ? '••••••••' : 'Senha'} />
+        <label htmlFor="vault-senha" className="label">Senha{entry ? ' (deixe em branco pra manter a atual)' : ''}</label>
+        <input id="vault-senha" type="password" autoComplete="new-password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={entry ? '••••••••' : 'Senha'} />
       </div>
       <div className="form-group">
-        <label className="label">Link (opcional)</label>
-        <input value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="Ex: link do painel administrativo" />
+        <label htmlFor="vault-link-opcional" className="label">Link (opcional)</label>
+        <input id="vault-link-opcional" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="Ex: link do painel administrativo" />
       </div>
       <div className="form-group">
-        <label className="label">Observação (opcional)</label>
-        <textarea rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Contexto, onde fica o equipamento, etc." />
+        <label htmlFor="vault-observacao-opcional" className="label">Observação (opcional)</label>
+        <textarea id="vault-observacao-opcional" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Contexto, onde fica o equipamento, etc." />
       </div>
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
       <button
         className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
         disabled={!form.title.trim() || (!entry && !form.password) || saving}
@@ -162,7 +162,7 @@ function AccessModal({ onClose }) {
           />
         )}
       </div>
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
     </Modal>
   )
 }

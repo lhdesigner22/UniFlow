@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { confirmDialog } from '../../store/dialogStore'
 import CardItem from './CardItem'
 import s from './Column.module.css'
+import { pressable } from '../../utils/pressable'
 
 // Lembra, por coluna, se os cards concluídos estão escondidos — estilo
 // Planner: some da vista assim que marca como concluído, pra não ocupar
@@ -83,7 +84,7 @@ export default function Column({ column, cards, onOpenCard, onAddCard, onToggleP
             onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') { setNameDraft(column.name); setEditingName(false) } }}
           />
         ) : (
-          <span className={s.name} onClick={() => { setNameDraft(column.name); setEditingName(true) }} title="Clique para renomear">{column.name}</span>
+          <span className={s.name} {...pressable(() => { setNameDraft(column.name); setEditingName(true) })} title="Clique para renomear" aria-label={`Renomear a coluna ${column.name}`}>{column.name}</span>
         )}
         <span className={s.count}>{cards.length}</span>
         <div className={s.menuWrap} ref={menuRef}>

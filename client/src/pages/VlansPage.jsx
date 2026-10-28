@@ -131,8 +131,8 @@ export default function VlansPage() {
   const ssids = useMemo(() => (data?.ssids || []).filter(w =>
     !term || `${w.ssid} ${w.vlan_id}`.toLowerCase().includes(term)), [data, term])
 
-  if (!info) return <div className={s.errorBox}>Local não encontrado.</div>
-  if (error) return <div className={s.errorBox}>{error}</div>
+  if (!info) return <div role="alert" className={s.errorBox}>Local não encontrado.</div>
+  if (error) return <div role="alert" className={s.errorBox}>{error}</div>
   if (!data) return <div className={s.loading}>Carregando VLANs...</div>
 
   return (

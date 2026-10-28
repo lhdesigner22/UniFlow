@@ -26,8 +26,8 @@ export default function CreateBoardModal({ onClose, onCreated }) {
   return (
     <Modal title="Novo quadro" onClose={onClose} width={420}>
       <div className="form-group">
-        <label className="label">Nome</label>
-        <input
+        <label htmlFor="create-board-modal-nome" className="label">Nome</label>
+        <input id="create-board-modal-nome"
           autoFocus
           value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -36,8 +36,8 @@ export default function CreateBoardModal({ onClose, onCreated }) {
         />
       </div>
       <div className="form-group">
-        <label className="label">Descrição (opcional)</label>
-        <textarea
+        <label htmlFor="create-board-modal-descricao-opcional" className="label">Descrição (opcional)</label>
+        <textarea id="create-board-modal-descricao-opcional"
           rows={2}
           value={form.description}
           onChange={e => setForm(f => ({ ...f, description: e.target.value }))}

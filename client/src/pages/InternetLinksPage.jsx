@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core'
+import { DndContext, closestCenter } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import api from '../services/api'
@@ -10,6 +10,8 @@ import Modal from '../components/common/Modal'
 import s from './InternetLinksPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
+import LineIcon from '../components/common/LineIcon'
+import { useSortableSensors, sortableAccessibility } from '../utils/sortableA11y'
 
 const LOCATIONS = [
   { key: 'sede', label: 'SEDE' },
@@ -104,18 +106,18 @@ function Editor({ link, defaultLocation, onClose, onSaved }) {
   return (
     <Modal title={link ? 'Editar link de internet' : 'Novo link de internet'} onClose={onClose} width={520}>
       <div className="form-group">
-        <label className="label">Local</label>
-        <select value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}>
+        <label htmlFor="internet-links-local" className="label">Local</label>
+        <select id="internet-links-local" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}>
           {LOCATIONS.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
         </select>
       </div>
       <div className="form-group">
-        <label className="label">Nome da operadora</label>
-        <input autoFocus value={form.provider} onChange={e => setForm(f => ({ ...f, provider: e.target.value }))} placeholder="Ex: Vivo, Claro, Algar..." />
+        <label htmlFor="internet-links-nome-da-operadora" className="label">Nome da operadora</label>
+        <input id="internet-links-nome-da-operadora" autoFocus value={form.provider} onChange={e => setForm(f => ({ ...f, provider: e.target.value }))} placeholder="Ex: Vivo, Claro, Algar..." />
       </div>
       <div className="form-group">
-        <label className="label">Velocidade do link</label>
-        <input value={form.speed} onChange={e => setForm(f => ({ ...f, speed: e.target.value }))} placeholder="Ex: 500 Mbps, 1 Gbps..." />
+        <label htmlFor="internet-links-velocidade-do-link" className="label">Velocidade do link</label>
+        <input id="internet-links-velocidade-do-link" value={form.speed} onChange={e => setForm(f => ({ ...f, speed: e.target.value }))} placeholder="Ex: 500 Mbps, 1 Gbps..." />
       </div>
       <div className="form-group">
         <label className={s.checkboxLabel}>
@@ -124,28 +126,28 @@ function Editor({ link, defaultLocation, onClose, onSaved }) {
         </label>
       </div>
       <div className="form-group">
-        <label className="label">Gerente de negócios</label>
-        <input value={form.account_manager} onChange={e => setForm(f => ({ ...f, account_manager: e.target.value }))} placeholder="Nome do gerente" />
+        <label htmlFor="internet-links-gerente-de-negocios" className="label">Gerente de negócios</label>
+        <input id="internet-links-gerente-de-negocios" value={form.account_manager} onChange={e => setForm(f => ({ ...f, account_manager: e.target.value }))} placeholder="Nome do gerente" />
       </div>
       <div className="form-group">
-        <label className="label">Contato</label>
-        <input value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} placeholder="Telefone ou e-mail do gerente" />
+        <label htmlFor="internet-links-contato" className="label">Contato</label>
+        <input id="internet-links-contato" value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} placeholder="Telefone ou e-mail do gerente" />
       </div>
       <div className="form-group">
-        <label className="label">CNPJ registrado</label>
-        <input value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" />
+        <label htmlFor="internet-links-cnpj-registrado" className="label">CNPJ registrado</label>
+        <input id="internet-links-cnpj-registrado" value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" />
       </div>
       <div className="form-group">
-        <label className="label">CEP</label>
-        <input value={cep} onChange={onCepChange} placeholder="00000-000" inputMode="numeric" />
+        <label htmlFor="internet-links-cep" className="label">CEP</label>
+        <input id="internet-links-cep" value={cep} onChange={onCepChange} placeholder="00000-000" inputMode="numeric" />
         {cepLoading && <p className={s.cepHint}>Buscando endereço...</p>}
-        {cepError && <p className={s.fileError}>{cepError}</p>}
+        {cepError && <p role="alert" className={s.fileError}>{cepError}</p>}
       </div>
       <div className="form-group">
-        <label className="label">Endereço</label>
-        <textarea rows={2} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Preenche sozinho a partir do CEP acima — complete com número e complemento" />
+        <label htmlFor="internet-links-endereco" className="label">Endereço</label>
+        <textarea id="internet-links-endereco" rows={2} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Preenche sozinho a partir do CEP acima — complete com número e complemento" />
       </div>
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
       <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.provider.trim() || saving} onClick={save}>
         {saving ? 'Salvando...' : 'Salvar'}
@@ -156,19 +158,23 @@ function Editor({ link, defaultLocation, onClose, onSaved }) {
 
 // Um card de link — arrastável só pela alça (⠿), pra não atrapalhar cliques
 // nos botões de editar/excluir ou no link "Abrir no Google Maps".
-function LinkCard({ link: l, draggable, canEdit, onEdit, onDelete }) {
-  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: l.id, disabled: !draggable })
+function LinkCard({ link: l, index, total, draggable, canEdit, onEdit, onDelete, onMove }) {
+  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: l.id, disabled: !draggable, attributes: { roleDescription: 'item reordenável' } })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
 
   return (
     <div ref={setNodeRef} style={style} className={s.card}>
       <div className={s.cardHeader}>
         {draggable && (
-          <button type="button" className={s.dragHandle} title="Arrastar para reordenar" {...attributes} {...listeners}>⠿</button>
+          <button type="button" className={s.dragHandle} title="Arrastar para reordenar" {...attributes} aria-label={`Reordenar ${l.provider}`} {...listeners}>⠿</button>
         )}
         <h3 className={s.cardTitle}>{l.provider}</h3>
         {canEdit(l) && (
           <div className={s.cardActions}>
+            {draggable && <>
+              <button type="button" className={s.iconBtn} title="Mover para antes" aria-label={`Mover ${l.provider} para antes`} disabled={index === 0} onClick={() => onMove(index, index - 1)}><LineIcon name="chevronLeft" /></button>
+              <button type="button" className={s.iconBtn} title="Mover para depois" aria-label={`Mover ${l.provider} para depois`} disabled={index === total - 1} onClick={() => onMove(index, index + 1)}><LineIcon name="chevronRight" /></button>
+            </>}
             <button className={s.iconBtn} title="Editar" onClick={() => onEdit(l)}>✏️</button>
             <button className={s.iconBtn} title="Excluir" onClick={() => onDelete(l)}>🗑️</button>
           </div>
@@ -246,17 +252,19 @@ export default function InternetLinksPage() {
 
   const canEdit = l => l.created_by === user?.id || user?.system_role === 'super_admin'
   const canReorder = user?.system_role === 'super_admin'
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const sensors = useSortableSensors()
 
   // Arrastar-e-soltar pra reordenar dentro do local atual — atualiza a tela
   // na hora e persiste a nova ordem; se falhar, refaz a busca pra desfazer.
-  const handleDragEnd = async e => {
+  const handleDragEnd = e => {
     const { active, over } = e
     if (!over || active.id === over.id) return
-    const oldIndex = filtered.findIndex(l => l.id === active.id)
-    const newIndex = filtered.findIndex(l => l.id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
+    moveTo(filtered.findIndex(l => l.id === active.id), filtered.findIndex(l => l.id === over.id))
+  }
 
+  // Também usado pelos botões ‹ › (quem não consegue arrastar).
+  const moveTo = async (oldIndex, newIndex) => {
+    if (oldIndex === -1 || newIndex < 0 || newIndex >= filtered.length) return
     const reordered = arrayMove(filtered, oldIndex, newIndex)
     setLinks(prev => [...(prev || []).filter(l => l.location !== locationTab), ...reordered])
     try {
@@ -294,11 +302,12 @@ export default function InternetLinksPage() {
           <p>{user?.system_role === 'super_admin' ? 'Cadastre o primeiro link desse local.' : 'Peça pra um Super Admin cadastrar.'}</p>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}
+          accessibility={sortableAccessibility(filtered, l => l.provider)}>
           <SortableContext items={filtered.map(l => l.id)} strategy={rectSortingStrategy}>
             <div className={s.grid}>
-              {filtered.map(l => (
-                <LinkCard key={l.id} link={l} draggable={canReorder} canEdit={canEdit} onEdit={setEditing} onDelete={deleteLink} />
+              {filtered.map((l, i) => (
+                <LinkCard key={l.id} link={l} index={i} total={filtered.length} draggable={canReorder} canEdit={canEdit} onEdit={setEditing} onDelete={deleteLink} onMove={moveTo} />
               ))}
             </div>
           </SortableContext>

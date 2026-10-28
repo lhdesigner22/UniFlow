@@ -25,6 +25,7 @@
   transition: background .12s;
 }
 .iconBtn:hover { background: var(--surface-2); }
+.iconBtn:disabled { opacity: .35; cursor: default; background: transparent; }
 .cardTitle { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
 .cardIp { font-size: 12.5px; color: var(--text-muted); }
 .mono { font-family: var(--font-mono, ui-monospace, monospace); color: var(--text); }

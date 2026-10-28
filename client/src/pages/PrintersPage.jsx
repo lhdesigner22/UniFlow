@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core'
+import { DndContext, closestCenter } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import api from '../services/api'
@@ -15,6 +15,8 @@ import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
 import { safeHref } from '../utils/safeHref'
 import PrinterSupplyHistory from '../components/common/PrinterSupplyHistory'
+import LineIcon from '../components/common/LineIcon'
+import { useSortableSensors, sortableAccessibility } from '../utils/sortableA11y'
 
 // Mesmo teto aplicado no servidor — 95 MB, o máximo seguro dentro do limite
 // real de corpo de requisição da Cloudflare (100 MB no plano atual, um teto
@@ -45,7 +47,7 @@ function timeAgo(iso) {
 // Envolve um card pra poder arrastá-lo; entrega as props da alça (⠿) via
 // render-prop — só ela inicia o arrasto, pra não atrapalhar os botões do card.
 function SortableCard({ id, disabled, className, children }) {
-  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id, disabled })
+  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id, disabled, attributes: { roleDescription: 'item reordenável' } })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
   return (
     <div ref={setNodeRef} style={style} className={className}>
@@ -118,22 +120,22 @@ function Editor({ printer, defaultLocation, onClose, onSaved }) {
   return (
     <Modal title={printer ? 'Editar impressora' : 'Nova impressora'} onClose={onClose} width={520}>
       <div className="form-group">
-        <label className="label">Local</label>
-        <select value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}>
+        <label htmlFor="printers-local" className="label">Local</label>
+        <select id="printers-local" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}>
           {LOCATIONS.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
         </select>
       </div>
       <div className="form-group">
-        <label className="label">Modelo</label>
-        <input autoFocus value={form.model} onChange={e => setForm(f => ({ ...f, model: e.target.value }))} placeholder="Ex: HP LaserJet Pro M404dw" />
+        <label htmlFor="printers-modelo" className="label">Modelo</label>
+        <input id="printers-modelo" autoFocus value={form.model} onChange={e => setForm(f => ({ ...f, model: e.target.value }))} placeholder="Ex: HP LaserJet Pro M404dw" />
       </div>
       <div className="form-group">
-        <label className="label">IP</label>
-        <input value={form.ip} onChange={e => setForm(f => ({ ...f, ip: e.target.value }))} placeholder="Ex: 192.168.1.50" />
+        <label htmlFor="printers-ip" className="label">IP</label>
+        <input id="printers-ip" value={form.ip} onChange={e => setForm(f => ({ ...f, ip: e.target.value }))} placeholder="Ex: 192.168.1.50" />
       </div>
       <div className="form-group">
-        <label className="label">Departamento</label>
-        <input value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} placeholder="Ex: Financeiro, TI, Secretaria..." />
+        <label htmlFor="printers-departamento" className="label">Departamento</label>
+        <input id="printers-departamento" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} placeholder="Ex: Financeiro, TI, Secretaria..." />
       </div>
       <div className="form-group">
         <label className="label">Driver (opcional, até 95 MB)</label>
@@ -150,11 +152,11 @@ function Editor({ printer, defaultLocation, onClose, onSaved }) {
         ) : (
           <input type="file" onChange={onFileChange} />
         )}
-        {fileError && <p className={s.fileError}>{fileError}</p>}
+        {fileError && <p role="alert" className={s.fileError}>{fileError}</p>}
       </div>
       <div className="form-group">
-        <label className="label">Ou link direto de instalação (opcional)</label>
-        <input
+        <label htmlFor="printers-ou-link-direto-de-instal" className="label">Ou link direto de instalação (opcional)</label>
+        <input id="printers-ou-link-direto-de-instal"
           value={form.link_url}
           onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))}
           placeholder="Ex: link do site do fabricante ou do Drive"
@@ -211,17 +213,19 @@ export default function PrintersPage() {
 
   const canEdit = p => p.created_by === user?.id || user?.system_role === 'super_admin'
   const canReorder = user?.system_role === 'super_admin'
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const sensors = useSortableSensors()
 
   // Arrastar-e-soltar dentro do local atual: atualiza a tela na hora e salva
   // a nova ordem; se falhar, refaz a busca pra desfazer.
-  const handleDragEnd = async e => {
+  const handleDragEnd = e => {
     const { active, over } = e
     if (!over || active.id === over.id) return
-    const oldIndex = filtered.findIndex(p => p.id === active.id)
-    const newIndex = filtered.findIndex(p => p.id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
+    moveTo(filtered.findIndex(p => p.id === active.id), filtered.findIndex(p => p.id === over.id))
+  }
 
+  // Também usado pelos botões ‹ › (quem não consegue arrastar).
+  const moveTo = async (oldIndex, newIndex) => {
+    if (oldIndex === -1 || newIndex < 0 || newIndex >= filtered.length) return
     const reordered = arrayMove(filtered, oldIndex, newIndex)
     setPrinters(prev => [...(prev || []).filter(p => p.location !== locationTab), ...reordered])
     try {
@@ -251,7 +255,8 @@ export default function PrintersPage() {
           <p>{user?.system_role === 'super_admin' ? 'Cadastre a primeira impressora desse local.' : 'Peça pra um Super Admin cadastrar.'}</p>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}
+          accessibility={sortableAccessibility(filtered, p => p.model)}>
           <SortableContext items={filtered.map(p => p.id)} strategy={rectSortingStrategy}>
             <div className={s.grid}>
               {filtered.map((p, i) => (
@@ -260,11 +265,15 @@ export default function PrintersPage() {
                     <Reveal delay={Math.min(i, 10) * 50} className={s.card}>
                       <div className={s.cardHeader}>
                         {canReorder && (
-                          <button type="button" className={s.dragHandle} title="Arrastar para reordenar" {...handleProps}>⠿</button>
+                          <button type="button" className={s.dragHandle} title="Arrastar para reordenar" aria-label={`Reordenar ${p.model}`} {...handleProps}>⠿</button>
                         )}
                         <h3 className={s.cardTitle}>{p.model}</h3>
                         {canEdit(p) && (
                           <div className={s.cardActions}>
+                            {canReorder && <>
+                              <button type="button" className={s.iconBtn} title="Mover para antes" aria-label={`Mover ${p.model} para antes`} disabled={i === 0} onClick={() => moveTo(i, i - 1)}><LineIcon name="chevronLeft" /></button>
+                              <button type="button" className={s.iconBtn} title="Mover para depois" aria-label={`Mover ${p.model} para depois`} disabled={i === filtered.length - 1} onClick={() => moveTo(i, i + 1)}><LineIcon name="chevronRight" /></button>
+                            </>}
                             <button className={s.iconBtn} title="Editar" onClick={() => setEditing(p)}>✏️</button>
                             <button className={s.iconBtn} title="Excluir" onClick={() => deletePrinter(p)}>🗑️</button>
                           </div>

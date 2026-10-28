@@ -65,7 +65,7 @@ function TechVisibilityModal({ entity, technicians, hidden, onClose, onSaved }) 
         ))}
         {shown.length === 0 && <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Nenhum técnico.</span>}
       </div>
-      {error && <p style={{ fontSize: 12, color: 'var(--danger, #EF4444)', marginBottom: 8 }}>{error}</p>}
+      {error && <p role="alert" style={{ fontSize: 12, color: 'var(--danger, #EF4444)', marginBottom: 8 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8 }}>
         <button className="btn btn-ghost" onClick={() => setHiddenSet(new Set())} disabled={!hiddenSet.size}>Mostrar todos</button>
         <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={save} disabled={saving}>

@@ -9,6 +9,7 @@ import { confirmDialog } from '../store/dialogStore'
 import s from './AgendaPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
+import { pressable } from '../utils/pressable'
 
 const WEEKDAY_LONG = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const WEEKDAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
@@ -222,7 +223,7 @@ export default function AgendaPage() {
                 {byDay[day].map(ev => {
                   const board = boardById(ev.board_id)
                   return (
-                    <div key={`${ev.id}-${ev.occurrence_date}`} className={s.eventRow} onClick={() => openEdit(ev)}>
+                    <div key={`${ev.id}-${ev.occurrence_date}`} className={s.eventRow} {...pressable(() => openEdit(ev))}>
                       <span className={s.eventTime}>{ev.event_time || 'Dia todo'}</span>
                       <span className={s.eventTitle}>{ev.title}</span>
                       <div className={s.eventBadges}>
@@ -251,8 +252,8 @@ export default function AgendaPage() {
       {showModal && (
         <Modal title={editing ? 'Editar evento' : 'Novo evento'} onClose={() => setShowModal(false)} width={480}>
           <div className="form-group">
-            <label className="label">Título</label>
-            <input
+            <label htmlFor="agenda-titulo" className="label">Título</label>
+            <input id="agenda-titulo"
               autoFocus
               value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
@@ -260,8 +261,8 @@ export default function AgendaPage() {
             />
           </div>
           <div className="form-group">
-            <label className="label">Descrição (opcional)</label>
-            <textarea
+            <label htmlFor="agenda-descricao-opcional" className="label">Descrição (opcional)</label>
+            <textarea id="agenda-descricao-opcional"
               rows={2}
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -269,26 +270,26 @@ export default function AgendaPage() {
             />
           </div>
           <div className="form-group">
-            <label className="label">Quadro</label>
-            <select value={form.board_id} onChange={e => setForm(f => ({ ...f, board_id: e.target.value }))}>
+            <label htmlFor="agenda-quadro" className="label">Quadro</label>
+            <select id="agenda-quadro" value={form.board_id} onChange={e => setForm(f => ({ ...f, board_id: e.target.value }))}>
               <option value="">Nenhum (evento global)</option>
               {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <div className={s.formRow}>
             <div className="form-group" style={{ flex: 1 }}>
-              <label className="label">Data</label>
-              <input type="date" value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} />
+              <label htmlFor="agenda-data" className="label">Data</label>
+              <input id="agenda-data" type="date" value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} />
             </div>
             <div className="form-group" style={{ flex: 1 }}>
-              <label className="label">Horário (opcional)</label>
-              <input type="time" value={form.event_time} onChange={e => setForm(f => ({ ...f, event_time: e.target.value }))} />
+              <label htmlFor="agenda-horario-opcional" className="label">Horário (opcional)</label>
+              <input id="agenda-horario-opcional" type="time" value={form.event_time} onChange={e => setForm(f => ({ ...f, event_time: e.target.value }))} />
             </div>
           </div>
           <div className={s.formRow}>
             <div className="form-group" style={{ flex: 1 }}>
-              <label className="label">Recorrência</label>
-              <select value={form.recurrence_type} onChange={e => setForm(f => ({ ...f, recurrence_type: e.target.value }))}>
+              <label htmlFor="agenda-recorrencia" className="label">Recorrência</label>
+              <select id="agenda-recorrencia" value={form.recurrence_type} onChange={e => setForm(f => ({ ...f, recurrence_type: e.target.value }))}>
                 <option value="none">Nenhuma</option>
                 <option value="weekly">Semanal</option>
                 <option value="monthly">Mensal</option>
@@ -296,14 +297,14 @@ export default function AgendaPage() {
             </div>
             {form.recurrence_type !== 'none' && (
               <div className="form-group" style={{ flex: 1 }}>
-                <label className="label">Repetir até (opcional)</label>
-                <input type="date" value={form.recurrence_until} onChange={e => setForm(f => ({ ...f, recurrence_until: e.target.value }))} />
+                <label htmlFor="agenda-repetir-ate-opcional" className="label">Repetir até (opcional)</label>
+                <input id="agenda-repetir-ate-opcional" type="date" value={form.recurrence_until} onChange={e => setForm(f => ({ ...f, recurrence_until: e.target.value }))} />
               </div>
             )}
           </div>
 
           <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
-          {formMsg && <p style={{ fontSize: 12, color: 'var(--danger)', marginBottom: 10 }}>{formMsg}</p>}
+          {formMsg && <p role="alert" style={{ fontSize: 12, color: 'var(--danger)', marginBottom: 10 }}>{formMsg}</p>}
 
           <div className={s.modalActions}>
             {editing && (
@@ -333,7 +334,7 @@ export default function AgendaPage() {
                 <div
                   key={`${ev.id}-${ev.occurrence_date}`}
                   className={s.eventRow}
-                  onClick={() => { setDayPopup(null); openEdit(ev) }}
+                  {...pressable(() => { setDayPopup(null); openEdit(ev) })}
                 >
                   <span className={s.eventTime}>{ev.event_time || 'Dia todo'}</span>
                   <span className={s.eventTitle}>{ev.title}</span>
@@ -399,7 +400,8 @@ function CalendarView({ gridStart, gridEnd, monthAnchor, byDay, onOpenEvent, onD
             <div
               key={dateStr}
               className={`${s.calendarCell} ${outside ? s.outside : ''} ${isToday ? s.today : ''}`}
-              onClick={() => onDayClick(dateStr)}
+              {...pressable(() => onDayClick(dateStr))}
+              aria-label={`${day.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}: ${dayEvents.length ? `${dayEvents.length} evento(s)` : 'sem eventos'}`}
             >
               <span className={s.calendarDayNum}>{day.getDate()}</span>
               <div className={s.calendarEvents}>

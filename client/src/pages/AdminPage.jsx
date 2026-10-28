@@ -555,7 +555,7 @@ export default function AdminPage() {
               </button>
             </div>
             {deptMsg && (
-              <p style={{ fontSize:12, color: deptMsg.type === 'error' ? 'var(--red)' : 'var(--green)', marginTop:6 }}>
+              <p role={deptMsg.type === 'error' ? 'alert' : 'status'} style={{ fontSize:12, color: deptMsg.type === 'error' ? 'var(--red)' : 'var(--green)', marginTop:6 }}>
                 {deptMsg.text}
               </p>
             )}
@@ -674,7 +674,7 @@ export default function AdminPage() {
           </div>
 
           {settingsMsg && (
-            <p style={{ fontSize:12, color:'var(--red)' }}>{settingsMsg.text}</p>
+            <p role="alert" style={{ fontSize:12, color:'var(--red)' }}>{settingsMsg.text}</p>
           )}
 
           {/* Fila de e-mail */}
@@ -694,7 +694,7 @@ export default function AdminPage() {
               </button>
             </div>
             {testStatus && (
-              <p style={{ fontSize: 12, marginBottom: 12, color: testStatus.type === 'success' ? 'var(--green)' : testStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
+              <p role="status" style={{ fontSize: 12, marginBottom: 12, color: testStatus.type === 'success' ? 'var(--green)' : testStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
                 {testStatus.text}
               </p>
             )}
@@ -779,7 +779,7 @@ export default function AdminPage() {
               </button>
             </div>
             {glpiSyncStatus && (
-              <p style={{ fontSize: 12, marginBottom: 4, color: glpiSyncStatus.type === 'success' ? 'var(--green)' : glpiSyncStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
+              <p role="status" style={{ fontSize: 12, marginBottom: 4, color: glpiSyncStatus.type === 'success' ? 'var(--green)' : glpiSyncStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
                 {glpiSyncStatus.text}
               </p>
             )}
@@ -801,7 +801,7 @@ export default function AdminPage() {
               )}
             </div>
             {retroStatus && (
-              <p style={{ fontSize: 12, marginBottom: 8, color: retroStatus.type === 'success' ? 'var(--green)' : retroStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
+              <p role="status" style={{ fontSize: 12, marginBottom: 8, color: retroStatus.type === 'success' ? 'var(--green)' : retroStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
                 {retroStatus.text}
               </p>
             )}
@@ -846,7 +846,7 @@ export default function AdminPage() {
               )}
             </div>
             {dupStatus && (
-              <p style={{ fontSize: 12, marginBottom: 8, color: dupStatus.type === 'success' ? 'var(--green)' : dupStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
+              <p role="status" style={{ fontSize: 12, marginBottom: 8, color: dupStatus.type === 'success' ? 'var(--green)' : dupStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
                 {dupStatus.text}
               </p>
             )}

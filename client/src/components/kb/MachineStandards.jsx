@@ -49,33 +49,33 @@ function Editor({ item, onClose, onSaved }) {
     <Modal title={item ? 'Editar perfil' : 'Novo perfil'} onClose={onClose} width={560}>
       <div className={s.formRow}>
         <div className="form-group">
-          <label className="label">Tipo</label>
-          <select value={form.kind} onChange={e => set('kind', e.target.value)}>
+          <label htmlFor="machine-standards-tipo" className="label">Tipo</label>
+          <select id="machine-standards-tipo" value={form.kind} onChange={e => set('kind', e.target.value)}>
             {KINDS.map(k => <option key={k.key} value={k.key}>{k.label}</option>)}
           </select>
         </div>
         <div className="form-group" style={{ flex: 2 }}>
-          <label className="label">{form.kind === 'setor' ? 'Setor' : 'Cargo'}</label>
-          <input autoFocus value={form.name} maxLength={80} onChange={e => set('name', e.target.value)} placeholder={form.kind === 'setor' ? 'Ex: Soluções Digitais' : 'Ex: Estagiário'} />
+          <label htmlFor="machine-standards-campo" className="label">{form.kind === 'setor' ? 'Setor' : 'Cargo'}</label>
+          <input id="machine-standards-campo" autoFocus value={form.name} maxLength={80} onChange={e => set('name', e.target.value)} placeholder={form.kind === 'setor' ? 'Ex: Soluções Digitais' : 'Ex: Estagiário'} />
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Observação (opcional)</label>
-        <input value={form.audience} maxLength={200} onChange={e => set('audience', e.target.value)} placeholder="Ex: Inclui coordenação, gerência e diretoria" />
+        <label htmlFor="machine-standards-observacao-opcional" className="label">Observação (opcional)</label>
+        <input id="machine-standards-observacao-opcional" value={form.audience} maxLength={200} onChange={e => set('audience', e.target.value)} placeholder="Ex: Inclui coordenação, gerência e diretoria" />
       </div>
       <div className={s.formRow}>
         <div className="form-group">
-          <label className="label">Processador</label>
-          <input value={form.cpu} maxLength={80} onChange={e => set('cpu', e.target.value)} placeholder="Ex: Intel Core i5" />
+          <label htmlFor="machine-standards-processador" className="label">Processador</label>
+          <input id="machine-standards-processador" value={form.cpu} maxLength={80} onChange={e => set('cpu', e.target.value)} placeholder="Ex: Intel Core i5" />
         </div>
         <div className="form-group">
-          <label className="label">Memória RAM</label>
-          <input value={form.ram} maxLength={80} onChange={e => set('ram', e.target.value)} placeholder="Ex: 8 a 16 GB" />
+          <label htmlFor="machine-standards-memoria-ram" className="label">Memória RAM</label>
+          <input id="machine-standards-memoria-ram" value={form.ram} maxLength={80} onChange={e => set('ram', e.target.value)} placeholder="Ex: 8 a 16 GB" />
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Requisito extra (opcional)</label>
-        <input value={form.extra} maxLength={200} onChange={e => set('extra', e.target.value)} placeholder="Ex: Placa de vídeo dedicada" />
+        <label htmlFor="machine-standards-requisito-extra-opcional" className="label">Requisito extra (opcional)</label>
+        <input id="machine-standards-requisito-extra-opcional" value={form.extra} maxLength={200} onChange={e => set('extra', e.target.value)} placeholder="Ex: Placa de vídeo dedicada" />
       </div>
       <div className="form-group">
         <label className="label">Ícone e cor</label>
@@ -90,7 +90,7 @@ function Editor({ item, onClose, onSaved }) {
           ))}
         </div>
       </div>
-      {error && <p className={s.error}>{error}</p>}
+      {error && <p role="alert" className={s.error}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.name.trim() || saving} onClick={save}>
         {saving ? 'Salvando...' : 'Salvar'}
       </button>

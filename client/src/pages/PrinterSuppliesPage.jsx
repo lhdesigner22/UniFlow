@@ -73,25 +73,25 @@ function SupplyEditor({ supply, knownModels, onClose, onSaved }) {
   return (
     <Modal title={supply ? 'Editar insumo' : 'Novo insumo'} onClose={onClose} width={620}>
       <div className="form-group">
-        <label className="label">Nome *</label>
-        <input autoFocus value={form.name} maxLength={120} onChange={e => set('name', e.target.value)} placeholder="Ex: Toner Ricoh SP 377 preto" />
+        <label htmlFor="printer-supplies-nome" className="label">Nome *</label>
+        <input id="printer-supplies-nome" autoFocus value={form.name} maxLength={120} onChange={e => set('name', e.target.value)} placeholder="Ex: Toner Ricoh SP 377 preto" />
       </div>
       <div className={s.formGrid3}>
         <div className="form-group">
-          <label className="label">Tipo</label>
-          <select value={form.type} onChange={e => set('type', e.target.value)}>
+          <label htmlFor="printer-supplies-tipo" className="label">Tipo</label>
+          <select id="printer-supplies-tipo" value={form.type} onChange={e => set('type', e.target.value)}>
             {Object.entries(SUPPLY_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
         <div className="form-group">
-          <label className="label">Cor</label>
-          <select value={form.color} onChange={e => set('color', e.target.value)}>
+          <label htmlFor="printer-supplies-cor" className="label">Cor</label>
+          <select id="printer-supplies-cor" value={form.color} onChange={e => set('color', e.target.value)}>
             {Object.entries(COLORS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
         <div className="form-group">
-          <label className="label">Código / part number</label>
-          <input value={form.code} maxLength={60} onChange={e => set('code', e.target.value)} placeholder="Ex: 408161" />
+          <label htmlFor="printer-supplies-codigo-part-number" className="label">Código / part number</label>
+          <input id="printer-supplies-codigo-part-number" value={form.code} maxLength={60} onChange={e => set('code', e.target.value)} placeholder="Ex: 408161" />
         </div>
       </div>
       <div className="form-group">
@@ -120,10 +120,10 @@ function SupplyEditor({ supply, knownModels, onClose, onSaved }) {
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Observações</label>
-        <textarea rows={2} value={form.notes} maxLength={1000} onChange={e => set('notes', e.target.value)} placeholder="Fornecedor, rendimento (páginas), onde fica guardado..." />
+        <label htmlFor="printer-supplies-observacoes" className="label">Observações</label>
+        <textarea id="printer-supplies-observacoes" rows={2} value={form.notes} maxLength={1000} onChange={e => set('notes', e.target.value)} placeholder="Fornecedor, rendimento (páginas), onde fica guardado..." />
       </div>
-      {error && <p className={s.error}>{error}</p>}
+      {error && <p role="alert" className={s.error}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.name.trim() || saving} onClick={save}>{saving ? 'Salvando...' : 'Salvar'}</button>
     </Modal>
   )
@@ -166,8 +166,8 @@ function MovementModal({ supply, location, kind, printers, onClose, onSaved }) {
       <p className={s.moveHead}><ColorDot color={supply.color} /> <strong>{supply.name}</strong> · {LOC_LABEL[location]} · saldo atual <strong>{current}</strong></p>
       {kind === 'troca' && (
         <div className="form-group">
-          <label className="label">Em qual impressora? *</label>
-          <select value={form.printer_id} onChange={e => set('printer_id', e.target.value)}>
+          <label htmlFor="printer-supplies-em-qual-impressora" className="label">Em qual impressora? *</label>
+          <select id="printer-supplies-em-qual-impressora" value={form.printer_id} onChange={e => set('printer_id', e.target.value)}>
             <option value="">Escolha a impressora...</option>
             {compatible.length > 0 && <optgroup label="Compatíveis com este insumo">{compatible.map(p => <option key={p.id} value={p.id}>{printerLabel(p)}</option>)}</optgroup>}
             {others.length > 0 && <optgroup label={compatible.length ? 'Outras deste prédio' : 'Impressoras deste prédio'}>{others.map(p => <option key={p.id} value={p.id}>{printerLabel(p)}</option>)}</optgroup>}
@@ -177,28 +177,28 @@ function MovementModal({ supply, location, kind, printers, onClose, onSaved }) {
       )}
       {kind === 'transferencia' && (
         <div className="form-group">
-          <label className="label">Para qual prédio?</label>
-          <select value={form.to_location} onChange={e => set('to_location', e.target.value)}>
+          <label htmlFor="printer-supplies-para-qual-predio" className="label">Para qual prédio?</label>
+          <select id="printer-supplies-para-qual-predio" value={form.to_location} onChange={e => set('to_location', e.target.value)}>
             {SUPPLY_LOCATIONS.filter(l => l.key !== location).map(l => <option key={l.key} value={l.key}>{l.label} (saldo {supply.stocks?.[l.key]?.quantity || 0})</option>)}
           </select>
         </div>
       )}
       <div className={s.formGrid2}>
         <div className="form-group">
-          <label className="label">{kind === 'ajuste' ? 'Quantidade contada (saldo real)' : 'Quantidade'}</label>
-          <input type="number" min={kind === 'ajuste' ? 0 : 1} max={10000} value={form.quantity} onChange={e => set('quantity', e.target.value)} />
-          {tooMuch && <p className={s.error}>Só tem {current} em {LOC_LABEL[location]}.</p>}
+          <label htmlFor="printer-supplies-campo" className="label">{kind === 'ajuste' ? 'Quantidade contada (saldo real)' : 'Quantidade'}</label>
+          <input id="printer-supplies-campo" type="number" min={kind === 'ajuste' ? 0 : 1} max={10000} value={form.quantity} onChange={e => set('quantity', e.target.value)} />
+          {tooMuch && <p role="alert" className={s.error}>Só tem {current} em {LOC_LABEL[location]}.</p>}
         </div>
         <div className="form-group">
-          <label className="label">Quando</label>
-          <input type="datetime-local" value={form.happened_at} onChange={e => set('happened_at', e.target.value)} />
+          <label htmlFor="printer-supplies-quando" className="label">Quando</label>
+          <input id="printer-supplies-quando" type="datetime-local" value={form.happened_at} onChange={e => set('happened_at', e.target.value)} />
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Observação</label>
-        <input value={form.note} maxLength={500} onChange={e => set('note', e.target.value)} placeholder={kind === 'entrada' ? 'Ex: NF 1234, fornecedor X' : kind === 'troca' ? 'Ex: contador 45.210 páginas, chamado #123' : 'Opcional'} />
+        <label htmlFor="printer-supplies-observacao" className="label">Observação</label>
+        <input id="printer-supplies-observacao" value={form.note} maxLength={500} onChange={e => set('note', e.target.value)} placeholder={kind === 'entrada' ? 'Ex: NF 1234, fornecedor X' : kind === 'troca' ? 'Ex: contador 45.210 páginas, chamado #123' : 'Opcional'} />
       </div>
-      {error && <p className={s.error}>{error}</p>}
+      {error && <p role="alert" className={s.error}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!valid || saving} onClick={save}>{saving ? 'Registrando...' : 'Registrar'}</button>
     </Modal>
   )

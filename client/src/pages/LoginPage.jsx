@@ -112,7 +112,7 @@ export default function LoginPage() {
             <p className={s.formSub}>Entre com sua conta Google corporativa pra continuar</p>
           </div>
 
-          {error && <div className={s.error}>{error}</div>}
+          {error && <div role="alert" className={s.error}>{error}</div>}
 
           {googleEnabled ? (
             <button
@@ -134,7 +134,7 @@ export default function LoginPage() {
               {googleLoading ? 'Autenticando...' : 'Continuar com Google'}
             </button>
           ) : (
-            <p className={s.error}>Login com Google não está configurado. Contate o administrador.</p>
+            <p role="alert" className={s.error}>Login com Google não está configurado. Contate o administrador.</p>
           )}
 
           {googleEnabled && (

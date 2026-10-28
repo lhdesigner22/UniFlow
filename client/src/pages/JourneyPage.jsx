@@ -41,18 +41,18 @@ function MilestoneModal({ userId, milestone, onClose, onSaved }) {
   return (
     <Modal title={milestone ? 'Editar marco' : 'Novo marco na jornada'} onClose={onClose} width={440}>
       <div className="form-group">
-        <label className="label">Data</label>
-        <input type="date" value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} />
+        <label htmlFor="journey-data" className="label">Data</label>
+        <input id="journey-data" type="date" value={form.event_date} onChange={e => setForm(f => ({ ...f, event_date: e.target.value }))} />
       </div>
       <div className="form-group">
-        <label className="label">Título</label>
-        <input autoFocus value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Entrou na empresa, Promovido a Analista..." />
+        <label htmlFor="journey-titulo" className="label">Título</label>
+        <input id="journey-titulo" autoFocus value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Entrou na empresa, Promovido a Analista..." />
       </div>
       <div className="form-group">
-        <label className="label">Detalhes (opcional)</label>
-        <textarea rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+        <label htmlFor="journey-detalhes-opcional" className="label">Detalhes (opcional)</label>
+        <textarea id="journey-detalhes-opcional" rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
       </div>
-      {error && <p className={s.error}>{error}</p>}
+      {error && <p role="alert" className={s.error}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.title.trim() || !form.event_date || saving} onClick={save}>
         {saving ? 'Salvando...' : 'Salvar'}
       </button>

@@ -129,61 +129,61 @@ function IncidentForm({ incident, building, knownLabs, onClose, onSaved }) {
     <Modal title={incident ? 'Editar incidente' : 'Registrar incidente'} onClose={onClose} width={640}>
       <div className={s.formGrid}>
         <div className="form-group">
-          <label className="label">Prédio</label>
-          <select value={form.building} onChange={e => set('building', e.target.value)}>
+          <label htmlFor="lab-incidents-predio" className="label">Prédio</label>
+          <select id="lab-incidents-predio" value={form.building} onChange={e => set('building', e.target.value)}>
             {Object.entries(INCIDENT_BUILDINGS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
         <div className="form-group">
-          <label className="label">Laboratório / sala *</label>
-          <input list="lab-names" value={form.lab} onChange={e => set('lab', e.target.value)} placeholder="Ex: Laboratório 3" autoFocus={!incident} />
+          <label htmlFor="lab-incidents-laboratorio-sala" className="label">Laboratório / sala *</label>
+          <input id="lab-incidents-laboratorio-sala" list="lab-names" value={form.lab} onChange={e => set('lab', e.target.value)} placeholder="Ex: Laboratório 3" autoFocus={!incident} />
           <datalist id="lab-names">{knownLabs.map(l => <option key={l} value={l} />)}</datalist>
         </div>
         <div className="form-group">
-          <label className="label">Tipo</label>
-          <select value={form.category} onChange={e => set('category', e.target.value)}>
+          <label htmlFor="lab-incidents-tipo" className="label">Tipo</label>
+          <select id="lab-incidents-tipo" value={form.category} onChange={e => set('category', e.target.value)}>
             {Object.entries(INCIDENT_CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
           </select>
         </div>
         <div className="form-group">
-          <label className="label">Gravidade</label>
-          <select value={form.severity} onChange={e => set('severity', e.target.value)}>
+          <label htmlFor="lab-incidents-gravidade" className="label">Gravidade</label>
+          <select id="lab-incidents-gravidade" value={form.severity} onChange={e => set('severity', e.target.value)}>
             {Object.entries(INCIDENT_SEVERITIES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Resumo *</label>
-        <input value={form.title} maxLength={140} onChange={e => set('title', e.target.value)} placeholder="Ex: PC 12 não liga / Projetor sem imagem / Cadeiras quebradas" />
+        <label htmlFor="lab-incidents-resumo" className="label">Resumo *</label>
+        <input id="lab-incidents-resumo" value={form.title} maxLength={140} onChange={e => set('title', e.target.value)} placeholder="Ex: PC 12 não liga / Projetor sem imagem / Cadeiras quebradas" />
       </div>
       <div className="form-group">
-        <label className="label">O que aconteceu (detalhes)</label>
-        <textarea rows={4} value={form.description} maxLength={5000} onChange={e => set('description', e.target.value)} placeholder="Descreva o problema, o que já foi tentado, se há risco, o que precisa ser feito..." />
+        <label htmlFor="lab-incidents-o-que-aconteceu-detalhes" className="label">O que aconteceu (detalhes)</label>
+        <textarea id="lab-incidents-o-que-aconteceu-detalhes" rows={4} value={form.description} maxLength={5000} onChange={e => set('description', e.target.value)} placeholder="Descreva o problema, o que já foi tentado, se há risco, o que precisa ser feito..." />
       </div>
       <div className={s.formGrid}>
         <div className="form-group">
-          <label className="label">Data e hora da ocorrência *</label>
-          <input type="datetime-local" value={form.occurred_at} onChange={e => set('occurred_at', e.target.value)} />
+          <label htmlFor="lab-incidents-data-e-hora-da-ocorrenci" className="label">Data e hora da ocorrência *</label>
+          <input id="lab-incidents-data-e-hora-da-ocorrenci" type="datetime-local" value={form.occurred_at} onChange={e => set('occurred_at', e.target.value)} />
         </div>
         <div className="form-group">
-          <label className="label">Equipamento</label>
-          <input value={form.equipment} maxLength={140} onChange={e => set('equipment', e.target.value)} placeholder="Ex: PC 12 (bancada 3), Projetor Epson" />
+          <label htmlFor="lab-incidents-equipamento" className="label">Equipamento</label>
+          <input id="lab-incidents-equipamento" value={form.equipment} maxLength={140} onChange={e => set('equipment', e.target.value)} placeholder="Ex: PC 12 (bancada 3), Projetor Epson" />
         </div>
         <div className="form-group">
-          <label className="label">Patrimônio</label>
-          <input value={form.patrimony} maxLength={60} onChange={e => set('patrimony', e.target.value)} placeholder="Ex: 004512" />
+          <label htmlFor="lab-incidents-patrimonio" className="label">Patrimônio</label>
+          <input id="lab-incidents-patrimonio" value={form.patrimony} maxLength={60} onChange={e => set('patrimony', e.target.value)} placeholder="Ex: 004512" />
         </div>
         <div className="form-group">
-          <label className="label">Chamado no GLPI</label>
-          <input value={form.glpi_ticket} maxLength={20} onChange={e => set('glpi_ticket', e.target.value)} placeholder="Nº do chamado (se abriu)" />
+          <label htmlFor="lab-incidents-chamado-no-glpi" className="label">Chamado no GLPI</label>
+          <input id="lab-incidents-chamado-no-glpi" value={form.glpi_ticket} maxLength={20} onChange={e => set('glpi_ticket', e.target.value)} placeholder="Nº do chamado (se abriu)" />
         </div>
         <div className="form-group">
-          <label className="label">Quem relatou</label>
-          <input value={form.reported_by_name} maxLength={120} onChange={e => set('reported_by_name', e.target.value)} placeholder="Professor, aluno, monitor..." />
+          <label htmlFor="lab-incidents-quem-relatou" className="label">Quem relatou</label>
+          <input id="lab-incidents-quem-relatou" value={form.reported_by_name} maxLength={120} onChange={e => set('reported_by_name', e.target.value)} placeholder="Professor, aluno, monitor..." />
         </div>
         <div className="form-group">
-          <label className="label">Turma / aula / professor no horário</label>
-          <input value={form.class_info} maxLength={200} onChange={e => set('class_info', e.target.value)} placeholder="Ex: ADS 3º sem — Prof. Fulano" />
+          <label htmlFor="lab-incidents-turma-aula-professor-no-" className="label">Turma / aula / professor no horário</label>
+          <input id="lab-incidents-turma-aula-professor-no-" value={form.class_info} maxLength={200} onChange={e => set('class_info', e.target.value)} placeholder="Ex: ADS 3º sem — Prof. Fulano" />
         </div>
       </div>
       {!incident && (
@@ -193,7 +193,7 @@ function IncidentForm({ incident, building, knownLabs, onClose, onSaved }) {
         </div>
       )}
       <DepartmentSelect value={form.department_id} onChange={v => set('department_id', v)} label="Visível para" />
-      {error && <p className={s.error}>{error}</p>}
+      {error && <p role="alert" className={s.error}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!valid || !!saving} onClick={save}>
         {saving || (incident ? 'Salvar alterações' : 'Registrar incidente')}
       </button>
@@ -314,7 +314,7 @@ function IncidentDetail({ id, user, writable, onClose, onChanged, onEdit, onDele
         <p className={s.description}>{inc.resolution || 'Sem anotações ainda.'}</p>
       )}
 
-      {error && <p className={s.error}>{error}</p>}
+      {error && <p role="alert" className={s.error}>{error}</p>}
       {canEditData && (
         <div className={s.detailActions}>
           <button className="btn btn-ghost btn-sm" onClick={() => onEdit(inc)}>✏️ Editar dados</button>

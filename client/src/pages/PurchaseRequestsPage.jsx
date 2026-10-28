@@ -97,54 +97,54 @@ function Editor({ request, defaultMonth, onClose, onSaved }) {
   return (
     <Modal title={request ? 'Editar solicitação' : 'Nova solicitação de compra'} onClose={onClose} width={560}>
       <div className="form-group">
-        <label className="label">Nome do item</label>
-        <input autoFocus value={form.item_name} onChange={e => setForm(f => ({ ...f, item_name: e.target.value }))} placeholder="Ex: Fonte Slim Bivolt com Cabo" />
+        <label htmlFor="purchase-requests-nome-do-item" className="label">Nome do item</label>
+        <input id="purchase-requests-nome-do-item" autoFocus value={form.item_name} onChange={e => setForm(f => ({ ...f, item_name: e.target.value }))} placeholder="Ex: Fonte Slim Bivolt com Cabo" />
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Mês de referência</label>
-          <select value={form.reference_month} onChange={e => setForm(f => ({ ...f, reference_month: e.target.value }))}>
+          <label htmlFor="purchase-requests-mes-de-referencia" className="label">Mês de referência</label>
+          <select id="purchase-requests-mes-de-referencia" value={form.reference_month} onChange={e => setForm(f => ({ ...f, reference_month: e.target.value }))}>
             {monthOptions.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
           </select>
         </div>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Chamado (opcional)</label>
-          <input value={form.ticket_number} onChange={e => setForm(f => ({ ...f, ticket_number: e.target.value }))} placeholder="Ex: 15780" />
+          <label htmlFor="purchase-requests-chamado-opcional" className="label">Chamado (opcional)</label>
+          <input id="purchase-requests-chamado-opcional" value={form.ticket_number} onChange={e => setForm(f => ({ ...f, ticket_number: e.target.value }))} placeholder="Ex: 15780" />
         </div>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Departamento</label>
-          <input value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} placeholder="Ex: TI, RH, Cobrança..." />
+          <label htmlFor="purchase-requests-departamento" className="label">Departamento</label>
+          <input id="purchase-requests-departamento" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} placeholder="Ex: TI, RH, Cobrança..." />
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Descrição</label>
-        <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Ex: Adaptador VGA para HDMI" />
+        <label htmlFor="purchase-requests-descricao" className="label">Descrição</label>
+        <input id="purchase-requests-descricao" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Ex: Adaptador VGA para HDMI" />
       </div>
       <div className="form-group">
-        <label className="label">Unidade / Sede</label>
-        <input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Ex: SEDE/CENTRO, ADM..." />
+        <label htmlFor="purchase-requests-unidade-sede" className="label">Unidade / Sede</label>
+        <input id="purchase-requests-unidade-sede" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Ex: SEDE/CENTRO, ADM..." />
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Qtd</label>
-          <input type="number" min="1" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
+          <label htmlFor="purchase-requests-qtd" className="label">Qtd</label>
+          <input id="purchase-requests-qtd" type="number" min="1" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
         </div>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Valor unitário (R$)</label>
-          <input type="number" min="0" step="0.01" value={form.unit_price} onChange={e => setForm(f => ({ ...f, unit_price: e.target.value }))} placeholder="0,00" />
+          <label htmlFor="purchase-requests-valor-unitario-r" className="label">Valor unitário (R$)</label>
+          <input id="purchase-requests-valor-unitario-r" type="number" min="0" step="0.01" value={form.unit_price} onChange={e => setForm(f => ({ ...f, unit_price: e.target.value }))} placeholder="0,00" />
         </div>
         <div className="form-group" style={{ flex: 1 }}>
-          <label className="label">Valor total</label>
-          <input value={fmtMoney((Number(form.quantity) || 0) * (Number(form.unit_price) || 0))} disabled />
+          <label htmlFor="purchase-requests-valor-total" className="label">Valor total</label>
+          <input id="purchase-requests-valor-total" value={fmtMoney((Number(form.quantity) || 0) * (Number(form.unit_price) || 0))} disabled />
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Link</label>
-        <input value={form.link_url} onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))} placeholder="Link do produto/orçamento" />
+        <label htmlFor="purchase-requests-link" className="label">Link</label>
+        <input id="purchase-requests-link" value={form.link_url} onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))} placeholder="Link do produto/orçamento" />
       </div>
       <div className="form-group">
-        <label className="label">Observação</label>
-        <textarea rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Motivo, contexto, urgência..." />
+        <label htmlFor="purchase-requests-observacao" className="label">Observação</label>
+        <textarea id="purchase-requests-observacao" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Motivo, contexto, urgência..." />
       </div>
 
       {!request && (
@@ -173,7 +173,7 @@ function Editor({ request, defaultMonth, onClose, onSaved }) {
         </div>
       )}
 
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
       <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
       <button
         className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
@@ -267,7 +267,7 @@ function ApproversModal({ request, currentUser, onClose, onUpdated }) {
               <button className="btn btn-ghost btn-sm" disabled={deciding} onClick={() => setChangingDecision(false)}>Cancelar</button>
             )}
           </div>
-          {error && <p className={s.fileError}>{error}</p>}
+          {error && <p role="alert" className={s.fileError}>{error}</p>}
         </div>
       )}
 
@@ -317,13 +317,13 @@ function StatusChangeModal({ request, targetStatus, onClose, onChanged }) {
   return (
     <Modal title={`Mudar status para "${label}"`} onClose={onClose} width={420}>
       <div className="form-group">
-        <label className="label">Comentário (opcional)</label>
-        <textarea
+        <label htmlFor="purchase-requests-comentario-opcional" className="label">Comentário (opcional)</label>
+        <textarea id="purchase-requests-comentario-opcional"
           autoFocus rows={3} value={comment} onChange={e => setComment(e.target.value)}
           placeholder="Ex: Gestor pediu pra revisar o orçamento antes..."
         />
       </div>
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={saving} onClick={confirm}>
         {saving ? 'Salvando...' : `Confirmar → ${label}`}
       </button>

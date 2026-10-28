@@ -52,26 +52,26 @@ function Editor({ partner, onClose, onSaved }) {
   return (
     <Modal title={partner ? 'Editar parceiro' : 'Novo parceiro'} onClose={onClose} width={520}>
       <div className="form-group">
-        <label className="label">Nome da empresa parceira</label>
-        <input autoFocus value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="Ex: Nome da empresa" />
+        <label htmlFor="partners-nome-da-empresa-parceira" className="label">Nome da empresa parceira</label>
+        <input id="partners-nome-da-empresa-parceira" autoFocus value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="Ex: Nome da empresa" />
       </div>
       <div className="form-group">
-        <label className="label">Responsável</label>
-        <input value={form.responsible_name} onChange={e => setForm(f => ({ ...f, responsible_name: e.target.value }))} placeholder="Nome do contato responsável" />
+        <label htmlFor="partners-responsavel" className="label">Responsável</label>
+        <input id="partners-responsavel" value={form.responsible_name} onChange={e => setForm(f => ({ ...f, responsible_name: e.target.value }))} placeholder="Nome do contato responsável" />
       </div>
       <div className="form-group">
-        <label className="label">Telefone</label>
-        <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 0000-0000" />
+        <label htmlFor="partners-telefone" className="label">Telefone</label>
+        <input id="partners-telefone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 0000-0000" />
       </div>
       <div className="form-group">
-        <label className="label">CNPJ registrado</label>
-        <input value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" />
+        <label htmlFor="partners-cnpj-registrado" className="label">CNPJ registrado</label>
+        <input id="partners-cnpj-registrado" value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" />
       </div>
       <div className="form-group">
-        <label className="label">Do que eles são responsáveis</label>
-        <textarea rows={3} value={form.responsibility} onChange={e => setForm(f => ({ ...f, responsibility: e.target.value }))} placeholder="Ex: Manutenção de impressoras, fornecimento de material..." />
+        <label htmlFor="partners-do-que-eles-sao-responsa" className="label">Do que eles são responsáveis</label>
+        <textarea id="partners-do-que-eles-sao-responsa" rows={3} value={form.responsibility} onChange={e => setForm(f => ({ ...f, responsibility: e.target.value }))} placeholder="Ex: Manutenção de impressoras, fornecimento de material..." />
       </div>
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
       <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
       <button
         className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}

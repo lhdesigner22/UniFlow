@@ -162,7 +162,7 @@ export default function AuditLogTab({ initialCategory = '', fixedCategory = null
         </div>
       </div>
 
-      {error && <p className={s.error} role="alert">{error}</p>}
+      {error && <p role="alert" className={s.error}>{error}</p>}
 
       {rows === null ? (
         <p className={s.muted}>Carregando os logs…</p>

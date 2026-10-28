@@ -93,16 +93,16 @@ function RequestModal({ onClose, onCreated }) {
   return (
     <Modal title="Nova solicitação de aprovação" onClose={onClose} width={560}>
       <div className="form-group">
-        <label className="label">Título</label>
-        <input autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Aprovar orçamento de material de TI" />
+        <label htmlFor="approvals-titulo" className="label">Título</label>
+        <input id="approvals-titulo" autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Aprovar orçamento de material de TI" />
       </div>
       <div className="form-group">
-        <label className="label">Descrição (opcional)</label>
-        <textarea rows={4} value={description} onChange={e => setDescription(e.target.value)} placeholder="Detalhes do que precisa ser aprovado..." />
+        <label htmlFor="approvals-descricao-opcional" className="label">Descrição (opcional)</label>
+        <textarea id="approvals-descricao-opcional" rows={4} value={description} onChange={e => setDescription(e.target.value)} placeholder="Detalhes do que precisa ser aprovado..." />
       </div>
       <div className="form-group">
-        <label className="label">Prazo (opcional)</label>
-        <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+        <label htmlFor="approvals-prazo-opcional" className="label">Prazo (opcional)</label>
+        <input id="approvals-prazo-opcional" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
       </div>
       <div className="form-group">
         <label className="label">Aprovadores</label>
@@ -136,9 +136,9 @@ function RequestModal({ onClose, onCreated }) {
         ) : (
           <input type="file" onChange={onFileChange} />
         )}
-        {fileError && <p className={s.fileError}>{fileError}</p>}
+        {fileError && <p role="alert" className={s.fileError}>{fileError}</p>}
       </div>
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
       <button
         className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
         disabled={!title.trim() || approvers.length === 0 || saving || uploading}
@@ -267,7 +267,7 @@ function DetailModal({ approval, currentUser, onClose, onUpdated, onDeleted }) {
               <button className="btn btn-ghost btn-sm" disabled={deciding} onClick={() => setChangingDecision(false)}>Cancelar</button>
             )}
           </div>
-          {error && <p className={s.fileError}>{error}</p>}
+          {error && <p role="alert" className={s.fileError}>{error}</p>}
         </div>
       )}
 

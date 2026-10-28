@@ -110,34 +110,34 @@ function Editor({ branch, defaultCompany, onClose, onSaved }) {
   return (
     <Modal title={branch ? 'Editar filial' : 'Nova filial'} onClose={onClose} width={520}>
       <div className="form-group">
-        <label className="label">Empresa</label>
-        <select value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))}>
+        <label htmlFor="companies-empresa" className="label">Empresa</label>
+        <select id="companies-empresa" value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))}>
           {COMPANIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
         </select>
       </div>
       <div className="form-group">
-        <label className="label">Nome da filial</label>
-        <input autoFocus value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Matriz, Filial Centro..." />
+        <label htmlFor="companies-nome-da-filial" className="label">Nome da filial</label>
+        <input id="companies-nome-da-filial" autoFocus value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ex: Matriz, Filial Centro..." />
       </div>
       <div className="form-group">
-        <label className="label">CNPJ</label>
-        <input value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" />
+        <label htmlFor="companies-cnpj" className="label">CNPJ</label>
+        <input id="companies-cnpj" value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" />
       </div>
       <div className="form-group">
-        <label className="label">CEP</label>
-        <input value={cep} onChange={onCepChange} placeholder="00000-000" inputMode="numeric" />
+        <label htmlFor="companies-cep" className="label">CEP</label>
+        <input id="companies-cep" value={cep} onChange={onCepChange} placeholder="00000-000" inputMode="numeric" />
         {cepLoading && <p className={s.cepHint}>Buscando endereço...</p>}
-        {cepError && <p className={s.fileError}>{cepError}</p>}
+        {cepError && <p role="alert" className={s.fileError}>{cepError}</p>}
       </div>
       <div className="form-group">
-        <label className="label">Endereço</label>
-        <textarea rows={2} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Preenche sozinho a partir do CEP acima — complete com número e complemento" />
+        <label htmlFor="companies-endereco" className="label">Endereço</label>
+        <textarea id="companies-endereco" rows={2} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Preenche sozinho a partir do CEP acima — complete com número e complemento" />
       </div>
       <div className="form-group">
-        <label className="label">Telefone</label>
-        <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 0000-0000" />
+        <label htmlFor="companies-telefone" className="label">Telefone</label>
+        <input id="companies-telefone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="(00) 0000-0000" />
       </div>
-      {error && <p className={s.fileError}>{error}</p>}
+      {error && <p role="alert" className={s.fileError}>{error}</p>}
       <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
       <button
         className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}

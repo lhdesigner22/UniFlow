@@ -110,18 +110,18 @@ function Editor({ article, onClose, onSaved }) {
   return (
     <Modal title={article ? 'Editar artigo' : 'Novo artigo'} onClose={onClose} width={560}>
       <div className="form-group">
-        <label className="label">Título</label>
-        <input autoFocus value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Resposta padrão — reset de senha" />
+        <label htmlFor="knowledge-base-titulo" className="label">Título</label>
+        <input id="knowledge-base-titulo" autoFocus value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Resposta padrão — reset de senha" />
       </div>
       <div className="form-group">
-        <label className="label">Categoria</label>
-        <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+        <label htmlFor="knowledge-base-categoria" className="label">Categoria</label>
+        <select id="knowledge-base-categoria" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
           {CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}
         </select>
       </div>
       <div className="form-group">
-        <label className="label">Conteúdo</label>
-        <textarea
+        <label htmlFor="knowledge-base-conteudo" className="label">Conteúdo</label>
+        <textarea id="knowledge-base-conteudo"
           rows={8}
           value={form.content}
           onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
@@ -144,11 +144,11 @@ function Editor({ article, onClose, onSaved }) {
         ) : (
           <input type="file" onChange={onFileChange} />
         )}
-        {fileError && <p className={s.fileError}>{fileError}</p>}
+        {fileError && <p role="alert" className={s.fileError}>{fileError}</p>}
       </div>
       <div className="form-group">
-        <label className="label">Ou link do documento (opcional)</label>
-        <input
+        <label htmlFor="knowledge-base-ou-link-do-documento-opc" className="label">Ou link do documento (opcional)</label>
+        <input id="knowledge-base-ou-link-do-documento-opc"
           value={form.link_url}
           onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))}
           placeholder="Ex: link do Google Drive/Docs — melhor pra arquivos grandes"

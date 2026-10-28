@@ -95,12 +95,12 @@ function Editor({ doc, onClose, onSaved }) {
   return (
     <Modal title={doc ? 'Editar documento' : 'Novo documento'} onClose={onClose} width={560}>
       <div className="form-group">
-        <label className="label">Título</label>
-        <input autoFocus value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Relatório mensal — como montar" />
+        <label htmlFor="gestao-titulo" className="label">Título</label>
+        <input id="gestao-titulo" autoFocus value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Relatório mensal — como montar" />
       </div>
       <div className="form-group">
-        <label className="label">Conteúdo</label>
-        <textarea
+        <label htmlFor="gestao-conteudo" className="label">Conteúdo</label>
+        <textarea id="gestao-conteudo"
           rows={8}
           value={form.content}
           onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
@@ -123,11 +123,11 @@ function Editor({ doc, onClose, onSaved }) {
         ) : (
           <input type="file" onChange={onFileChange} />
         )}
-        {fileError && <p className={s.fileError}>{fileError}</p>}
+        {fileError && <p role="alert" className={s.fileError}>{fileError}</p>}
       </div>
       <div className="form-group">
-        <label className="label">Ou link do documento (opcional)</label>
-        <input
+        <label htmlFor="gestao-ou-link-do-documento-opc" className="label">Ou link do documento (opcional)</label>
+        <input id="gestao-ou-link-do-documento-opc"
           value={form.link_url}
           onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))}
           placeholder="Ex: link do Google Drive/Docs — melhor pra arquivos grandes"

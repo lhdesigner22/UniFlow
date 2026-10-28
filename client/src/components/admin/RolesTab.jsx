@@ -185,7 +185,7 @@ export default function RolesTab({ roles, modules, setRoles, defaultRoleId, setD
         </div>
         <p className={s.footNote}>Cofre de Senhas e VLANs têm lista própria de acesso (Super Admin autoriza pessoa por pessoa). Administração é só do Super Admin.</p>
 
-        {msg && <p className={`${s.msg} ${msg.type === 'success' ? s.ok : s.err}`}>{msg.text}</p>}
+        {msg && <p role={msg.type === 'success' ? 'status' : 'alert'} className={`${s.msg} ${msg.type === 'success' ? s.ok : s.err}`}>{msg.text}</p>}
 
         {!locked && (
           <div className={s.actions}>

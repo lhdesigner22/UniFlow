@@ -154,12 +154,12 @@ function Editor({ item, year, onClose, onSaved }) {
           <p className={s.saveHint}>Quanto esta entrega economizou para a instituição. Entra no total “Save financeiro” do painel e na apresentação.</p>
           <div className={s.formRow}>
             <div className="form-group">
-              <label className="label">Valor economizado (R$)</label>
-              <input autoFocus inputMode="decimal" value={form.saving_text} onChange={e => set('saving_text', e.target.value)} placeholder="Ex: 12.500,00" />
+              <label htmlFor="success-cases-valor-economizado-r" className="label">Valor economizado (R$)</label>
+              <input id="success-cases-valor-economizado-r" autoFocus inputMode="decimal" value={form.saving_text} onChange={e => set('saving_text', e.target.value)} placeholder="Ex: 12.500,00" />
             </div>
             <div className="form-group">
-              <label className="label">Esse valor é</label>
-              <select value={form.saving_period} onChange={e => set('saving_period', e.target.value)}>
+              <label htmlFor="success-cases-esse-valor-e" className="label">Esse valor é</label>
+              <select id="success-cases-esse-valor-e" value={form.saving_period} onChange={e => set('saving_period', e.target.value)}>
                 {Object.entries(SAVING_PERIODS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
               </select>
             </div>
@@ -172,8 +172,8 @@ function Editor({ item, year, onClose, onSaved }) {
             </p>
           )}
           <div className="form-group">
-            <label className="label">Como chegamos nesse valor (opcional)</label>
-            <textarea rows={4} value={form.saving_note} maxLength={500} onChange={e => set('saving_note', e.target.value)}
+            <label htmlFor="success-cases-como-chegamos-nesse-valo" className="label">Como chegamos nesse valor (opcional)</label>
+            <textarea id="success-cases-como-chegamos-nesse-valo" rows={4} value={form.saving_note} maxLength={500} onChange={e => set('saving_note', e.target.value)}
               placeholder="Ex: Licença do sistema anterior custava R$ 1.200/mês; o GLPI é open source, sem custo de licença." />
           </div>
           {item?.saving_value != null && (
@@ -183,73 +183,73 @@ function Editor({ item, year, onClose, onSaved }) {
       ) : (
       <>
       <div className="form-group">
-        <label className="label">Título (em linguagem simples)</label>
-        <input autoFocus value={form.title} maxLength={100} onChange={e => set('title', e.target.value)} placeholder="Ex: Wi-Fi padronizado em todos os prédios" />
+        <label htmlFor="success-cases-titulo-em-linguagem-simp" className="label">Título (em linguagem simples)</label>
+        <input id="success-cases-titulo-em-linguagem-simp" autoFocus value={form.title} maxLength={100} onChange={e => set('title', e.target.value)} placeholder="Ex: Wi-Fi padronizado em todos os prédios" />
       </div>
       <div className="form-group">
-        <label className="label">Frase do cartão</label>
-        <input value={form.headline} maxLength={160} onChange={e => set('headline', e.target.value)} placeholder="Ex: Um só padrão de Wi-Fi, gerenciado de um painel" />
+        <label htmlFor="success-cases-frase-do-cartao" className="label">Frase do cartão</label>
+        <input id="success-cases-frase-do-cartao" value={form.headline} maxLength={160} onChange={e => set('headline', e.target.value)} placeholder="Ex: Um só padrão de Wi-Fi, gerenciado de um painel" />
       </div>
       <div className={s.formRow}>
         <div className="form-group">
-          <label className="label">Pilar</label>
-          <select value={form.pillar} onChange={e => set('pillar', e.target.value)}>
+          <label htmlFor="success-cases-pilar" className="label">Pilar</label>
+          <select id="success-cases-pilar" value={form.pillar} onChange={e => set('pillar', e.target.value)}>
             {Object.entries(PILLARS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
         </div>
         <div className="form-group">
-          <label className="label">Situação</label>
-          <select value={form.status} onChange={e => set('status', e.target.value)}>
+          <label htmlFor="success-cases-situacao" className="label">Situação</label>
+          <select id="success-cases-situacao" value={form.status} onChange={e => set('status', e.target.value)}>
             {Object.entries(STATUSES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
         </div>
         <div className="form-group">
-          <label className="label">Concluído em</label>
-          <input type="month" value={form.completed_on} onChange={e => set('completed_on', e.target.value)} />
+          <label htmlFor="success-cases-concluido-em" className="label">Concluído em</label>
+          <input id="success-cases-concluido-em" type="month" value={form.completed_on} onChange={e => set('completed_on', e.target.value)} />
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Antes — qual era o problema</label>
-        <textarea rows={2} value={form.before_text} maxLength={1000} onChange={e => set('before_text', e.target.value)} />
+        <label htmlFor="success-cases-antes-qual-era-o-problem" className="label">Antes — qual era o problema</label>
+        <textarea id="success-cases-antes-qual-era-o-problem" rows={2} value={form.before_text} maxLength={1000} onChange={e => set('before_text', e.target.value)} />
       </div>
       <div className="form-group">
-        <label className="label">O que fizemos</label>
-        <textarea rows={2} value={form.solution_text} maxLength={1000} onChange={e => set('solution_text', e.target.value)} />
+        <label htmlFor="success-cases-o-que-fizemos" className="label">O que fizemos</label>
+        <textarea id="success-cases-o-que-fizemos" rows={2} value={form.solution_text} maxLength={1000} onChange={e => set('solution_text', e.target.value)} />
       </div>
       <div className={s.formRow}>
         <div className="form-group" style={{ flex: '0 0 140px' }}>
-          <label className="label">Número</label>
-          <input value={form.result_value} maxLength={20} onChange={e => set('result_value', e.target.value)} placeholder="Ex: −40%" />
+          <label htmlFor="success-cases-numero" className="label">Número</label>
+          <input id="success-cases-numero" value={form.result_value} maxLength={20} onChange={e => set('result_value', e.target.value)} placeholder="Ex: −40%" />
         </div>
         <div className="form-group">
-          <label className="label">Resultado</label>
-          <input value={form.result_label} maxLength={160} onChange={e => set('result_label', e.target.value)} placeholder="Ex: menos chamados de Wi-Fi" />
+          <label htmlFor="success-cases-resultado" className="label">Resultado</label>
+          <input id="success-cases-resultado" value={form.result_label} maxLength={160} onChange={e => set('result_label', e.target.value)} placeholder="Ex: menos chamados de Wi-Fi" />
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Número ao vivo do UniFlow (usado quando não há número digitado)</label>
-        <select value={form.live_metric} onChange={e => set('live_metric', e.target.value)}>
+        <label htmlFor="success-cases-numero-ao-vivo-do-uniflo" className="label">Número ao vivo do UniFlow (usado quando não há número digitado)</label>
+        <select id="success-cases-numero-ao-vivo-do-uniflo" value={form.live_metric} onChange={e => set('live_metric', e.target.value)}>
           <option value="">Nenhum</option>
           {Object.entries(LIVE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
       </div>
       <div className={s.formRow}>
         <div className="form-group">
-          <label className="label">Responsáveis</label>
-          <input value={form.owner} maxLength={120} onChange={e => set('owner', e.target.value)} />
+          <label htmlFor="success-cases-responsaveis" className="label">Responsáveis</label>
+          <input id="success-cases-responsaveis" value={form.owner} maxLength={120} onChange={e => set('owner', e.target.value)} />
         </div>
         <div className="form-group" style={{ flex: '0 0 110px' }}>
-          <label className="label">Ano</label>
-          <input type="number" value={form.year} onChange={e => set('year', e.target.value)} />
+          <label htmlFor="success-cases-ano" className="label">Ano</label>
+          <input id="success-cases-ano" type="number" value={form.year} onChange={e => set('year', e.target.value)} />
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Detalhe técnico (fica recolhido — não coloque IPs nem senhas)</label>
-        <textarea rows={2} value={form.technical} maxLength={2000} onChange={e => set('technical', e.target.value)} />
+        <label htmlFor="success-cases-detalhe-tecnico-fica-rec" className="label">Detalhe técnico (fica recolhido — não coloque IPs nem senhas)</label>
+        <textarea id="success-cases-detalhe-tecnico-fica-rec" rows={2} value={form.technical} maxLength={2000} onChange={e => set('technical', e.target.value)} />
       </div>
       </>
       )}
-      {error && <p className={s.error}>{error}</p>}
+      {error && <p role="alert" className={s.error}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.title.trim() || saving} onClick={save}>
         {saving ? 'Salvando...' : 'Salvar'}
       </button>
