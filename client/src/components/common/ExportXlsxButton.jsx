@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { alertDialog } from '../../store/dialogStore'
+import LineIcon from './LineIcon'
 
 // Botão "Exportar Excel" das telas com exportação (ver utils/exports.js).
 // `onExport` busca os dados e baixa o .xlsx — pode levar uns segundos na 1ª vez
@@ -18,7 +19,7 @@ export default function ExportXlsxButton({ onExport, label = 'Exportar Excel', c
   }
   return (
     <button className={className} onClick={run} disabled={busy} title="Baixar planilha do Excel (.xlsx)">
-      {busy ? 'Gerando planilha...' : `📊 ${label}`}
+      {busy ? 'Gerando planilha...' : <><LineIcon name="sheet" /> {label}</>}
     </button>
   )
 }

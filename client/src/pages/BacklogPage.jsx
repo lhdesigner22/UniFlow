@@ -179,7 +179,7 @@ export default function BacklogPage() {
           <p className={s.sub}>Visão somente leitura dos chamados abertos no GLPI ({meta.entity || 'sem entidade'}). Clique em qualquer card ou barra pra filtrar a tabela.</p>
           {snapshot?.glpiPaused && (
             <p style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, background: 'color-mix(in srgb, var(--danger, #EF4444) 12%, transparent)', color: 'var(--danger, #EF4444)' }}>
-              ⏸️ Consultas ao GLPI pausadas (Admin → GLPI) — mostrando o último resumo salvo, sem atualizar.
+              Consultas ao GLPI pausadas (Admin → GLPI) — mostrando o último resumo salvo, sem atualizar.
             </p>
           )}
         </div>
@@ -193,7 +193,7 @@ export default function BacklogPage() {
               disabled={refreshing}
               title="Atualiza Backlog, Total de Chamados e Eventos da Agenda juntos"
             >
-              {refreshing ? 'Atualizando...' : '🔄 Atualizar agora'}
+              {refreshing ? 'Atualizando...' : 'Atualizar agora'}
             </button>
           )}
         </div>

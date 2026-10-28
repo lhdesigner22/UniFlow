@@ -12,6 +12,7 @@ import Reveal from '../components/common/Reveal'
 import InventoryPicker from '../components/common/InventoryPicker'
 import { isAllowedLoanEmail, LOAN_EMAIL_ERROR } from '../utils/loanEmail'
 import s from './EquipmentLoansPage.module.css'
+import LineIcon from '../components/common/LineIcon'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
 
@@ -213,7 +214,7 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
         <label className="label">Email (opcional)</label>
         <input type="email" value={form.requester_email} onChange={e => setForm(f => ({ ...f, requester_email: e.target.value }))} placeholder="nome@colegioser.com" />
         {emailInvalid && <p className={s.fileError}>{LOAN_EMAIL_ERROR}</p>}
-        {emailLookup === 'loading' && <p className={s.roomHint}>🔎 Buscando e-mail no diretório...</p>}
+        {emailLookup === 'loading' && <p className={s.roomHint}><LineIcon name="search" /> Buscando e-mail no diretório...</p>}
         {emailLookup === 'not_found' && <p className={s.roomHint}>Não achei esse nome no diretório — preenche manual.</p>}
         {!loan && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 8, fontSize: 13, opacity: canSendEmail ? 1 : 0.5 }}>
@@ -259,7 +260,7 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
               onChange={e => setForm(f => ({ ...f, patrimony: e.target.value, equipment_inventory_id: null }))}
               placeholder="Ex: 5028"
             />
-            <button type="button" className="btn btn-ghost btn-sm" title="Escolher do inventário" onClick={() => setShowInventoryPicker(v => !v)}>📋</button>
+            <button type="button" className="btn btn-ghost btn-sm" title="Escolher do inventário" onClick={() => setShowInventoryPicker(v => !v)}><LineIcon name="list" /></button>
           </div>
           {showInventoryPicker && (
             <InventoryPicker building={form.building} excludeIds={pickedInventoryIds} onPick={pickFromInventory} onClose={() => setShowInventoryPicker(false)} />
@@ -285,7 +286,7 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
                     onChange={e => patchExtra(x.key, { patrimony: e.target.value, equipment_inventory_id: null })}
                     placeholder="Patrimônio"
                   />
-                  <button type="button" className="btn btn-ghost btn-sm" title="Escolher do inventário" onClick={() => setExtraPickerKey(k => k === x.key ? null : x.key)}>📋</button>
+                  <button type="button" className="btn btn-ghost btn-sm" title="Escolher do inventário" onClick={() => setExtraPickerKey(k => k === x.key ? null : x.key)}><LineIcon name="list" /></button>
                   <button type="button" className="btn btn-ghost btn-sm" title="Remover este equipamento" onClick={() => setExtras(list => list.filter(y => y.key !== x.key))}>✕</button>
                 </div>
                 {extraPickerKey === x.key && (
@@ -308,7 +309,7 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
           ))}
           <div className="form-group">
             <button type="button" className="btn btn-ghost btn-sm" onClick={addExtra}>
-              ➕ Adicionar outro equipamento
+              <LineIcon name="plus" /> Adicionar outro equipamento
             </button>
           </div>
         </>
@@ -335,13 +336,13 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
             const profs = groupByProfessor(roomLookup.entries)
             return profs.length === 0 ? (
               <p className={s.roomHint}>
-                📅 {roomLookup.room}: {roomLookup.entries.length === 0
+                <LineIcon name="calendar" /> {roomLookup.room}: {roomLookup.entries.length === 0
                   ? 'a grade sincronizada não tem dados de hoje (pode estar desatualizada — peça pra atualizar).'
                   : 'sem aula hoje.'}
               </p>
             ) : (
               <div className={s.roomProfList}>
-                <p className={s.roomHint}>🧑‍🏫 {roomLookup.room} hoje — clique pra usar:</p>
+                <p className={s.roomHint}><LineIcon name="user" /> {roomLookup.room} hoje — clique pra usar:</p>
                 {profs.map(({ professor, turnos }) => (
                   <button
                     key={professor}
@@ -481,7 +482,7 @@ function MessageModal({ loan, onClose, onEmailSaved }) {
         disabled={!message.trim() || !target || toInvalid || sending}
         onClick={send}
       >
-        {sending ? 'Enviando...' : '✉️ Enviar por e-mail'}
+        {sending ? 'Enviando...' : <><LineIcon name="mail" /> Enviar por e-mail</>}
       </button>
     </Modal>
   )
@@ -568,7 +569,7 @@ function InventoryModal({ building, onClose }) {
                     {!!i.on_loan && ' · emprestado agora'}
                   </span>
                 </div>
-                <button className={s.iconBtn} title="Excluir" onClick={() => remove(i)}>🗑️</button>
+                <button className={s.iconBtn} title="Excluir" onClick={() => remove(i)}><LineIcon name="trash" /></button>
               </div>
             ))}
           </div>
@@ -683,9 +684,9 @@ export default function EquipmentLoansPage() {
           {user?.system_role === 'super_admin' && (
             <>
               <button className="btn btn-ghost" disabled={syncingRooms} onClick={syncRoomSchedule}>
-                {syncingRooms ? 'Atualizando grade...' : '🔄 Atualizar grade de salas'}
+                {syncingRooms ? 'Atualizando grade...' : <><LineIcon name="refresh" /> Atualizar grade de salas</>}
               </button>
-              <button className="btn btn-ghost" onClick={() => setShowInventory(true)}>📋 Inventário</button>
+              <button className="btn btn-ghost" onClick={() => setShowInventory(true)}><LineIcon name="list" /> Inventário</button>
             </>
           )}
           <ExportXlsxButton onExport={exportLoansXlsx} />
@@ -777,12 +778,12 @@ export default function EquipmentLoansPage() {
                           title={hasNewReply(l) ? 'O solicitante respondeu por e-mail — abrir conversa' : 'Enviar mensagem por e-mail ao solicitante'}
                           onClick={() => setMessaging(l)}
                         >
-                          ✉️
+                          <LineIcon name="mail" />
                           {hasNewReply(l) && <span aria-label="resposta nova" style={{ position: 'absolute', top: 1, right: 1, width: 8, height: 8, borderRadius: '50%', background: 'var(--red, #EF4444)' }} />}
                         </button>
                         {canEdit(l) && <>
-                          <button className={s.iconBtn} title="Editar" onClick={() => setEditing(l)}>✏️</button>
-                          <button className={s.iconBtn} title="Excluir" onClick={() => deleteLoan(l)}>🗑️</button>
+                          <button className={s.iconBtn} title="Editar" onClick={() => setEditing(l)}><LineIcon name="edit" /></button>
+                          <button className={s.iconBtn} title="Excluir" onClick={() => deleteLoan(l)}><LineIcon name="trash" /></button>
                         </>}
                       </div>
                     </td>

@@ -17,6 +17,7 @@ import s from './PurchaseRequestsPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
 import { safeHref } from '../utils/safeHref'
+import LineIcon from '../components/common/LineIcon'
 
 const STATUSES = [
   { key: 'pendente', label: 'Pendente' },
@@ -499,7 +500,7 @@ export default function PurchaseRequestsPage() {
                       <td className={s.mono}>{fmtMoney(r.quantity * r.unit_price)}</td>
                       <td className={s.linkCell}>
                         {r.link_url
-                          ? <a className={s.cardLink} href={safeHref(r.link_url)} target="_blank" rel="noreferrer" title={r.link_url}>🔗</a>
+                          ? <a className={s.cardLink} href={safeHref(r.link_url)} target="_blank" rel="noreferrer" title={r.link_url}><LineIcon name="link" /></a>
                           : '—'}
                       </td>
                       <td className={s.descCell} title={r.notes}>{r.notes || '—'}</td>
@@ -530,8 +531,8 @@ export default function PurchaseRequestsPage() {
                       <td className={s.stickyActions}>
                         {canEdit(r) && (
                           <div className={s.rowActions}>
-                            <button className={s.iconBtn} title="Editar" onClick={() => setEditing(r)}>✏️</button>
-                            <button className={s.iconBtn} title="Excluir" onClick={() => deleteRequest(r)}>🗑️</button>
+                            <button className={s.iconBtn} title="Editar" onClick={() => setEditing(r)}><LineIcon name="edit" /></button>
+                            <button className={s.iconBtn} title="Excluir" onClick={() => deleteRequest(r)}><LineIcon name="trash" /></button>
                           </div>
                         )}
                       </td>

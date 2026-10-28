@@ -118,3 +118,25 @@
   .page { padding: 20px 16px; gap: 16px; }
   .header { flex-direction: column; }
 }
+
+/* ── Acabamento "premium" (out/2026, mesmo padrão dos Cases de Sucesso) ──
+   KPIs neutros (cor só no número e num pontinho), tabela com cabeçalho cinza
+   sem caixa-alta e ícones de linha nas ações. */
+.title { font-size: 2rem; letter-spacing: -.032em; }
+.sub { font-size: 14px; }
+.kpiCard, .kpiTotal, .kpiDone { background: var(--surface); border-color: var(--border2); border-radius: 12px; box-shadow: none; padding: 16px 18px; gap: 6px; }
+.kpiNumber { font-weight: 600; letter-spacing: -.03em; font-size: 1.75rem; font-variant-numeric: tabular-nums; }
+.kpiLabel { font-size: 12px; }
+.kpiTotal .kpiLabel::before, .kpiDone .kpiLabel::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
+.kpiTotal .kpiLabel::before { background: var(--brand); }
+.kpiDone .kpiLabel::before { background: var(--success); }
+.kpiDone .kpiNumber { color: var(--success); }
+.tableCard { border-radius: 12px; box-shadow: none; }
+.table th { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.table td { padding: 10px; }
+.iconBtn { color: var(--text-muted); font-size: 15px; }
+.iconBtn:hover { color: var(--text); }
+.iconBtn[title="Excluir"]:hover { color: var(--danger); }
+.roomHint svg { margin-right: 2px; }
+:global([data-theme="dark"]) .kpiCard,
+:global([data-theme="dark"]) .tableCard { box-shadow: 0 1px 0 rgba(255,255,255,.04) inset; }

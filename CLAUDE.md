@@ -159,7 +159,8 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   Topbar e menu transparentes/no mesmo fundo), item ativo do menu = degrau de cinza (sem azul), títulos h1/h2 peso 600 com tracking negativo,
   botões `.btn` em pílula (todos os temas), login no estilo Gcore (`Auth.module.css`).
 - **Cases de Sucesso é a página-modelo**: ícones de linha (SVG) no lugar de emoji, KPIs num painel só dividido por linhas, cartões neutros
-  (bloco "Acabamento premium" no fim do `.module.css`). As outras telas ainda têm emojis/pílulas saturadas — aplicar o mesmo tela a tela.
+  (bloco "Acabamento premium" no fim do `.module.css`). Já aplicado também em Início (Dashboard), Backlog, Total de Chamados, Compras e
+  Empréstimos; ícones de ação em `components/common/LineIcon.jsx` (usar no lugar de emoji). Outras telas: aplicar o mesmo tela a tela.
   Prints locais com o Playwright CLI (`%APPDATA%\npm\playwright-cli.cmd`: `open`, `localstorage-set token ...`, `goto`, `screenshot --filename`).
 
 ## Desempenho do banco (estudo de out/2026)

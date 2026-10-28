@@ -87,3 +87,33 @@
   .header { flex-direction: column; }
   .kpiRow { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Acabamento "premium" (out/2026, mesmo padrão dos Cases de Sucesso) ──
+   Cartões neutros com borda finíssima (sem fundo colorido): a cor fica só no
+   número e num pontinho antes do rótulo. Títulos peso 600, cabeçalho da
+   tabela em cinza sem caixa-alta, alternador de vista em degrau de cinza. */
+.title { font-size: 2rem; letter-spacing: -.032em; }
+.sub { font-size: 14px; }
+.kpiRow { gap: 12px; }
+.kpiCard, .kpiTotal, .kpiGood, .kpiWarn {
+  background: var(--surface); border-color: var(--border2); border-radius: 12px; box-shadow: none; padding: 16px 18px; gap: 6px;
+}
+.kpiNumber { font-weight: 600; letter-spacing: -.03em; font-size: 1.75rem; font-variant-numeric: tabular-nums; }
+.kpiLabel { font-size: 12px; }
+.kpiTotal .kpiLabel::before, .kpiGood .kpiLabel::before, .kpiWarn .kpiLabel::before {
+  content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 7px; vertical-align: 1px;
+}
+.kpiTotal .kpiLabel::before { background: var(--brand); }
+.kpiGood .kpiLabel::before { background: var(--success); }
+.kpiWarn .kpiLabel::before { background: var(--danger); }
+.kpiClickable:hover { transform: none; box-shadow: none; background: var(--surface-2); }
+.kpiActive { outline: 1px solid color-mix(in srgb, var(--text) 40%, transparent); outline-offset: -1px; }
+.chartCard, .tableCard { border-radius: 12px; box-shadow: none; padding: 20px 22px; }
+.chartCard h3 { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+.table th { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.table td { padding: 10px; }
+:global([data-theme="dark"]) .kpiCard,
+:global([data-theme="dark"]) .chartCard,
+:global([data-theme="dark"]) .tableCard { box-shadow: 0 1px 0 rgba(255,255,255,.04) inset; }
+.viewToggle button { font-weight: 500; }
+.viewToggle .viewOn { background: var(--surface); color: var(--text); box-shadow: 0 0 0 1px var(--border2); }
