@@ -159,6 +159,10 @@ export default function DashboardPage() {
             <span className={s.principlesTagline}>Seu sonho, nossa meta!</span>
           </div>
           <span className={s.principlesTitle}>PARISFE</span>
+          {/* Página própria (public/parisfe.html), sem login, pra deixar aberta na TV */}
+          <a className={`btn btn-ghost btn-sm ${s.principlesScreen}`} href="/parisfe" target="_blank" rel="noopener">
+            Abrir no telão
+          </a>
         </div>
         <div className={s.principlesGrid}>
           {PRINCIPLES.map((p, i) => (

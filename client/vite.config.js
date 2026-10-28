@@ -36,7 +36,8 @@ export default defineConfig({
         // (pptxgenjs, pdf-lib) só são baixadas quando
         // alguém exporta — não entram no pacote que todo aparelho pré-baixa.
         globIgnores: ['**/exceljs*', '**/pptxgen*', '**/pdf-lib*', '**/casesDeck*'],
-        navigateFallbackDenylist: [/^\/api\//],
+        // /parisfe: telão dos valores (public/parisfe.html), página própria fora do app
+        navigateFallbackDenylist: [/^\/api\//, /^\/parisfe/],
       },
     }),
   ],

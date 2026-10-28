@@ -65,6 +65,7 @@
 }
 .principlesBrand { display: block; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
 .principlesTagline { display: block; font-size: 11px; color: var(--text-muted); }
+.principlesScreen { margin-left: auto; text-decoration: none; }
 .principlesTitle {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   font-family: var(--font-display); font-size: 22px; font-weight: 800;
