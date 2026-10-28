@@ -1,0 +1,33 @@
+# Testes de ponta a ponta a cada push e pull request (server/test-e2e/run-all.mjs):
+# o mesmo worker.js rodando no Node com banco SQLite em memória (node-server.mjs).
+# Nada aqui fala com produção — sem secrets, sem Cloudflare, sem GLPI de verdade.
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      # --ignore-scripts: o wrangler/workerd não é usado aqui, não precisa baixar o runtime
+      - run: npm ci --ignore-scripts
+        working-directory: server
+      - run: npm test
+        working-directory: server
+      - name: Build do client
+        run: npm ci --ignore-scripts && npm run build
+        working-directory: client

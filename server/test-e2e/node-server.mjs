@@ -7,6 +7,7 @@
 //
 //   cd server && node test-e2e/node-server.mjs     (banco novo em memória a cada execução)
 //   MOCK_GMAIL=1 node test-e2e/node-server.mjs      (+ Gmail de mentira, pra loan-replies-e2e.mjs)
+//   RATE_LIMIT=1 node test-e2e/node-server.mjs      (+ limite de tentativas, pra secrets-e2e.mjs)
 import { registerHooks } from 'node:module'
 import { DatabaseSync } from 'node:sqlite'
 import { createServer } from 'node:http'
@@ -75,6 +76,21 @@ const env = {
 }
 const ctx = { waitUntil() {}, passThroughOnException() {} }
 
+// RATE_LIMIT=1: limitador de mentira com os mesmos números do wrangler.jsonc
+// (janela fixa de 60s, em memória). Desligado por padrão — as outras suítes
+// revelam muitas senhas seguidas e cairiam no limite.
+if (process.env.RATE_LIMIT) {
+  const fakeLimiter = limit => {
+    const hits = new Map()
+    return { async limit({ key }) {
+      const now = Date.now(), h = hits.get(key)
+      if (!h || now - h.start >= 60_000) { hits.set(key, { start: now, n: 1 }); return { success: true } }
+      return { success: ++h.n <= limit }
+    } }
+  }
+  Object.assign(env, { LOGIN_LIMITER: fakeLimiter(60), SECRET_LIMITER: fakeLimiter(30) })
+}
+
 // ── MOCK_GMAIL=1: Gmail de mentira (envio + caixa de entrada) ────────────
 // Intercepta o fetch pros hosts do Google. Controle pelos endpoints /__mock/*
 // (só existem neste servidor de teste):
@@ -83,6 +99,7 @@ const ctx = { waitUntil() {}, passThroughOnException() {} }
 //   POST /__mock/gmail/mode   {oauthCanRead}                              → token OAuth só de envio?
 //   POST /__mock/cron         {cron, minute}                              → roda o scheduled()
 //   GET  /__mock/setting?key=  ·  POST /__mock/setting {key, value}       → lê / grava app_settings
+//   POST /__mock/sql          {sql, args?}                               → roda SQL e devolve as linhas
 const mock = { sent: [], inbox: [], oauthCanRead: true }
 if (process.env.MOCK_GMAIL) {
   const { generateKeyPairSync } = await import('node:crypto')
@@ -160,6 +177,8 @@ async function mockControl(req, url, body) {
     return { ok: true }
   }
   if (url.pathname === '/__mock/setting') return sqlite.prepare('SELECT value FROM app_settings WHERE key = ?').get(url.searchParams.get('key')) || null
+  // POST /__mock/sql {sql, args?} → linhas (prepara/confere o banco nos testes; só existe aqui)
+  if (url.pathname === '/__mock/sql') { const { sql, args = [] } = JSON.parse(body); return sqlite.prepare(sql).all(...args) }
   return null
 }
 

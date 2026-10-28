@@ -4,6 +4,7 @@ import { signJwt } from '../lib/jwt.js'
 import { verifyGoogleIdToken, decodeJwtPayload } from '../lib/googleAuth.js'
 import { auth } from '../middleware/auth.js'
 import { signDownloadTicket } from '../lib/requestToken.js'
+import { rateLimit, byIp, byUser } from '../lib/rateLimit.js'
 import { loadAccess } from '../lib/permissions.js'
 import { auditInBackground } from '../lib/audit.js'
 
@@ -37,7 +38,7 @@ app.post('/register', c => c.json({ error: 'Cadastro por e-mail/senha desativado
 // tentativas nem a restrição de domínio do Google. 410, igual ao /register.
 app.post('/login', c => c.json({ error: 'Login por e-mail/senha desativado. Entre com sua conta Google.' }, 410))
 
-app.post('/google', async c => {
+app.post('/google', rateLimit('LOGIN_LIMITER', byIp, 'Muitas tentativas de login — espere um minuto.'), async c => {
   const db = c.get('db')
   const { credential } = await c.req.json()
   if (!credential) return c.json({ error: 'Token não fornecido' }, 400)
@@ -142,7 +143,7 @@ app.post('/google', async c => {
 // (ver lib/requestToken.js). Só caminhos de anexo; o acesso ao arquivo é
 // checado de novo quando o navegador baixa.
 const DOWNLOAD_PATH = /^\/api\/[a-z-]+\/[\w-]+\/attachment$/
-app.post('/download-ticket', auth, async c => {
+app.post('/download-ticket', auth, rateLimit('SECRET_LIMITER', byUser, 'Muitos downloads em pouco tempo — espere um minuto.'), async c => {
   const { path } = await c.req.json().catch(() => ({}))
   if (typeof path !== 'string' || !DOWNLOAD_PATH.test(path)) return c.json({ error: 'Caminho de download inválido' }, 400)
   return c.json({ ticket: await signDownloadTicket(c.env, c.get('user'), path) })

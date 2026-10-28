@@ -34,7 +34,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0062). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0063). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -45,6 +45,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Se o `wrangler dev`/`d1 --local` quebrar** com "access violation" (aconteceu em out/2026 no Windows 11 Insider 26300, qualquer
   versão do wrangler): `cd server && node test-e2e/node-server.mjs` roda o mesmo worker.js no Node com D1 em SQLite (memória,
   migrações + seeds) na porta 8799 — as suítes rodam igual. Sem tempo real nem arquivos estáticos.
+- **`cd server && npm test`** (`test-e2e/run-all.mjs`) sobe o node-server e roda tudo abaixo na ordem certa — é o que o **GitHub Actions**
+  roda a cada push (`.github/workflows/e2e.yml`, sem secrets, sem produção). Suíte nova = incluir em `GROUPS` do `run-all.mjs`.
+  `secrets` precisa de `RATE_LIMIT=1` (limitador de mentira); `POST /__mock/sql` no node-server prepara/confere o banco.
 - Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `labels`, `machine-standards`, `audit`, `security`, `download-ticket` (nesta ordem: o `security` força novo login do analista e
   invalida o token tv:0 dele; o `download-ticket` faz o mesmo com o colaborador). `xlsx` conta linhas — rode em banco limpo (servidor recém-subido); passe uma pasta como argumento pra
   salvar os .xlsx e abrir no Excel. `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`.
@@ -80,8 +83,10 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   (`utils/safeHref.js`). CSV exportado usa `lib/csv.js` (neutraliza fórmula). Portão do KB: com id na rota vale a categoria do artigo.
 - Downloads de anexo: **ticket de 60s** em `?ticket=` (`lib/requestToken.js`, `POST /api/auth/download-ticket`, preso ao caminho, só GET);
   `?token=` com o token de login NÃO é mais aceito (out/2026).
-- Pendente (não feito): rate limit (1 regra grátis no painel do Cloudflare); `react-router` 7 (corrige o redirecionamento aberto do audit) /
-  `vite` 8. Avisos "altos" do `npm audit` no servidor vêm do `@cloudflare/puppeteer` (pacotes Node que não rodam no Worker).
+- **Limite de tentativas** (`lib/rateLimit.js`, `ratelimits` no wrangler.jsonc): login 60/min por IP (a escola sai por um IP só),
+  ver/copiar senha (Cofre/VLANs) e ticket de download 30/min por pessoa → 429. Não é na API toda (o tempo real faz muita leitura).
+  O workers.dev não tem zona, então as regras de rate limit do painel (WAF) não servem — por isso é no código.
+- Pendente (não feito): `react-router` 7 (corrige o redirecionamento aberto do audit) / `vite` 8. Avisos "altos" do `npm audit` no servidor vêm do `@cloudflare/puppeteer` (pacotes Node que não rodam no Worker).
 
 ## Permissões (cargos × departamentos) — decisões do Luiz
 - **Cargos configuráveis** (tabela `roles`, Admin → aba Cargos): por módulo `none|view|edit` + escopo `all|department`.
@@ -130,7 +135,8 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   +7 min, o minuto seguinte relê; e ao abrir o chat. Status em `app_settings.gmail_inbox_status`. Bolinha vermelha no ✉️ = resposta nova. Teste: `MOCK_GMAIL=1 node test-e2e/node-server.mjs` +
   `loan-replies-e2e.mjs`.
 - Desempenho (estrelas/luas — 👎 privado: quem recebeu + Super Admin), Jornada, Organograma, Impressoras (drag-and-drop), Compras por mês,
-  Aprovações (trocar decisão), Cofre de Senhas (AES-GCM), **VLANs** (Gestão; senhas de Wi-Fi no banco, não no repo; acesso = lista do Cofre).
+  Aprovações (trocar decisão), Cofre de Senhas (AES-GCM), **VLANs** (Gestão; senhas de Wi-Fi no banco **cifradas** como o Cofre — `password_enc/iv`, migração 0063; texto puro
+  em `password` vindo de seed é cifrado e apagado pela rota ao abrir a tela/mostrar; não no repo; acesso = lista do Cofre).
 - **Gestão → Desenvolvimentos** (`routes/developments.js`, `DevelopmentsPage.jsx`, módulo `gestao`): vitrine dos sistemas da equipe
   (logo, para que serve, link, situação). Logo reduzida a 256 px no navegador e guardada como data URL no D1 (sem SVG). O menu lateral
   lista cada um (`GET /developments?menu=1`, sem as logos). Etiquetas dos quadros: criar/editar pelo próprio cartão (CardModal).
@@ -209,8 +215,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - Limite a vigiar: cache cru do Total (`glpi_total_raw`, limite de linha do D1: 2 MB). Chegou a 1,95 MB (8,6 mil chamados) em out/2026 →
   formato compacto v2 (`encodeRaw`/`decodeRaw` em `glpiTotalSync.js`: chamado = array, origem/técnicos = índices) caiu p/ ~0,9 MB; a
   cópia `'current'` do cache cru deixou de existir (só o resumo `'current'` continua). Cresce ~110 bytes por chamado.
+  **Aviso automático**: passou de 1,5 milhão de caracteres, os Super Admins recebem no sininho (1/dia; `alertRawSize`).
 - **Total de Chamados → "Chamados por origem da requisição"**: campo 9 do GLPI (Origem da requisição), só no Total (`withOrigin`);
   ranking do período (vale o filtro De/Até) + mês a mês das 6 maiores (resto em "Outras"). Decisão do Luiz: o "setor" é a Origem da requisição;
   botão "Só setores" (ligado por padrão) esconde os canais Helpdesk, E-Mail e Sem origem (`isChannelOrigin`, `sectorSeries`/`sectorMonthly`).
-- Ideias não feitas: cartão aberto (CardModal) ao vivo; eventos do GLPI por departamento/entidade; criptografar senhas de Wi-Fi como o Cofre;
+- Ideias não feitas: cartão aberto (CardModal) ao vivo; eventos do GLPI por departamento/entidade;
   descobrir quem cria chamados de feriado em massa.

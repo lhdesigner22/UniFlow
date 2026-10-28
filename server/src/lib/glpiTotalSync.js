@@ -7,6 +7,7 @@
 // fazem sentido quando o conjunto inclui chamados já fechados.
 import { glpiFetchTickets, resolveAssignees, ALL_STATUS_CODES } from './glpiClient.js'
 import { loadGlpiTechCache } from './glpiTechCache.js'
+import { createNotification } from '../routes/notifications.js'
 import { computeBacklogSnapshot, fixMojibake } from './glpiBacklogSync.js'
 import { configuredEntities, matchesEntity, entityKey, DEFAULT_ENTITY, distinctEntityPaths, loadSeenEntities, saveSeenEntities } from './glpiEntities.js'
 
@@ -151,6 +152,28 @@ export function decodeRaw(json) {
   return { tickets, assigneeNamesByTicket }
 }
 
+// O cache cru fica numa linha só do D1, e linha tem limite de 2 MB: passou
+// disso, a gravação falha e o Total de Chamados para de atualizar sem aviso.
+// Em out/2026 estava em ~0,9 MB e cresce ~110 bytes por chamado. Acima de
+// 1,5 MB os Super Admins recebem um aviso no sininho (no máximo 1 por dia) —
+// hora de enxugar o formato (encodeRaw) ou dividir o cache em mais linhas.
+// Conta caracteres, não bytes (acento ocupa 2): é uma estimativa, de propósito
+// baixa no custo — o cron do Total já é o mais pesado.
+export const RAW_ALERT_CHARS = 1_500_000
+export async function alertRawSize(db, entity, chars) {
+  if (chars < RAW_ALERT_CHARS) return
+  const today = new Date().toISOString().slice(0, 10)
+  if ((await db.prepare("SELECT value FROM app_settings WHERE key = 'glpi_total_raw_alert_at'").get())?.value === today) return
+  await db.prepare("INSERT INTO app_settings (key, value) VALUES ('glpi_total_raw_alert_at', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(today)
+  const mb = (chars / 1024 / 1024).toFixed(2)
+  const admins = await db.prepare("SELECT id FROM users WHERE system_role = 'super_admin'").all()
+  for (const a of admins) {
+    await createNotification(db, a.id, 'system', '⚠️ Total de Chamados perto do limite',
+      `O cache de chamados de ${entity} está com ~${mb} MB (o limite do banco é 2 MB por registro). Passando disso, o Total de Chamados para de atualizar. Peça para enxugar o formato do cache.`,
+      '/chamados-total')
+  }
+}
+
 const upsert = (table, id, data) => ({
   sql: `INSERT INTO ${table} (id, data, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
   args: [id, data],
@@ -197,6 +220,7 @@ export async function runGlpiTotalSync(env, db) {
       main = snapshot
     }
     await db.batch(statements) // um lote por entidade (cada cache cru pode ser grande)
+    await alertRawSize(db, entity, rawJson.length)
   }
 
   return { totalTickets: allTickets.length, entities: entities.length, resolutionRate: main?.resolutionRate }

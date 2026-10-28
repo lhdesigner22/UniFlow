@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { auth } from '../middleware/auth.js'
 import { isScriptLink, LINK_ERROR } from '../lib/safeUrl.js'
 import { encryptSecret, decryptSecret } from '../lib/vaultCrypto.js'
+import { rateLimit, byUser } from '../lib/rateLimit.js'
 import { writeAudit, checkRevealBurst, auditVaultDenied, auditVaultOpen } from '../lib/audit.js'
 
 // Cofre de senhas — acesso (ver e editar) NÃO segue o system_role normal:
@@ -106,7 +107,7 @@ app.get('/', async c => {
 
 // GET /:id/reveal?purpose=show|copy — decifra e devolve só a senha desse item.
 // O log (com o motivo: mostrar na tela ou copiar) é gravado antes de decifrar.
-app.get('/:id/reveal', async c => {
+app.get('/:id/reveal', rateLimit('SECRET_LIMITER', byUser, 'Muitas senhas em pouco tempo — espere um minuto.'), async c => {
   const db = c.get('db')
   const id = c.req.param('id')
   const row = await db.prepare('SELECT title, password_enc, password_iv FROM vault_entries WHERE id = ?').get(id)

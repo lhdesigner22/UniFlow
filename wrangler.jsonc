@@ -58,6 +58,12 @@
 	// Navegador headless da Cloudflare (Browser Rendering) — usado só pela
 	// sincronização semanal da grade de salas. Plano Free: 10 min/dia.
 	"browser": { "binding": "BROWSER" },
+	// Limite de tentativas (server/src/lib/rateLimit.js). Login por IP é folgado
+	// de propósito: a escola inteira pode sair pelo mesmo IP às 8h.
+	"ratelimits": [
+		{ "name": "LOGIN_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } },
+		{ "name": "SECRET_LIMITER", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } }
+	],
 	// Sem isso o esbuild injeta __name(...) dentro das funções que mandamos
 	// pro navegador via page.evaluate, e elas quebram lá ("__name is not defined").
 	"keep_names": false,
