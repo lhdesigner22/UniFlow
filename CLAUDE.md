@@ -164,6 +164,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Cases de Sucesso é a página-modelo**: ícones de linha (SVG) no lugar de emoji, KPIs num painel só dividido por linhas, cartões neutros
   (bloco "Acabamento premium" no fim do `.module.css`). Já aplicado também em Início (Dashboard), Backlog, Total de Chamados, Compras e
   Empréstimos; ícones de ação em `components/common/LineIcon.jsx` (usar no lugar de emoji). Outras telas: aplicar o mesmo tela a tela.
+  **Admin** (out/2026, skills design-critique + design-taste-frontend): título "Administração" com o retrato do acesso embaixo, abas sublinhadas
+  sem emoji, aba Usuários = `components/admin/UsersTab.jsx` (tabela real, busca, filtros por cargo/departamento, ações no menu "⋯").
+  Falta nas abas Cargos/Departamentos/Notificações/GLPI (ainda com emoji). Crítica das 5 telas restantes: Admin < KB < Impressoras < Agenda < Aprovações.
 - **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
   `all: unset` dos módulos). Cores (1ª etapa feita): hex/rgba com o MESMO valor de um token viraram `var(--x)` / `color-mix(in srgb, var(--x) N%, transparent)`
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`

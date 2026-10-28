@@ -292,7 +292,7 @@ export default function KnowledgeBasePage() {
                 </div>
                 <h3 className={s.cardTitle}>{a.title}</h3>
                 {a.content && <p className={s.cardContent}>{a.content}</p>}
-                {a.has_attachment && (
+                {!!a.has_attachment && ( /* vem 0/1 do banco — sem o !! o React desenha o "0" */
                   <button type="button" className={s.cardLink} onClick={() => downloadFile(`/kb/${a.id}/attachment`, a.attachment_name || 'anexo')}>
                     📎 Baixar {a.attachment_name}
                   </button>

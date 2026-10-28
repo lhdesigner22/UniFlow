@@ -1,0 +1,100 @@
+/* Admin → Usuários: tabela de verdade (regras de linha, cabeçalho cinza em
+   caixa normal, sem zebra), mesmo cartão neutro da aba Logs. */
+.wrap { display: flex; flex-direction: column; gap: 14px; }
+
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.toolbar select { width: auto; height: 34px; padding: 0 10px; font-size: 13px; border-radius: 8px; max-width: 220px; }
+.search {
+  display: flex; align-items: center; gap: 6px; flex: 0 1 320px;
+  height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text-muted);
+}
+.search input { border: none; background: transparent; padding: 0; height: 32px; font-size: 13px; flex: 1; min-width: 0; box-shadow: none; }
+.search input:focus { box-shadow: none; }
+.search:focus-within { border-color: var(--brand); }
+.count { margin-left: auto; font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 760px; }
+.caption {
+  caption-side: top; text-align: left; padding: 12px 16px;
+  font-size: 12px; color: var(--text-muted); border-bottom: 1px solid var(--border);
+}
+.caption strong { color: var(--text); font-weight: 500; }
+.table th {
+  text-align: left; font-size: 12px; font-weight: 500; color: var(--text-muted);
+  padding: 10px 16px; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.table td { padding: 10px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table tbody tr:last-child td { border-bottom: none; }
+.table th:first-child { width: 40%; }
+.num { text-align: right !important; }
+.since { color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.person { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* Cor própria e clara de cada pessoa (identidade, não dado). */
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; font-size: 13px; font-weight: 600;
+  background: color-mix(in srgb, var(--hue) 18%, transparent);
+  color: color-mix(in srgb, var(--hue) 70%, var(--text));
+}
+.names { display: flex; flex-direction: column; min-width: 0; }
+.name { font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.me {
+  font-size: 11px; font-weight: 500; color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; line-height: 18px;
+}
+.email { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.cellSelect {
+  width: 100%; max-width: 230px; height: 32px; padding: 0 10px; font-size: 13px;
+  border-radius: 8px; background: transparent; border: 1px solid var(--border); color: var(--text); cursor: pointer;
+}
+.cellSelect:hover:not(:disabled) { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
+.cellSelect:disabled { cursor: default; opacity: .7; }
+
+.actions { width: 1%; text-align: right; }
+.menuWrap { position: relative; display: inline-block; }
+.menuBtn {
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.menuBtn:hover, .menuBtn[aria-expanded="true"] { border-color: var(--border); color: var(--text); }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 250px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: var(--shadow-md); padding: 4px; display: flex; flex-direction: column;
+}
+.menu button {
+  display: flex; align-items: flex-start; gap: 10px; text-align: left;
+  padding: 8px 10px; border: none; border-radius: 6px; background: transparent;
+  color: var(--text); font-size: 13px; cursor: pointer;
+}
+.menu button svg { margin-top: 2px; color: var(--text-muted); }
+.menu button:hover, .menu button:focus-visible { background: var(--surface-2); outline: none; }
+.menu small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.menu .danger, .menu .danger svg { color: var(--danger-text); }
+
+.empty { padding: 28px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.linkBtn { border: none; background: none; color: var(--info-text); cursor: pointer; font: inherit; padding: 0; }
+
+/* Celular: cada pessoa vira um bloco (nome em cima, departamento e cargo
+   embaixo, um por linha), sem rolar de lado. */
+@media (max-width: 720px) {
+  .count { margin-left: 0; width: 100%; }
+  .search { flex: 1 1 100%; }
+  .toolbar select { flex: 1 1 45%; max-width: none; }
+  .table { min-width: 0; }
+  .caption { display: block; width: 100%; }
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { position: relative; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .table tbody tr:last-child { border-bottom: none; }
+  .table td { border: none; padding: 4px 0; }
+  .table th:first-child { width: auto; }
+  .cellSelect { max-width: none; }
+  .since { text-align: left !important; font-size: 12px; }
+  .since::before { content: 'Entrou em '; }
+  .actions { position: absolute; top: 12px; right: 12px; width: auto; }
+}

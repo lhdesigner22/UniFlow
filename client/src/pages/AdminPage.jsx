@@ -1,5 +1,6 @@
 import RolesTab from '../components/admin/RolesTab'
 import AuditLogTab from '../components/admin/AuditLogTab'
+import UsersTab from '../components/admin/UsersTab'
 import DepartmentModulesModal from '../components/admin/DepartmentModulesModal'
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -153,6 +154,8 @@ export default function AdminPage() {
   const [settingsMsg, setSettingsMsg] = useState(null)
 
   const isAuditor = me?.system_role === 'auditor'
+  const noDeptCount = users.filter(u => !u.department_id).length
+  const superAdminCount = users.filter(u => u.system_role === 'super_admin').length
 
   useEffect(() => {
     if (me && me.system_role !== 'super_admin' && me.system_role !== 'auditor') { navigate('/'); return }
@@ -427,115 +430,40 @@ export default function AdminPage() {
 
   return (
     <div className={s.page}>
-      <div className={s.header}>
-        <div>
-          <h1 className={s.title}>{isAuditor ? '👁️ Painel do Super Admin (somente leitura)' : '⭐ Painel do Super Admin'}</h1>
-          <p className={s.sub}>
-            {isAuditor
-              ? 'Você enxerga tudo aqui, mas não pode alterar nada nesta tela — seu perfil só edita a Base de Conhecimento.'
-              : 'Gerencie usuários, departamentos e permissões do sistema.'}
-          </p>
-        </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/')}>← Voltar</button>
-      </div>
+      <header className={s.header}>
+        <h1 className={s.title}>Administração</h1>
+        <p className={s.sub}>
+          {isAuditor && <><strong>Somente leitura</strong> — seu perfil só edita a Base de Conhecimento. </>}
+          {users.length} pessoas · {noDeptCount === 0 ? 'todas com departamento' : `${noDeptCount} sem departamento (veem só o Geral)`} · {superAdminCount} Super Admin
+        </p>
+      </header>
 
-      {/* Tabs */}
-      <div className={s.tabs}>
-        <button className={`${s.tab} ${tab === 'users' ? s.active : ''}`} onClick={() => setTab('users')}>
-          👥 Usuários <span className={s.badge}>{users.length}</span>
-        </button>
-        <button className={`${s.tab} ${tab === 'roles' ? s.active : ''}`} onClick={() => setTab('roles')}>
-          🔑 Cargos <span className={s.badge}>{roles.length}</span>
-        </button>
-        <button className={`${s.tab} ${tab === 'departments' ? s.active : ''}`} onClick={() => setTab('departments')}>
-          🏢 Departamentos <span className={s.badge}>{departments.length}</span>
-        </button>
-        <button className={`${s.tab} ${tab === 'notifications' ? s.active : ''}`} onClick={() => setTab('notifications')}>
-          📧 Notificações
-        </button>
-        <button className={`${s.tab} ${tab === 'glpi' ? s.active : ''}`} onClick={() => setTab('glpi')}>
-          🖥️ GLPI {unparsedTickets.length > 0 && <span className={s.badge}>{unparsedTickets.length}</span>}
-        </button>
-        <button className={`${s.tab} ${tab === 'logs' ? s.active : ''}`} onClick={() => setTab('logs')}>
-          🕵️ Logs
-        </button>
-      </div>
+      {/* Abas sublinhadas sobre uma linha (padrão das telas premium, sem emoji) */}
+      <nav className={s.tabs} aria-label="Áreas da administração">
+        {[
+          ['users', 'Usuários', users.length],
+          ['roles', 'Cargos', roles.length],
+          ['departments', 'Departamentos', departments.length],
+          ['notifications', 'Notificações'],
+          ['glpi', 'GLPI', unparsedTickets.length || null],
+          ['logs', 'Logs'],
+        ].map(([key, label, count]) => (
+          <button key={key} type="button" aria-current={tab === key ? 'true' : undefined}
+            className={`${s.tab} ${tab === key ? s.active : ''}`} onClick={() => setTab(key)}>
+            {label}{count != null && <span className={s.badge}>{count}</span>}
+          </button>
+        ))}
+      </nav>
 
       {/* ── Tab: Logs de auditoria ── */}
       {tab === 'logs' && <AuditLogTab initialCategory={searchParams.get('category') || ''} />}
 
       {/* ── Tab: Usuários ── */}
       {tab === 'users' && (
-        <Reveal as="div" className={s.section}>
-          <div className={s.info}>
-            <strong>🔐 Como funciona:</strong> Defina o <em>departamento</em> de cada pessoa (ela só vê o conteúdo do seu) e o <em>cargo</em> (o que ela pode ver e editar em cada área). Os cargos são configurados na aba <em>Cargos</em>.
-          </div>
-          <div className={s.table}>
-            <div className={s.tableHead}>
-              <span>Usuário</span>
-              <span>Departamento</span>
-              <span>Cargo</span>
-              <span></span>
-            </div>
-            {users.map(u => (
-              <div key={u.id} className={s.tableRow}>
-                <div className={s.userCell}>
-                  <div className="avatar" style={{ width:34, height:34, fontSize:13, background: u.id === me?.id ? '#22c55e' : '#4a7cf7', flexShrink:0 }}>
-                    {u.name?.charAt(0)}
-                  </div>
-                  <div>
-                    <div className={s.userName}>
-                      {u.name}
-                      {u.id === me?.id && <span style={{ fontSize:10, color:'var(--muted)', marginLeft:6 }}>(você)</span>}
-                    </div>
-                    <div className={s.userEmail}>{u.email}</div>
-                  </div>
-                </div>
-
-                <select
-                  value={u.department_id || ''}
-                  onChange={e => updateUser(u.id, { department_id: e.target.value || null })}
-                  className={s.select}
-                >
-                  <option value="">— Sem departamento</option>
-                  {departments.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={u.role_id || 'role-colaborador'}
-                  onChange={e => updateUser(u.id, { role_id: e.target.value })}
-                  className={s.select}
-                  disabled={u.id === me?.id}
-                  title={u.id === me?.id ? 'Você não pode alterar o próprio cargo' : undefined}
-                >
-                  {roles.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.system_role === 'super_admin' ? '⭐ ' : r.system_role === 'auditor' ? '👁️ ' : ''}{r.name}
-                    </option>
-                  ))}
-                </select>
-
-                <div className={s.rowActions}>
-                  <button
-                    className="btn btn-icon btn-sm"
-                    onClick={() => forceRelogin(u)}
-                    disabled={u.id === me?.id}
-                    title={u.id === me?.id ? 'Não dá pra forçar a própria sessão' : 'Forçar novo login (derruba a sessão atual dela — útil pra puxar a foto do Google na hora, por exemplo)'}
-                  >🔄</button>
-                  <button
-                    className="btn btn-icon btn-sm"
-                    style={{ color:'var(--red)' }}
-                    onClick={() => deleteUser(u.id)}
-                    disabled={u.id === me?.id}
-                    title={u.id === me?.id ? 'Não é possível excluir a si mesmo' : 'Excluir usuário'}
-                  >🗑️</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Reveal>
+        <UsersTab
+          users={users} departments={departments} roles={roles} me={me} readOnly={isAuditor}
+          onUpdate={updateUser} onForceRelogin={forceRelogin} onDelete={deleteUser}
+        />
       )}
 
       {/* ── Tab: Cargos ── */}

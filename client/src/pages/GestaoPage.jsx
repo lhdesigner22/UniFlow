@@ -235,7 +235,7 @@ export default function GestaoPage() {
                 )}
               </div>
               {d.content && <p className={s.cardContent}>{d.content}</p>}
-              {d.has_attachment && (
+              {!!d.has_attachment && (
                 <button type="button" className={s.cardLink} onClick={() => downloadFile(`/kb/${d.id}/attachment`, d.attachment_name || 'anexo')}>
                   📎 Baixar {d.attachment_name}
                 </button>

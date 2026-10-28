@@ -210,7 +210,7 @@ function DetailModal({ approval, currentUser, onClose, onUpdated, onDeleted }) {
 
       {approval.description && <p className={s.description}>{approval.description}</p>}
 
-      {approval.has_attachment && (
+      {!!approval.has_attachment && (
         <button type="button" className={s.cardLink} onClick={() => downloadFile(`/approvals/${approval.id}/attachment`, approval.attachment_name || 'anexo')}>
           📎 Baixar {approval.attachment_name}
         </button>

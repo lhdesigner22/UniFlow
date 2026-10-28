@@ -1,32 +1,33 @@
-.page { padding: 36px 32px; max-width: 1000px; margin: 0 auto; }
+/* Largura toda, como as outras telas premium (antes: coluna de 1000px centralizada). */
+.page { padding: 36px 32px; display: flex; flex-direction: column; gap: 20px; }
 .loading { display:flex; align-items:center; justify-content:center; height:60vh; color:var(--muted); gap:10px; }
 
-.header { margin-bottom: 28px; }
-.title { font-size:1.6rem; font-weight:800; letter-spacing:-.02em; margin-bottom:5px; }
-.sub { font-size:13px; color:var(--muted); }
+/* Título-substantivo + uma linha com o retrato do acesso (a "constatação" da tela). */
+.header { display: flex; flex-direction: column; gap: 6px; }
+.title { font-size: 2rem; font-weight: 600; letter-spacing: -.032em; line-height: 1.1; }
+.sub { font-size: 14px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.sub strong { color: var(--warning-text); font-weight: 500; }
 
-/* ── Tabs ── */
+/* ── Abas: sublinhadas sobre uma linha inteira, sem emoji nem pílula ── */
 .tabs {
-  display:flex; gap:2px; margin-bottom:28px;
-  background: var(--card); border: 1px solid var(--border2);
-  border-radius: 12px; padding: 4px;
-  width: fit-content;
+  display: flex; gap: 4px; border-bottom: 1px solid var(--border);
+  overflow-x: auto; scrollbar-width: none;
 }
 .tab {
-  background:none; border:none; color:var(--muted);
-  font-size:13px; font-weight:600;
-  padding:8px 20px; cursor:pointer; border-radius:9px;
-  transition:all .15s; display:flex; align-items:center; gap:6px;
+  position: relative; display: flex; align-items: center; gap: 6px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 14px; font-weight: 500; padding: 10px 12px 12px; cursor: pointer; white-space: nowrap;
+  transition: color .15s;
 }
-.tab:hover { color:var(--white); }
-.tab.active {
-  background: var(--navy2); color:var(--white);
-  box-shadow: var(--shadow-sm);
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--text); }
+.tab.active::after {
+  content: ''; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px;
+  border-radius: 2px; background: var(--text);
 }
 .badge {
-  background:var(--border2); color:var(--muted);
-  font-size:10px; font-weight:700;
-  padding:1px 7px; border-radius:20px;
+  color: var(--text-muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
+  background: var(--surface-2); padding: 0 6px; border-radius: 999px; line-height: 18px;
 }
 
 .section { display:flex; flex-direction:column; gap:20px; }
@@ -37,40 +38,6 @@
 }
 .info strong { color:var(--white); }
 .info em { color:var(--blue); font-style:normal; font-weight:700; }
-
-/* ── Table ── */
-/* overflow-x:auto aqui (não na página inteira) — em telas estreitas a
-   tabela rola de lado sozinha, sem forçar o resto da página a rolar junto. */
-.table { display:flex; flex-direction:column; gap:3px; overflow-x:auto; }
-.tableHead {
-  display:grid; grid-template-columns: 1fr 160px 150px 70px;
-  gap:12px; padding:8px 16px; min-width:600px;
-  font-size:10px; font-weight:700; color:var(--muted);
-  text-transform:uppercase; letter-spacing:.07em;
-}
-.tableRow {
-  display:grid; grid-template-columns: 1fr 160px 150px 70px;
-  gap:12px; align-items:center; padding:12px 16px; min-width:600px;
-  background:var(--card); border:1px solid var(--border2);
-  border-radius:12px; transition:border-color .15s, box-shadow .15s;
-}
-.tableRow:hover { border-color:var(--border); box-shadow: var(--shadow-sm); }
-.rowActions { display: flex; align-items: center; gap: 2px; justify-content: flex-end; }
-.userCell { display:flex; align-items:center; gap:12px; overflow:hidden; }
-.userAvatar {
-  width:36px; height:36px; border-radius:50%;
-  background:linear-gradient(135deg,var(--blue),var(--purple));
-  color:#fff; display:flex; align-items:center; justify-content:center;
-  font-size:13px; font-weight:700; flex-shrink:0;
-}
-.userName { font-size:13px; font-weight:600; color:var(--white); }
-.userEmail { font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.select {
-  font-size:12px; padding:6px 10px;
-  background:var(--navy3); border:1.5px solid var(--border2);
-  border-radius:9px; color:var(--white); cursor:pointer; width:100%;
-}
-.select:focus { outline:none; border-color:var(--blue); }
 
 /* ── Departments ── */
 .deptGrid { display:flex; flex-direction:column; gap:6px; }
@@ -181,18 +148,9 @@
 /* ── Mobile ── */
 @media (max-width: 768px) {
   .page { padding: 20px 16px; }
-  .tabs { width: 100%; flex-wrap: wrap; }
+  .tabs { flex-wrap: nowrap; }
   .tab { padding: 8px 12px; font-size: 12px; }
   .emailInput { width: 100%; min-width: 0; }
   .addRecipientRow { width: 100%; }
 
-  /* Usuários: em vez de rolar de lado, cada linha vira um cartãozinho —
-     nome/e-mail em cima, departamento e papel embaixo, um por linha. */
-  .table { overflow-x: visible; }
-  .tableHead { display: none; }
-  .tableRow {
-    display: flex; flex-direction: column; align-items: stretch; gap: 10px;
-    min-width: 0; padding: 14px 16px;
-  }
-  .tableRow > button:last-child { align-self: flex-end; margin-top: -4px; }
 }

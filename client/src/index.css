@@ -362,6 +362,12 @@ input[type="radio"]:focus-visible { outline: 2px solid var(--brand); outline-off
 .skip-link:focus { transform: none; }
 main:focus { outline: none; }
 
+/* Texto só para leitor de tela (ex.: cabeçalho de uma coluna de ações). */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
 @media (max-width: 768px) {
   /* Prevent iOS auto-zoom on input focus (needs font-size >= 16px) */
   input, textarea, select { font-size: 16px; }
