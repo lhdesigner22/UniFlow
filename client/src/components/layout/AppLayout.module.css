@@ -11,6 +11,8 @@
   background: var(--navy);
   min-width: 0;
 }
+/* Escuro: deixa aparecer o brilho azul do body (index.css) */
+:global([data-theme="dark"]) .main { background: transparent; }
 .content {
   flex: 1;
   overflow: auto;

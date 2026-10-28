@@ -7,6 +7,8 @@
   transition: width .25s cubic-bezier(.4,0,.2,1), min-width .25s cubic-bezier(.4,0,.2,1);
   flex-shrink: 0;
 }
+/* Escuro: menu no mesmo fundo quase preto da página (o brilho fica só no conteúdo) */
+:global([data-theme="dark"]) .sidebar { background: var(--bg); }
 .collapsed { width: 56px; min-width: 56px; }
 
 /* ── Logo ── */

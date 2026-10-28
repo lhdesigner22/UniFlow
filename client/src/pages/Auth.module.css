@@ -183,6 +183,36 @@
 }
 .googleHint svg { flex-shrink: 0; opacity: .7; }
 
+/* ── Escuro "edge" (referência: site da Gcore) ─────────────────────
+   Os dois lados no mesmo preto, um brilho azul forte saindo do canto
+   superior direito, título grande em cinza claro e botão em pílula. */
+:global([data-theme="dark"]) .page { background: #05070D; }
+:global([data-theme="dark"]) .brand {
+  background: transparent;
+  background-image: radial-gradient(ellipse 80% 55% at 10% 105%, rgba(34,197,94,.07) 0%, transparent 60%);
+  border-right-color: rgba(148,163,184,.08);
+}
+:global([data-theme="dark"]) .brand::before {
+  background-image:
+    linear-gradient(rgba(148,163,184,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,.035) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse 90% 70% at 30% 50%, #000 30%, transparent 80%);
+}
+:global([data-theme="dark"]) .brandTagline { font-size: 2.6rem; font-weight: 600; color: #D7DCE6; letter-spacing: -.035em; }
+:global([data-theme="dark"]) .formSide {
+  background: transparent;
+  background-image:
+    radial-gradient(ellipse 70% 60% at 100% 0%, rgba(59,130,246,.32) 0%, rgba(59,130,246,.08) 40%, transparent 70%),
+    linear-gradient(rgba(148,163,184,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,.025) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+}
+:global([data-theme="dark"]) .formTitle { font-size: 2rem; font-weight: 600; color: #D7DCE6; letter-spacing: -.03em; }
+:global([data-theme="dark"]) .googleButton {
+  border-radius: 999px; background: rgba(255,255,255,.04); border-color: rgba(148,163,184,.2);
+}
+:global([data-theme="dark"]) .googleButton:hover { background: rgba(59,130,246,.14); border-color: rgba(59,130,246,.5); box-shadow: 0 0 24px rgba(59,130,246,.25); }
+
 /* ── Mobile: esconde o painel de marca, formulário ocupa a tela toda ──
    Importante: essa regra precisa vir DEPOIS da declaração base de `.brand`
    (lá em cima) — como as duas têm a mesma especificidade, a que aparece
