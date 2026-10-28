@@ -30,8 +30,8 @@
 }
 .progressDot:hover { border-color: var(--brand); transform: scale(1.15); }
 .progressDot:active { transform: scale(.85); }
-.progressInProgress { border-color: #f59e0b; background: #f59e0b; animation: pop .3s var(--ease-spring); }
-.progressCompleted { border-color: #22c55e; background: #22c55e; animation: pop .3s var(--ease-spring); }
+.progressInProgress { border-color: var(--warning); background: var(--warning); animation: pop .3s var(--ease-spring); }
+.progressCompleted { border-color: var(--success); background: var(--success); animation: pop .3s var(--ease-spring); }
 
 .metaRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .badge {
@@ -40,8 +40,8 @@
   display: inline-flex; align-items: center; gap: 3px;
 }
 .badge.danger { color: #fff; background: var(--danger); }
-.badge.warning { color: #7a4a04; background: rgba(245,158,11,.25); }
-[data-theme="dark"] .badge.warning { color: #fbbf24; background: rgba(245,158,11,.18); }
+.badge.warning { color: #7a4a04; background: color-mix(in srgb, var(--warning) 25%, transparent); }
+[data-theme="dark"] .badge.warning { color: #fbbf24; background: color-mix(in srgb, var(--warning) 18%, transparent); }
 .badge.muted { color: var(--text-muted); }
 
 .membersRow { display: flex; justify-content: flex-end; }

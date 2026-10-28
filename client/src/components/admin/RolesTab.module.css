@@ -1,6 +1,6 @@
 .wrap { display: flex; flex-direction: column; gap: 16px; }
 .info {
-  background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2); border-radius: var(--radius);
+  background: color-mix(in srgb, var(--brand) 8%, transparent); border: 1px solid color-mix(in srgb, var(--brand) 20%, transparent); border-radius: var(--radius);
   padding: 12px 14px; font-size: 13px; line-height: 1.6; color: var(--text-muted);
 }
 
@@ -11,7 +11,7 @@
   padding: 8px 14px; cursor: pointer; text-align: left; transition: border-color .12s, background .12s;
 }
 .roleChip:hover { border-color: var(--brand); }
-.roleChip.active { border-color: var(--brand); background: rgba(59,130,246,.1); }
+.roleChip.active { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, transparent); }
 .roleName { font-size: 13px; font-weight: 600; color: var(--text); }
 .roleCount { font-size: 11px; color: var(--text-muted); }
 .newChip { justify-content: center; border-style: dashed; color: var(--brand); font-weight: 600; font-size: 13px; }
@@ -44,13 +44,13 @@
 .modHint { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
 .cell { text-align: center; width: 110px; }
 .cell input { cursor: pointer; }
-.on_none { background: rgba(239,68,68,.08); }
-.on_view { background: rgba(245,158,11,.1); }
-.on_edit { background: rgba(34,197,94,.1); }
+.on_none { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.on_view { background: color-mix(in srgb, var(--warning) 10%, transparent); }
+.on_edit { background: color-mix(in srgb, var(--success) 10%, transparent); }
 
 .footNote { font-size: 11.5px; color: var(--text-muted); margin: 0; }
 .msg { font-size: 12.5px; margin: 0; }
-.ok { color: var(--green, #16a34a); }
-.err { color: var(--red, #ef4444); }
+.ok { color: var(--green, var(--accent-dark)); }
+.err { color: var(--red, var(--danger)); }
 .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .defaultNote { font-size: 12.5px; color: var(--text-muted); background: color-mix(in srgb, var(--brand) 8%, transparent); border-radius: 8px; padding: 8px 12px; margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

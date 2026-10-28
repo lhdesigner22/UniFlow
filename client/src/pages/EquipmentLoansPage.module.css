@@ -20,10 +20,10 @@
 }
 .kpiNumber { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--text); }
 .kpiLabel { font-size: 11.5px; color: var(--text-muted); line-height: 1.3; }
-.kpiTotal { background: rgba(59,130,246,.08); border-color: rgba(59,130,246,.25); }
+.kpiTotal { background: color-mix(in srgb, var(--brand) 8%, transparent); border-color: color-mix(in srgb, var(--brand) 25%, transparent); }
 .kpiTotal .kpiNumber { color: var(--brand); }
-.kpiDone { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.25); }
-.kpiDone .kpiNumber { color: #16a34a; }
+.kpiDone { background: color-mix(in srgb, var(--success) 8%, transparent); border-color: color-mix(in srgb, var(--success) 25%, transparent); }
+.kpiDone .kpiNumber { color: var(--accent-dark); }
 [data-theme="dark"] .kpiDone .kpiNumber { color: #4ade80; }
 
 /* ── Tabela ── */
@@ -74,9 +74,9 @@
   width: auto; padding: 4px 26px 4px 10px; font-size: 12px; font-weight: 600;
   border-radius: 20px; border: 1px solid transparent; cursor: pointer; font-family: inherit;
 }
-.statusSelect[data-status="aguardando_devolucao"] { background: rgba(245,158,11,.14); color: #b45309; }
-.statusSelect[data-status="devolvido"] { background: rgba(34,197,94,.14); color: #16a34a; }
-.statusSelect[data-status="uso_permanente"] { background: rgba(59,130,246,.12); color: #1d4ed8; }
+.statusSelect[data-status="aguardando_devolucao"] { background: color-mix(in srgb, var(--warning) 14%, transparent); color: #b45309; }
+.statusSelect[data-status="devolvido"] { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--accent-dark); }
+.statusSelect[data-status="uso_permanente"] { background: color-mix(in srgb, var(--brand) 12%, transparent); color: #1d4ed8; }
 [data-theme="dark"] .statusSelect[data-status="aguardando_devolucao"] { color: #fbbf24; }
 [data-theme="dark"] .statusSelect[data-status="devolvido"] { color: #4ade80; }
 [data-theme="dark"] .statusSelect[data-status="uso_permanente"] { color: #93c5fd; }
@@ -89,7 +89,7 @@
 .stickyActions { right: 0; min-width: 104px; box-shadow: -6px 0 8px -6px rgba(16,24,40,.15); }
 .table tbody tr:hover .stickyStatus, .table tbody tr:hover .stickyActions { background: var(--surface-2); }
 
-.fileError { font-size: 12px; color: var(--danger, #EF4444); margin-top: 6px; }
+.fileError { font-size: 12px; color: var(--danger, var(--danger)); margin-top: 6px; }
 .roomHint { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; line-height: 1.4; }
 
 .roomProfList { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }

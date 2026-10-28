@@ -10,4 +10,4 @@
 .name { font-size: 13px; font-weight: 700; color: var(--text); }
 .meta { font-size: 11.5px; color: var(--text-muted); }
 .actions { display: flex; gap: 6px; flex-shrink: 0; }
-.dangerBtn { color: var(--danger, #EF4444); }
+.dangerBtn { color: var(--danger, var(--danger)); }

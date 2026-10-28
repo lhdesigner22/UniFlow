@@ -51,7 +51,7 @@
 .menuItem {
   display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
   padding: 7px 9px; border-radius: 6px; border: none; background: transparent;
-  color: var(--danger, #EF4444); font-size: 12.5px; cursor: pointer; transition: background .12s;
+  color: var(--danger, var(--danger)); font-size: 12.5px; cursor: pointer; transition: background .12s;
 }
 .menuItem:hover { background: var(--border2); }
 

@@ -16,7 +16,7 @@
 .tab:hover { border-color: var(--brand); color: var(--text); }
 .tabActive { background: var(--brand); border-color: var(--brand); color: white; }
 .tabCount {
-  background: var(--danger, #EF4444); color: #fff; border-radius: 999px;
+  background: var(--danger, var(--danger)); color: #fff; border-radius: 999px;
   font-size: 10px; font-weight: 700; padding: 1px 6px; min-width: 16px; text-align: center;
 }
 
@@ -46,11 +46,11 @@
   font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
   white-space: nowrap; flex-shrink: 0;
 }
-.statusPending { background: rgba(245,158,11,.15); color: #b45309; }
+.statusPending { background: color-mix(in srgb, var(--warning) 15%, transparent); color: #b45309; }
 [data-theme="dark"] .statusPending { color: #fbbf24; }
-.statusApproved { background: rgba(34,197,94,.15); color: #15803d; }
+.statusApproved { background: color-mix(in srgb, var(--success) 15%, transparent); color: #15803d; }
 [data-theme="dark"] .statusApproved { color: #4ade80; }
-.statusRejected { background: rgba(239,68,68,.15); color: #b91c1c; }
+.statusRejected { background: color-mix(in srgb, var(--danger) 15%, transparent); color: #b91c1c; }
 [data-theme="dark"] .statusRejected { color: #f87171; }
 
 /* ── Chips de aprovadores (form de criação) ── */
@@ -69,7 +69,7 @@
   padding: 8px 12px; border: 1px solid var(--border2); border-radius: 8px;
   background: var(--surface-2); font-size: 13px;
 }
-.fileError { font-size: 12px; color: var(--danger, #EF4444); margin-top: 6px; }
+.fileError { font-size: 12px; color: var(--danger, var(--danger)); margin-top: 6px; }
 
 /* ── Detalhe ── */
 .detailHeader { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }

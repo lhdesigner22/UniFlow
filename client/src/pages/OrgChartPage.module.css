@@ -9,12 +9,12 @@
 .empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
 .empty p { color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 13px; }
 
-.fileError { font-size: 12px; color: var(--danger, #EF4444); margin-top: 6px; }
+.fileError { font-size: 12px; color: var(--danger, var(--danger)); margin-top: 6px; }
 
 /* ── Modo "ligar dois cargos" (conexão sem hierarquia) ── */
 .linkBanner {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.3);
+  background: color-mix(in srgb, var(--brand) 10%, transparent); border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
   border-radius: var(--radius-sm); padding: 8px 14px; font-size: 13px; color: var(--text);
 }
 .nodeLinking { border-color: var(--brand) !important; box-shadow: 0 0 0 2px var(--brand); }
@@ -73,7 +73,7 @@
    tracejada, cor diferente, pra distinguir de longe. */
 .linksSvg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; }
 .hierarchyLine { stroke: var(--border2); stroke-width: 2; }
-.linkLine { stroke: var(--accent, #F59E0B); stroke-width: 2; stroke-dasharray: 5 4; opacity: .8; }
+.linkLine { stroke: var(--accent, var(--warning)); stroke-width: 2; stroke-dasharray: 5 4; opacity: .8; }
 .freeLine { stroke: var(--brand); stroke-width: 2.5; stroke-linecap: round; }
 .freeLinePreview { stroke: var(--brand); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 4 4; opacity: .7; }
 

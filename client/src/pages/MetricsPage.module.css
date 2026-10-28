@@ -26,9 +26,9 @@
 .statsRow > *:nth-child(5) { animation-delay: .18s; }
 .statsRow > *:nth-child(n+6) { animation-delay: .22s; }
 .statNumber { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--text); }
-.statNumber.green { color: #22c55e; }
-.statNumber.amber { color: #f59e0b; }
-.statNumber.red { color: var(--danger, #ef4444); }
+.statNumber.green { color: var(--success); }
+.statNumber.amber { color: var(--warning); }
+.statNumber.red { color: var(--danger, var(--danger)); }
 .statLabel { font-size: 12px; color: var(--text-muted); }
 
 .chartsGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }

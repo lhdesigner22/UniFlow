@@ -52,7 +52,7 @@
 }
 .cardLink:hover { text-decoration: underline; }
 
-.fileError { font-size: 12px; color: var(--danger, #EF4444); margin-top: 6px; }
+.fileError { font-size: 12px; color: var(--danger, var(--danger)); margin-top: 6px; }
 .cepHint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 
 @media (max-width: 768px) {

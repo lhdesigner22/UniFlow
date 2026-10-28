@@ -19,7 +19,7 @@
 .stat span { font-size: 12px; color: var(--text-muted); }
 .statOpen strong { color: #F97316; }
 .statProgress strong { color: var(--brand); }
-.statUrgent strong { color: var(--danger, #EF4444); }
+.statUrgent strong { color: var(--danger, var(--danger)); }
 .statDone strong { color: var(--accent); }
 
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -39,7 +39,7 @@
 .cardSev_baixa { border-left-color: #64748B; }
 .cardSev_media { border-left-color: #EAB308; }
 .cardSev_alta { border-left-color: #F97316; }
-.cardSev_critica { border-left-color: #EF4444; }
+.cardSev_critica { border-left-color: var(--danger); }
 .cardBtn { display: flex; flex-direction: column; width: 100%; padding: 0; border: none; background: none; text-align: left; cursor: pointer; color: inherit; font: inherit; }
 .cardBtn:hover .cardTitle { color: var(--brand); }
 .cover { width: 100%; height: 150px; object-fit: cover; display: block; background: var(--surface-2); }
@@ -58,12 +58,12 @@
 .severity_baixa { background: var(--surface-2); color: var(--text-muted); }
 .severity_media { background: color-mix(in srgb, #EAB308 18%, transparent); color: #CA8A04; }
 .severity_alta { background: color-mix(in srgb, #F97316 18%, transparent); color: #EA580C; }
-.severity_critica { background: color-mix(in srgb, #EF4444 18%, transparent); color: #EF4444; }
+.severity_critica { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
 .chip { font-size: 11.5px; padding: 2px 9px; border-radius: 20px; background: var(--surface-2); color: var(--text); }
 
 /* ── Formulário ── */
 .formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
-.error { font-size: 12px; color: var(--danger, #EF4444); margin: 4px 0 10px; }
+.error { font-size: 12px; color: var(--danger, var(--danger)); margin: 4px 0 10px; }
 
 /* ── Fotos ── */
 .photoPicker, .gallery { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -72,7 +72,7 @@
 .thumbBtn { padding: 0; border: none; background: none; cursor: zoom-in; }
 .thumbRemove {
   position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%;
-  border: none; background: var(--danger, #EF4444); color: #fff; font-size: 14px; line-height: 1; cursor: pointer;
+  border: none; background: var(--danger, var(--danger)); color: #fff; font-size: 14px; line-height: 1; cursor: pointer;
 }
 .addPhoto {
   width: 92px; height: 92px; border-radius: 8px; border: 1.5px dashed var(--border2);

@@ -41,7 +41,7 @@
 .scoreRow { display: flex; gap: 12px; font-size: 13px; font-weight: 700; }
 .scorePop { animation: pop .35s var(--ease-spring); }
 .scoreStars, .scoreMoons { display: inline-flex; align-items: center; gap: 4px; }
-.scoreStars { color: #16a34a; }
+.scoreStars { color: var(--accent-dark); }
 [data-theme="dark"] .scoreStars { color: #4ade80; }
 .scoreMoons { color: #dc2626; }
 [data-theme="dark"] .scoreMoons { color: #f87171; }
@@ -49,15 +49,15 @@
 .actionsRow { display: flex; gap: 6px; margin-top: 4px; }
 .actionsRow button:hover { transform: scale(1.1) rotate(-4deg); }
 .actionsRow button:active { transform: scale(.92); }
-.likeBtn { color: #16a34a !important; border-color: rgba(34,197,94,.35) !important; }
-.likeBtn:hover { background: rgba(34,197,94,.12) !important; border-color: #16a34a !important; }
-.dislikeBtn { color: #dc2626 !important; border-color: rgba(239,68,68,.35) !important; }
-.dislikeBtn:hover { background: rgba(239,68,68,.12) !important; border-color: #dc2626 !important; }
+.likeBtn { color: var(--accent-dark) !important; border-color: color-mix(in srgb, var(--success) 35%, transparent) !important; }
+.likeBtn:hover { background: color-mix(in srgb, var(--success) 12%, transparent) !important; border-color: var(--accent-dark) !important; }
+.dislikeBtn { color: #dc2626 !important; border-color: color-mix(in srgb, var(--danger) 35%, transparent) !important; }
+.dislikeBtn:hover { background: color-mix(in srgb, var(--danger) 12%, transparent) !important; border-color: #dc2626 !important; }
 [data-theme="dark"] .likeBtn { color: #4ade80 !important; }
 [data-theme="dark"] .dislikeBtn { color: #f87171 !important; }
 /* Botão de confirmar no modal de "dar like/dislike" — fundo sólido, cor
    consegue distinguir de longe qual dos dois será registrado. */
-.confirmLikeBtn { background: #16a34a; color: #fff; }
+.confirmLikeBtn { background: var(--accent-dark); color: #fff; }
 .confirmLikeBtn:hover { background: #15803d; }
 .confirmDislikeBtn { background: #dc2626; color: #fff; }
 .confirmDislikeBtn:hover { background: #b91c1c; }
@@ -77,14 +77,14 @@
   flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
-.historyIcon.iconLike { background: rgba(34,197,94,.14); color: #16a34a; }
-.historyIcon.iconDislike { background: rgba(239,68,68,.14); color: #dc2626; }
+.historyIcon.iconLike { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--accent-dark); }
+.historyIcon.iconDislike { background: color-mix(in srgb, var(--danger) 14%, transparent); color: #dc2626; }
 [data-theme="dark"] .historyIcon.iconLike { color: #4ade80; }
 [data-theme="dark"] .historyIcon.iconDislike { color: #f87171; }
 
 /* Ícone inline no texto de descrição (header) */
 .inlineIcon { vertical-align: -2px; }
-.likeText { color: #16a34a; }
+.likeText { color: var(--accent-dark); }
 .dislikeText { color: #dc2626; }
 [data-theme="dark"] .likeText { color: #4ade80; }
 [data-theme="dark"] .dislikeText { color: #f87171; }
