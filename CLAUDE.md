@@ -164,6 +164,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Cases de Sucesso é a página-modelo**: ícones de linha (SVG) no lugar de emoji, KPIs num painel só dividido por linhas, cartões neutros
   (bloco "Acabamento premium" no fim do `.module.css`). Já aplicado também em Início (Dashboard), Backlog, Total de Chamados, Compras e
   Empréstimos; ícones de ação em `components/common/LineIcon.jsx` (usar no lugar de emoji). Outras telas: aplicar o mesmo tela a tela.
+- **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
+  `all: unset` dos módulos). Pendentes: ~300 cores fixas → variáveis; aliases duplicados (`--white`/`--text`, `--blue`/`--brand`,
+  `--navy2`/`--surface`); `--font-mono` usada e não definida; componentes repetidos por tela (KPI ×5, tabela ×6, chips ×6, vazio ×28).
   Prints locais com o Playwright CLI (`%APPDATA%\npm\playwright-cli.cmd`: `open`, `localstorage-set token ...`, `goto`, `screenshot --filename`).
 
 ## Desempenho do banco (estudo de out/2026)

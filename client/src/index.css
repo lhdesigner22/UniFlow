@@ -328,6 +328,25 @@ button, a, [role="button"] {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ── Foco do teclado (auditoria /design-system, out/2026) ───────────────
+   Um contorno só, na cor da marca, que aparece SÓ navegando com Tab
+   (:focus-visible — clique de mouse não mostra). Antes ficava o contorno
+   padrão do navegador, invisível no grafite e apagado nos botões que usam
+   `all: unset` (cartões dos Cases, linhas clicáveis). Seletor com tag
+   (button:focus-visible) de propósito: vence o `.classe { all: unset }`
+   dos módulos. Campos (input/select/textarea) já têm a borda azul + anel
+   no :focus, mais acima. */
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
 @media (max-width: 768px) {
   /* Prevent iOS auto-zoom on input focus (needs font-size >= 16px) */
   input, textarea, select { font-size: 16px; }
