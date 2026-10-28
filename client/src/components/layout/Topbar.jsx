@@ -116,6 +116,7 @@ export default function Topbar({ onMenuClick }) {
         <input
           className={s.search}
           placeholder="Buscar quadros, cartões..."
+          aria-label="Buscar quadros e cartões"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -127,6 +128,7 @@ export default function Topbar({ onMenuClick }) {
             className={s.deptView}
             value={getDeptView()}
             onChange={changeDeptView}
+            aria-label="Ver como departamento"
             title="Ver o sistema como um departamento (só filtra a tela — não muda o seu acesso)"
           >
             <option value="all">🏢 Todos os departamentos</option>
@@ -139,6 +141,7 @@ export default function Topbar({ onMenuClick }) {
           className={`btn btn-icon ${s.themeBtn}`}
           onClick={handleThemeToggle}
           title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          aria-label={theme === 'dark' ? 'Mudar para o modo claro' : 'Mudar para o modo escuro'}
         >
           <span className={s.themeIcon} data-active={theme === 'light'}>
             <IconSun />
@@ -150,7 +153,12 @@ export default function Topbar({ onMenuClick }) {
 
         {/* Notifications */}
         <div ref={ref} className={s.notifWrap}>
-          <button className={`btn btn-icon ${s.notifBtn}`} onClick={() => setShowNotifs(!showNotifs)}>
+          <button
+            className={`btn btn-icon ${s.notifBtn}`}
+            onClick={() => setShowNotifs(!showNotifs)}
+            aria-label={unread > 0 ? `Notificações (${unread} não lidas)` : 'Notificações'}
+            aria-expanded={showNotifs}
+          >
             <IconBell />
             {unread > 0 && <span className={s.badge}>{unread > 9 ? '9+' : unread}</span>}
           </button>

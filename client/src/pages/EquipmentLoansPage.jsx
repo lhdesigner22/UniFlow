@@ -229,6 +229,7 @@ function Editor({ loan, defaultBuilding, onClose, onSaved }) {
             </label>
             <select
               style={{ width: 'auto' }}
+              aria-label="Prazo de devolução"
               value={deadlinePeriod}
               disabled={!canSendEmail || !sendEmail}
               onChange={e => setDeadlinePeriod(e.target.value)}
@@ -724,10 +725,11 @@ export default function EquipmentLoansPage() {
             <input
               className={s.searchInput}
               placeholder="Buscar por nome, equipamento, patrimônio, sala..."
+              aria-label="Buscar empréstimos"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} aria-label="Filtrar por situação">
               <option value="abertos">Em aberto (sem devolvidos)</option>
               <option value="">Todas as situações</option>
               {STATUSES.map(st => <option key={st.key} value={st.key}>{st.label}</option>)}
@@ -763,6 +765,7 @@ export default function EquipmentLoansPage() {
                     <td className={s.stickyStatus}>
                       <select
                         className={s.statusSelect}
+                        aria-label={`Situação do empréstimo de ${l.requester_name}`}
                         disabled={!writable}
                         data-status={l.status}
                         value={l.status}

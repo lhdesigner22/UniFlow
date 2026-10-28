@@ -405,7 +405,7 @@ export default function BacklogPage() {
           {/* ── Tabela ── */}
           <Reveal ref={tableRef} className={s.tableCard}>
             <div className={s.tableFilters}>
-              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} aria-label="Filtrar por status">
                 <option value="">Todos os status</option>
                 {Object.entries(snapshot.statusLabels)
                   .filter(([code]) => !['5', '6'].includes(code) && (isTi || ['1', '2', '3', '4'].includes(code) || snapshot.byStatus[code] > 0))
@@ -413,20 +413,20 @@ export default function BacklogPage() {
                     <option key={code} value={code}>{label}</option>
                   ))}
               </select>
-              <select value={techFilter} onChange={e => setTechFilter(e.target.value)}>
+              <select value={techFilter} onChange={e => setTechFilter(e.target.value)} aria-label="Filtrar por técnico">
                 <option value="">Todos os técnicos</option>
                 <option value="__none__">Sem técnico</option>
                 {visibleTechs.map(t => (
                   <option key={t.name} value={t.name}>{t.name}</option>
                 ))}
               </select>
-              <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)}>
+              <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} aria-label="Filtrar por mês">
                 <option value="">Todos os meses</option>
                 {monthlyBarData.map(m => (
                   <option key={m.month} value={m.month}>{m.label}</option>
                 ))}
               </select>
-              <select value={ageFilter} onChange={e => setAgeFilter(e.target.value)}>
+              <select value={ageFilter} onChange={e => setAgeFilter(e.target.value)} aria-label="Filtrar por idade do chamado">
                 <option value="">Qualquer idade</option>
                 <option value="__old__">Mais de 30 dias</option>
                 {AGE_BUCKETS_ORDER.map(b => (
@@ -434,12 +434,12 @@ export default function BacklogPage() {
                 ))}
               </select>
               {categoryData.length > 0 && (
-                <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+                <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} aria-label="Filtrar por categoria">
                   <option value="">Todas as categorias</option>
                   {snapshot.byCategory.map(c => <option key={c.name} value={c.name}>{c.name} ({c.count})</option>)}
                 </select>
               )}
-              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
+              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} aria-label="Filtrar por prioridade">
                 <option value="">Qualquer prioridade</option>
                 <option value="alta">Alta ou acima</option>
               </select>

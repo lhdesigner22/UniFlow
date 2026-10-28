@@ -671,7 +671,7 @@ export default function SuccessCasesPage() {
         </div>
         <div className={s.headerActions}>
           {data.years.length > 1 && (
-            <select value={shownYear} onChange={e => setYear(Number(e.target.value))}>
+            <select value={shownYear} onChange={e => setYear(Number(e.target.value))} aria-label="Ano">
               {data.years.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           )}

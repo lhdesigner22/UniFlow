@@ -454,10 +454,11 @@ export default function PurchaseRequestsPage() {
             <input
               className={s.searchInput}
               placeholder="Buscar por item, departamento, chamado..."
+              aria-label="Buscar solicitações"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} aria-label="Filtrar por status">
               <option value="">Todos os status</option>
               {STATUSES.map(st => <option key={st.key} value={st.key}>{st.label}</option>)}
             </select>
@@ -516,6 +517,7 @@ export default function PurchaseRequestsPage() {
                         {manualOptions ? (
                           <select
                             className={s.statusSelect}
+                            aria-label={`Status de ${r.item_name}`}
                             data-status={r.status}
                             value={r.status}
                             onChange={e => setStatusChangeFor({ request: r, targetStatus: e.target.value })}

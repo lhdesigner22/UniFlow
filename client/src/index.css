@@ -349,6 +349,19 @@ summary:focus-visible,
 input[type="checkbox"]:focus-visible,
 input[type="radio"]:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
+/* "Pular para o conteúdo" (AppLayout): fora da tela até receber o foco do
+   Tab; aí aparece no canto, por cima do menu. O <main> que recebe o salto
+   não ganha contorno — o foco ali é só o ponto de partida do próximo Tab. */
+.skip-link {
+  position: fixed; top: 10px; left: 10px; z-index: 1000;
+  padding: 8px 14px; border-radius: 999px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  font-size: 13px; font-weight: 600; text-decoration: none;
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: none; }
+main:focus { outline: none; }
+
 @media (max-width: 768px) {
   /* Prevent iOS auto-zoom on input focus (needs font-size >= 16px) */
   input, textarea, select { font-size: 16px; }

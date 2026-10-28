@@ -23,3 +23,6 @@
 }
 .title { font-size: 15px; font-weight: 700; }
 .body { padding: 20px; overflow-y: auto; }
+
+/* O próprio modal recebe foco quando não tem campo (ver Modal.jsx) — sem contorno nele. */
+.modal:focus { outline: none; }

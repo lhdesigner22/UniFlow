@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import api from '../../services/api'
 import { useLiveRefresh } from '../../hooks/useLiveRefresh'
@@ -400,7 +400,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
       <aside className={`${s.sidebar} ${collapsed ? s.collapsed : ''} ${mobileOpen ? s.mobileOpen : ''}`}>
 
         {/* Logo */}
-        <div className={s.logo} onClick={() => navigate('/')}>
+        <Link to="/" className={s.logo} aria-label="UniFlow — ir para o Início">
           <div className={s.logoMark}>
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
               <path d="M10 2L16 6V14L10 18L4 14V6L10 2Z" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
@@ -408,17 +408,17 @@ export default function Sidebar({ mobileOpen, onClose }) {
             </svg>
           </div>
           {showLabels && <span className={s.logoText}>Uni<em>FLOW</em></span>}
-        </div>
+        </Link>
 
         {/* Nav */}
         <nav className={s.nav}>
-          <NavLink to="/" end className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
+          <NavLink to="/" end className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`} aria-label={showLabels ? undefined : 'Início'}>
             <span className={s.navIcon}><IconHome /></span>
             {showLabels && <span>Início</span>}
           </NavLink>
           {can('agenda') && (
           <>
-          <NavLink to="/agenda" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
+          <NavLink to="/agenda" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`} aria-label={showLabels ? undefined : 'Agenda'}>
             <span className={s.navIcon}><IconCalendar /></span>
             {showLabels && <span>Agenda</span>}
           </NavLink>
@@ -426,7 +426,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
           )}
           {can('metrics') && (
           <>
-          <NavLink to="/metricas" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
+          <NavLink to="/metricas" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`} aria-label={showLabels ? undefined : 'Métricas'}>
             <span className={s.navIcon}><IconChart /></span>
             {showLabels && <span>Métricas</span>}
           </NavLink>
@@ -438,6 +438,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
             type="button"
             className={`${s.navGroupHeader} ${teamActive ? s.active : ''}`}
             onClick={() => showLabels ? setTeamOpen(o => !o) : navigate('/time/desempenho')}
+            aria-expanded={showLabels ? teamOpen : undefined}
+            aria-label={showLabels ? undefined : 'Time'}
           >
             <span className={s.navIcon}><IconTeam /></span>
             {showLabels && (
@@ -468,6 +470,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
             type="button"
             className={`${s.navGroupHeader} ${chamadosActive ? s.active : ''}`}
             onClick={() => showLabels ? setChamadosOpen(o => !o) : navigate('/backlog')}
+            aria-expanded={showLabels ? chamadosOpen : undefined}
+            aria-label={showLabels ? undefined : 'Chamados'}
           >
             <span className={s.navIcon}><IconBacklog /></span>
             {showLabels && (
@@ -491,7 +495,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
           )}
           {can('kb') && (
           <>
-          <NavLink to="/base-conhecimento" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
+          <NavLink to="/base-conhecimento" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`} aria-label={showLabels ? undefined : 'Base de Conhecimento'}>
             <span className={s.navIcon}><IconBook /></span>
             {showLabels && <span>Base de Conhecimento</span>}
           </NavLink>
@@ -503,6 +507,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
             type="button"
             className={`${s.navGroupHeader} ${flowsActive ? s.active : ''}`}
             onClick={() => showLabels ? setFlowsOpen(o => !o) : navigate('/aprovacoes')}
+            aria-expanded={showLabels ? flowsOpen : undefined}
+            aria-label={showLabels ? undefined : 'Fluxos'}
           >
             <span className={s.navIcon}><IconApprovals /></span>
             {showLabels && (
@@ -527,6 +533,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
                   type="button"
                   className={`${s.navSubGroupHeader} ${purchaseActive ? s.active : ''}`}
                   onClick={() => setPurchaseMonthsOpen(o => !o)}
+                  aria-expanded={purchaseMonthsOpen}
                 >
                   <span>Solicitação de Compra</span>
                   {!!pendingPurchaseCount && <span className={s.navCount}>{pendingPurchaseCount}</span>}
@@ -552,6 +559,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
                   type="button"
                   className={`${s.navSubGroupHeader} ${incidentsActive ? s.active : ''}`}
                   onClick={() => setIncidentsOpen(o => !o)}
+                  aria-expanded={incidentsOpen}
                 >
                   <span>Incidentes Laboratórios</span>
                   {!!incidentsTotal && <span className={s.navCount}>{incidentsTotal}</span>}
@@ -579,6 +587,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
             type="button"
             className={`${s.navGroupHeader} ${printersActive ? s.active : ''}`}
             onClick={() => showLabels ? setPrintersOpen(o => !o) : navigate('/impressoras/sede')}
+            aria-expanded={showLabels ? printersOpen : undefined}
+            aria-label={showLabels ? undefined : 'Impressoras'}
           >
             <span className={s.navIcon}><IconPrinter /></span>
             {showLabels && (
@@ -620,6 +630,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
             type="button"
             className={`${s.navGroupHeader} ${equipmentLoansActive ? s.active : ''}`}
             onClick={() => showLabels ? setEquipmentLoansOpen(o => !o) : navigate('/emprestimo-equipamentos/sede')}
+            aria-expanded={showLabels ? equipmentLoansOpen : undefined}
+            aria-label={showLabels ? undefined : 'Empréstimo de Equipamentos'}
           >
             <span className={s.navIcon}><IconSwap /></span>
             {showLabels && (
@@ -650,6 +662,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
             type="button"
             className={`${s.navGroupHeader} ${companiesActive ? s.active : ''}`}
             onClick={() => showLabels ? setCompaniesOpen(o => !o) : navigate('/empresas/colegio-ser')}
+            aria-expanded={showLabels ? companiesOpen : undefined}
+            aria-label={showLabels ? undefined : 'Empresas'}
           >
             <span className={s.navIcon}><IconBuilding /></span>
             {showLabels && (
@@ -684,6 +698,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
             type="button"
             className={`${s.navGroupHeader} ${gestaoActive ? s.active : ''}`}
             onClick={() => showLabels ? setGestaoOpen(o => !o) : navigate('/gestao/documentos')}
+            aria-expanded={showLabels ? gestaoOpen : undefined}
+            aria-label={showLabels ? undefined : 'Gestão'}
           >
             <span className={s.navIcon}><IconBriefcase /></span>
             {showLabels && (
@@ -717,6 +733,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
                     type="button"
                     className={`${s.navSubGroupHeader} ${vlansActive ? s.active : ''}`}
                     onClick={() => setVlansOpen(o => !o)}
+                    aria-expanded={vlansOpen}
                   >
                     <span>Segmentação de VLANs</span>
                     <span className={`${s.navGroupChevron} ${vlansOpen ? s.open : ''}`}><IconChevronSmall open={vlansOpen} /></span>
@@ -740,6 +757,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
                     type="button"
                     className={`${s.navSubGroupHeader} ${devsActive ? s.active : ''}`}
                     onClick={() => setDevsOpen(o => !o)}
+                    aria-expanded={devsOpen}
                   >
                     <span>Desenvolvimentos</span>
                     <span className={`${s.navGroupChevron} ${devsOpen ? s.open : ''}`}><IconChevronSmall open={devsOpen} /></span>
@@ -763,7 +781,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
           </>
           )}
           {(user?.system_role === 'super_admin' || user?.system_role === 'auditor') && (
-            <NavLink to="/admin" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`}>
+            <NavLink to="/admin" className={({ isActive }) => `${s.navItem} ${isActive ? s.active : ''}`} aria-label={showLabels ? undefined : 'Administração'}>
               <span className={s.navIcon}><IconShield /></span>
               {showLabels && <span>Administração</span>}
             </NavLink>
@@ -778,11 +796,11 @@ export default function Sidebar({ mobileOpen, onClose }) {
         <div className={s.section}>
           {showLabels && (
             <div className={s.sectionHeader}>
-              <button type="button" className={s.sectionToggle} onClick={() => setBoardsListOpen(v => !v)}>
+              <button type="button" className={s.sectionToggle} onClick={() => setBoardsListOpen(v => !v)} aria-expanded={boardsListOpen}>
                 <span>Quadros</span>
                 <span className={`${s.navGroupChevron} ${boardsListOpen ? s.open : ''}`}><IconChevronSmall open={boardsListOpen} /></span>
               </button>
-              <button className={s.addBtn} onClick={() => setShowCreateBoard(true)} title="Novo quadro">
+              <button className={s.addBtn} onClick={() => setShowCreateBoard(true)} title="Novo quadro" aria-label="Novo quadro">
                 <IconPlus />
               </button>
             </div>
@@ -805,6 +823,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
                       type="button"
                       className={s.pipeMenuBtn}
                       title="Mais opções"
+                      aria-label={`Mais opções do quadro ${b.name}`}
+                      aria-expanded={menuOpenFor === b.id}
                       onClick={() => setMenuOpenFor(prev => (prev === b.id ? null : b.id))}
                     >
                       <IconDots />
@@ -853,7 +873,12 @@ export default function Sidebar({ mobileOpen, onClose }) {
             {showLabels && (
               <button className={`btn btn-ghost ${s.logoutBtn}`} onClick={logout}>Sair</button>
             )}
-            <button className={`btn btn-icon ${s.collapseBtn}`} onClick={() => setCollapsed(!collapsed)}>
+            <button
+              className={`btn btn-icon ${s.collapseBtn}`}
+              onClick={() => setCollapsed(!collapsed)}
+              aria-label={collapsed ? 'Expandir o menu' : 'Recolher o menu'}
+              title={collapsed ? 'Expandir o menu' : 'Recolher o menu'}
+            >
               <IconChevron collapsed={collapsed} />
             </button>
           </div>
