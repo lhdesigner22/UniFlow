@@ -173,6 +173,8 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   (etiquetas `.badge-*` usam); `--font-mono` definido. Pendentes: ~185 cores fixas no CSS (pares claro/escuro por tela) e 119 no JSX; aliases duplicados (`--white`/`--text`, `--blue`/`--brand`,
   `--navy2`/`--surface`); componentes repetidos por tela (KPI ×5, tabela ×6, chips ×6, vazio ×28).
   Prints locais com o Playwright CLI (`%APPDATA%\npm\playwright-cli.cmd`: `open`, `localstorage-set token ...`, `goto`, `screenshot --filename`).
+  Ele roda pelo cmd: `&` na URL corta o resto e `=>` num `eval` vira redirecionamento (cria arquivos lixo na pasta) — use URLs sem `&`
+  e `snapshot` pra esperar. Auditoria a11y local: `npm install --no-save axe-core` no client (some quando o npm reinstala).
 
 ## Logs de auditoria (out/2026) — pedido do Luiz: controle maior do Cofre
 - Tabela `audit_logs` (migração 0062), `lib/audit.js`, `routes/audit.js`, tela **Admin → 🕵️ Logs** (`components/admin/AuditLogTab.jsx`;

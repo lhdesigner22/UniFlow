@@ -171,11 +171,13 @@ textarea { resize: vertical; }
   white-space: nowrap; line-height: 1.4; letter-spacing: .01em;
 }
 .btn-sm { padding: 5px 12px; font-size: 12px; }
+/* Contraste (auditoria de acessibilidade, out/2026): branco sobre --brand dava
+   3,68:1; sobre --brand-dark dá 5,17:1 (mínimo 4,5:1). Hover/clique um tom abaixo (#1D4ED8, 6,7:1). */
 .btn-primary {
-  background: var(--brand); color: #fff;
+  background: var(--brand-dark); color: #fff;
 }
-.btn-primary:hover { background: var(--brand-dark); box-shadow: 0 4px 14px color-mix(in srgb, var(--brand) 35%, transparent); }
-.btn-primary:active { background: var(--brand-dark); }
+.btn-primary:hover { background: #1D4ED8; box-shadow: 0 4px 14px color-mix(in srgb, var(--brand) 35%, transparent); }
+.btn-primary:active { background: #1D4ED8; }
 .btn-accent { background: var(--accent); color: #fff; }
 .btn-accent:hover { background: var(--accent-dark); box-shadow: 0 4px 14px color-mix(in srgb, var(--success) 35%, transparent); }
 .btn-green  { background: var(--success); color: #fff; }
