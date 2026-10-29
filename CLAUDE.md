@@ -221,6 +221,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   **Time → Organograma** refeito (out/2026): prancheta pontilhada que rola nos dois sentidos e abre centralizada no topo; caixa = iniciais
   coloridas + nome + cargo (topo com filete azul); ações (subordinado, ligar, voltar ao lugar, editar, excluir) em ícones que aparecem no
   hover/foco (sempre no toque, `@media (hover: none)`; no modo "ligar" aparecem em todas). Arrastar/linhas/ligações/linhas soltas iguais.
+  **Time → Jornada** refeita (out/2026): pessoas em fichas no topo (com nº de marcos, atualiza ao mexer), pessoa aberta com resumo
+  "N marcos desde <mês> de <ano>", linha do tempo VERTICAL agrupada por ano (ano grande = capítulo) + História ao lado (embaixo no
+  celular); editar/excluir marco no hover, "Tirar da Jornada" no "⋯". Meses em minúscula (antes saía "Fev De 2022").
 - **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
   `all: unset` dos módulos). Cores (1ª etapa feita): hex/rgba com o MESMO valor de um token viraram `var(--x)` / `color-mix(in srgb, var(--x) N%, transparent)`
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`
