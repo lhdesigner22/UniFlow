@@ -7,7 +7,7 @@ import { confirmDialog, alertDialog } from '../store/dialogStore'
 import { downloadFile } from '../utils/download'
 import Modal from '../components/common/Modal'
 import MemberPicker from '../components/common/MemberPicker'
-import Reveal from '../components/common/Reveal'
+import LineIcon from '../components/common/LineIcon'
 import Avatar from '../components/common/Avatar'
 import s from './ApprovalsPage.module.css'
 
@@ -31,6 +31,69 @@ function timeAgo(iso) {
   const days = Math.round(hours / 24)
   if (days < 30) return `há ${days}d`
   return new Date(iso.replace(' ', 'T') + 'Z').toLocaleDateString('pt-BR')
+}
+
+// Prazo em linguagem de gente; só alerta (vencido/hoje) enquanto está pendente
+function dueInfo(due, status) {
+  if (!due) return null
+  const [y, m, d] = due.slice(0, 10).split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const diff = Math.round((date - today) / 86400000)
+  const plain = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`
+  if (status !== 'pending') return { text: `Prazo ${plain}`, tone: '' }
+  if (diff < -1) return { text: `Venceu há ${-diff} dias`, tone: 'late' }
+  if (diff === -1) return { text: 'Venceu ontem', tone: 'late' }
+  if (diff === 0) return { text: 'Vence hoje', tone: 'soon' }
+  if (diff === 1) return { text: 'Vence amanhã', tone: 'soon' }
+  return { text: diff <= 7 ? `Vence em ${diff} dias` : `Prazo ${plain}`, tone: '' }
+}
+
+// "Assinaturas": cada aprovador com a marca da decisão (✓ aprovou, ✗ reprovou, relógio = falta)
+// textOnly: só o resumo (no detalhe a lista de aprovadores já mostra as marcas)
+function SignOffs({ approvers, size = 26, textOnly }) {
+  const done = approvers.filter(a => a.decision === 'approved').length
+  const rejectedBy = approvers.find(a => a.decision === 'rejected')
+  return (
+    <span className={s.signoffs}>
+      {!textOnly && <span className={s.marks}>
+        {approvers.slice(0, 5).map(a => (
+          <span key={a.id} className={s.mark} data-decision={a.decision} title={`${a.user_name}: ${(STATUS_META[a.decision] || STATUS_META.pending).label.toLowerCase()}`}>
+            <Avatar id={a.user_id} name={a.user_name} photo={a.user_avatar} size={size} />
+            <span className={s.markIcon} aria-hidden="true">
+              <LineIcon name={a.decision === 'approved' ? 'check' : a.decision === 'rejected' ? 'close' : 'clock'} size={9} />
+            </span>
+          </span>
+        ))}
+      </span>}
+      <span className={s.signoffText}>
+        {rejectedBy ? `${rejectedBy.user_name} reprovou` : `${done} de ${approvers.length} ${approvers.length === 1 ? 'aprovou' : 'aprovaram'}`}
+      </span>
+    </span>
+  )
+}
+
+function ApprovalRow({ a, scope, onOpen }) {
+  const meta = STATUS_META[a.status] || STATUS_META.pending
+  const due = dueInfo(a.due_date, a.status)
+  return (
+    <li>
+      <button type="button" className={s.row} onClick={onOpen}>
+        <span className={s.rowMain}>
+          <span className={s.rowTitle}>{a.title}</span>
+          <span className={s.rowMeta}>
+            {scope === 'received' ? `De ${a.requester_name}, ${timeAgo(a.created_at)}` : `Pedido ${timeAgo(a.created_at)}`}
+            {!!a.has_attachment && <><LineIcon name="download" size={12} /> anexo</>}
+          </span>
+        </span>
+        <span className={`${s.due} ${due?.tone ? s[due.tone] : ''}`}>
+          {due && <><LineIcon name="calendar" size={13} />{due.text}</>}
+        </span>
+        <SignOffs approvers={a.approvers} size={24} />
+        <span className={`${s.statusBadge} ${s[meta.cls]}`}>{meta.label}</span>
+      </button>
+    </li>
+  )
 }
 
 // ── Nova solicitação ────────────────────────────────────────────────
@@ -91,7 +154,7 @@ function RequestModal({ onClose, onCreated }) {
   }
 
   return (
-    <Modal title="Nova solicitação de aprovação" onClose={onClose} width={560}>
+    <Modal title="Pedir aprovação" onClose={onClose} width={560}>
       <div className="form-group">
         <label htmlFor="approvals-titulo" className="label">Título</label>
         <input id="approvals-titulo" autoFocus value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Aprovar orçamento de material de TI" />
@@ -105,17 +168,17 @@ function RequestModal({ onClose, onCreated }) {
         <input id="approvals-prazo-opcional" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
       </div>
       <div className="form-group">
-        <label className="label">Aprovadores</label>
+        <span className="label" id="approvals-aprovadores">Quem aprova</span>
         <div className={s.chipsRow}>
           {approvers.map(a => (
             <span key={a.id} className={s.chip}>
               <Avatar id={a.id} name={a.name} photo={a.avatar} size={20} />
               {a.name}
-              <button type="button" className={s.chipRemove} onClick={() => removeApprover(a.id)}>×</button>
+              <button type="button" className={s.chipRemove} onClick={() => removeApprover(a.id)} aria-label={`Tirar ${a.name}`}>×</button>
             </span>
           ))}
           <div className={s.inviteWrap}>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowPicker(v => !v)}>+ Adicionar</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowPicker(v => !v)} aria-describedby="approvals-aprovadores"><LineIcon name="user" size={14} /> Adicionar pessoa</button>
             {showPicker && (
               <MemberPicker
                 existingIds={approvers.map(a => a.id)}
@@ -127,14 +190,14 @@ function RequestModal({ onClose, onCreated }) {
         </div>
       </div>
       <div className="form-group">
-        <label className="label">Anexo (opcional, até 95 MB)</label>
+        <label htmlFor="approvals-anexo" className="label">Anexo (opcional, até 95 MB)</label>
         {file ? (
           <div className={s.attachmentRow}>
-            <span>📎 {file.name}</span>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFile(null)}>✕ Cancelar</button>
+            <span><LineIcon name="download" size={14} /> {file.name}</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFile(null)}>Cancelar</button>
           </div>
         ) : (
-          <input type="file" onChange={onFileChange} />
+          <input id="approvals-anexo" type="file" onChange={onFileChange} />
         )}
         {fileError && <p role="alert" className={s.fileError}>{fileError}</p>}
       </div>
@@ -144,7 +207,7 @@ function RequestModal({ onClose, onCreated }) {
         disabled={!title.trim() || approvers.length === 0 || saving || uploading}
         onClick={submit}
       >
-        {uploading ? 'Enviando anexo...' : saving ? 'Enviando...' : 'Enviar solicitação'}
+        {uploading ? 'Enviando anexo...' : saving ? 'Enviando...' : 'Enviar pedido'}
       </button>
     </Modal>
   )
@@ -200,44 +263,54 @@ function DetailModal({ approval, currentUser, onClose, onUpdated, onDeleted }) {
     <Modal title={approval.title} onClose={onClose} width={560}>
       <div className={s.detailHeader}>
         <span className={`${s.statusBadge} ${s[status.cls]}`}>{status.label}</span>
-        {approval.due_date && <span className={s.dueBadge}>📅 Prazo: {approval.due_date.slice(0, 10).split('-').reverse().join('/')}</span>}
+        {(() => { const due = dueInfo(approval.due_date, approval.status); return due && (
+          <span className={`${s.due} ${due.tone ? s[due.tone] : ''}`}><LineIcon name="calendar" size={13} />{due.text}</span>
+        ) })()}
       </div>
 
       <div className={s.metaRow}>
         <Avatar id={approval.requested_by} name={approval.requester_name} photo={approval.requester_avatar} size={22} />
-        <span>Solicitado por <strong>{approval.requester_name}</strong> · {timeAgo(approval.created_at)}</span>
+        <span>Pedido por <strong>{approval.requester_name}</strong>, {timeAgo(approval.created_at)}</span>
       </div>
 
       {approval.description && <p className={s.description}>{approval.description}</p>}
 
       {!!approval.has_attachment && (
-        <button type="button" className={s.cardLink} onClick={() => downloadFile(`/approvals/${approval.id}/attachment`, approval.attachment_name || 'anexo')}>
-          📎 Baixar {approval.attachment_name}
+        <button type="button" className={`btn btn-ghost btn-sm ${s.attachBtn}`} onClick={() => downloadFile(`/approvals/${approval.id}/attachment`, approval.attachment_name || 'anexo')}>
+          <LineIcon name="download" size={14} /> Baixar {approval.attachment_name}
         </button>
       )}
 
       <div className={s.section}>
-        <span className={s.sectionTitle}>Aprovadores</span>
-        <div className={s.approverList}>
+        <div className={s.sectionHead}>
+          <h3 className={s.sectionTitle}>Quem aprova</h3>
+          <SignOffs approvers={approval.approvers} textOnly />
+        </div>
+        <ul className={s.approverList}>
           {approval.approvers.map(a => {
             const meta = STATUS_META[a.decision] || STATUS_META.pending
             return (
-              <div key={a.id} className={s.approverRow}>
-                <Avatar id={a.user_id} name={a.user_name} photo={a.user_avatar} size={26} />
+              <li key={a.id} className={s.approverRow}>
+                <span className={s.mark} data-decision={a.decision}>
+                  <Avatar id={a.user_id} name={a.user_name} photo={a.user_avatar} size={28} />
+                  <span className={s.markIcon} aria-hidden="true">
+                    <LineIcon name={a.decision === 'approved' ? 'check' : a.decision === 'rejected' ? 'close' : 'clock'} size={9} />
+                  </span>
+                </span>
                 <div className={s.approverInfo}>
-                  <span className={s.approverName}>{a.user_name}</span>
-                  {a.comment && <span className={s.approverComment}>"{a.comment}"</span>}
+                  <span className={s.approverName}>{a.user_name}{a.user_id === currentUser?.id && <span className={s.you}> (você)</span>}</span>
+                  {a.comment && <span className={s.approverComment}>{a.comment}</span>}
                 </div>
                 <span className={`${s.statusBadge} ${s[meta.cls]}`}>{meta.label}</span>
-              </div>
+              </li>
             )
           })}
-        </div>
+        </ul>
       </div>
 
       {alreadyDecided && !changingDecision && (
         <div className={s.section}>
-          <span className={s.sectionTitle}>Sua decisão</span>
+          <h3 className={s.sectionTitle}>Sua decisão</h3>
           <div className={s.decideRow}>
             <span className={`${s.statusBadge} ${s[(STATUS_META[myApprover.decision] || STATUS_META.pending).cls]}`}>
               {(STATUS_META[myApprover.decision] || STATUS_META.pending).label}
@@ -249,32 +322,33 @@ function DetailModal({ approval, currentUser, onClose, onUpdated, onDeleted }) {
 
       {canDecide && (
         <div className={s.section}>
-          <span className={s.sectionTitle}>Sua decisão</span>
+          <h3 className={s.sectionTitle}><label htmlFor="approval-comment">Sua decisão</label></h3>
           <textarea
+            id="approval-comment"
             rows={2}
-            placeholder="Comentário (opcional)"
+            placeholder="Comentário (opcional): o motivo ajuda quem pediu"
             value={comment}
             onChange={e => setComment(e.target.value)}
           />
-          <div className={s.decideRow}>
-            <button className="btn btn-primary btn-sm" style={{ background: 'var(--success, #22c55e)' }} disabled={deciding} onClick={() => decide('approved')}>
-              ✓ Aprovar
+          <div className={s.decideButtons}>
+            <button className={`${s.decideBtn} ${s.approve}`} disabled={deciding} onClick={() => decide('approved')}>
+              <LineIcon name="check" size={16} /> Aprovar
             </button>
-            <button className="btn btn-danger btn-sm" disabled={deciding} onClick={() => decide('rejected')}>
-              ✕ Reprovar
+            <button className={`${s.decideBtn} ${s.reject}`} disabled={deciding} onClick={() => decide('rejected')}>
+              <LineIcon name="close" size={16} /> Reprovar
             </button>
-            {changingDecision && (
-              <button className="btn btn-ghost btn-sm" disabled={deciding} onClick={() => setChangingDecision(false)}>Cancelar</button>
-            )}
           </div>
+          {changingDecision && (
+            <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }} disabled={deciding} onClick={() => setChangingDecision(false)}>Manter a decisão anterior</button>
+          )}
           {error && <p role="alert" className={s.fileError}>{error}</p>}
         </div>
       )}
 
       {isRequester && (
         <div className={s.dangerZone}>
-          <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} disabled={deleting} onClick={remove}>
-            🗑 Excluir solicitação
+          <button className={`btn btn-ghost btn-sm ${s.dangerBtn}`} disabled={deleting} onClick={remove}>
+            <LineIcon name="trash" size={14} /> Excluir solicitação
           </button>
         </div>
       )}
@@ -327,52 +401,52 @@ export default function ApprovalsPage() {
 
   if (loading && !approvals) return <div className={s.loading}>Carregando aprovações...</div>
 
+  const list = approvals || []
+  const waiting = scope === 'received' ? list.filter(a => a.my_decision === 'pending') : list.filter(a => a.status === 'pending')
+  const rest = scope === 'received' ? list.filter(a => a.my_decision !== 'pending') : list.filter(a => a.status !== 'pending')
+  const lateCount = waiting.filter(a => dueInfo(a.due_date, a.status)?.tone === 'late').length
+
   return (
     <div className={s.page}>
       <div className={s.header}>
         <div>
           <h1 className={s.title}>Aprovações</h1>
-          <p className={s.sub}>Peça aprovação pra qualquer pessoa e acompanhe as decisões — no estilo do Aprovações do Teams.</p>
+          <p className={s.sub}>
+            {scope === 'received'
+              ? (waiting.length ? `${waiting.length} ${waiting.length === 1 ? 'pedido espera' : 'pedidos esperam'} a sua decisão${lateCount ? `, ${lateCount} com prazo vencido` : ''}.` : 'Nenhum pedido esperando a sua decisão.')
+              : `Você pediu ${list.length} ${list.length === 1 ? 'aprovação' : 'aprovações'}; ${waiting.length} ainda em andamento.`}
+          </p>
         </div>
-        {canEditModule(user, 'approvals') && <button className="btn btn-primary" onClick={() => setCreating(true)}>+ Nova solicitação</button>}
+        {canEditModule(user, 'approvals') && <button className="btn btn-primary" onClick={() => setCreating(true)}><LineIcon name="plus" size={15} /> Pedir aprovação</button>}
       </div>
 
-      <div className={s.tabs}>
-        <button className={`${s.tab} ${scope === 'received' ? s.tabActive : ''}`} onClick={() => setScope('received')}>
+      <nav className={s.tabs} aria-label="Aprovações">
+        <button type="button" aria-current={scope === 'received' ? 'true' : undefined} className={`${s.tab} ${scope === 'received' ? s.tabActive : ''}`} onClick={() => setScope('received')}>
           Recebidas {scope === 'received' && pendingMineCount > 0 && <span className={s.tabCount}>{pendingMineCount}</span>}
         </button>
-        <button className={`${s.tab} ${scope === 'sent' ? s.tabActive : ''}`} onClick={() => setScope('sent')}>
+        <button type="button" aria-current={scope === 'sent' ? 'true' : undefined} className={`${s.tab} ${scope === 'sent' ? s.tabActive : ''}`} onClick={() => setScope('sent')}>
           Enviadas
         </button>
-      </div>
+      </nav>
 
-      {(approvals || []).length === 0 ? (
+      {list.length === 0 ? (
         <div className={s.empty}>
-          <h3>{scope === 'received' ? 'Nenhuma aprovação pra você' : 'Nenhuma solicitação enviada'}</h3>
-          <p>{scope === 'received' ? 'Quando alguém pedir sua aprovação, aparece aqui.' : 'Clique em "+ Nova solicitação" pra pedir uma aprovação.'}</p>
+          <h2>{scope === 'received' ? 'Ninguém pediu sua aprovação ainda' : 'Você ainda não pediu nenhuma aprovação'}</h2>
+          <p>{scope === 'received' ? 'Quando alguém pedir, o pedido aparece aqui e no sininho.' : 'Use "Pedir aprovação" para mandar um pedido a uma ou mais pessoas.'}</p>
         </div>
       ) : (
-        <div className={s.list}>
-          {(approvals || []).map((a, i) => {
-            const meta = STATUS_META[a.status] || STATUS_META.pending
-            return (
-              <Reveal key={a.id} delay={Math.min(i, 10) * 45} className={s.row} onClick={() => setOpenId(a.id)}>
-                <div className={s.rowMain}>
-                  <span className={s.rowTitle}>{a.title}</span>
-                  <span className={s.rowMeta}>
-                    {scope === 'received' ? `De ${a.requester_name}` : `${a.approvers.length} aprovador${a.approvers.length === 1 ? '' : 'es'}`}
-                    {' · '}{timeAgo(a.created_at)}
-                  </span>
-                </div>
-                <div className={s.rowAvatars}>
-                  {(scope === 'received' ? [{ id: a.requested_by, name: a.requester_name, avatar: a.requester_avatar }] : a.approvers.map(x => ({ id: x.user_id, name: x.user_name, avatar: x.user_avatar })))
-                    .slice(0, 4)
-                    .map((p, i) => <Avatar key={i} id={p.id} name={p.name} photo={p.avatar} size={24} />)}
-                </div>
-                <span className={`${s.statusBadge} ${s[meta.cls]}`}>{meta.label}</span>
-              </Reveal>
-            )
-          })}
+        <div className={s.groups}>
+          {[
+            [scope === 'received' ? 'Esperando você' : 'Em andamento', waiting],
+            [scope === 'received' ? 'Já decididas por você' : 'Concluídas', rest],
+          ].filter(([, items]) => items.length).map(([label, items]) => (
+            <section key={label} className={s.group} aria-label={label}>
+              <h2 className={s.groupTitle}>{label}<span className={s.groupCount}>{items.length}</span></h2>
+              <ul className={s.list}>
+                {items.map(a => <ApprovalRow key={a.id} a={a} scope={scope} onOpen={() => setOpenId(a.id)} />)}
+              </ul>
+            </section>
+          ))}
         </div>
       )}
 

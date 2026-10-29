@@ -202,7 +202,11 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   **Agenda** refeita (out/2026): "Semana" = linha do tempo dos 7 dias (dia em número grande, hoje com a linha "Agora, HH:MM" entre o que
   passou — esmaecido — e o que vem; dia vazio = "Nada marcado"); "Mês" = painel único dividido por linhas, hoje num círculo azul, no
   celular os eventos viram pontos. `isoDate` passou a usar a data LOCAL (com `toISOString`, depois das 21h de Brasília "hoje" virava
-  amanhã). Próxima tela pela crítica: Aprovações.
+  amanhã).
+  **Aprovações** refeita (out/2026): "Recebidas" em "Esperando você" + "Já decididas por você" ("Enviadas": "Em andamento" + "Concluídas");
+  cada linha com prazo em linguagem de gente (`dueInfo`: "Venceu ontem" em vermelho) e as "assinaturas" (`SignOffs`: avatar de cada
+  aprovador com ✓/✗/relógio + "1 de 2 aprovaram" ou "Fulano reprovou"); detalhe com botões grandes Aprovar/Reprovar. Botão = "Pedir aprovação".
+  **Fila da crítica das 5 telas concluída** (Admin, KB, Impressoras, Agenda, Aprovações).
 - **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
   `all: unset` dos módulos). Cores (1ª etapa feita): hex/rgba com o MESMO valor de um token viraram `var(--x)` / `color-mix(in srgb, var(--x) N%, transparent)`
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`

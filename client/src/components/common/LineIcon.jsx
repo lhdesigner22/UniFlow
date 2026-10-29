@@ -18,6 +18,7 @@ const PATHS = {
   more: <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>,
   chevronLeft: <><path d="m15 18-6-6 6-6" /></>,
   chevronRight: <><path d="m9 18 6-6-6-6" /></>,
+  close: <><path d="M18 6 6 18M6 6l12 12" /></>,
   transfer: <><path d="M17 3l4 4-4 4" /><path d="M21 7H8" /><path d="M7 21l-4-4 4-4" /><path d="M3 17h13" /></>,
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   sliders: <><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></>,

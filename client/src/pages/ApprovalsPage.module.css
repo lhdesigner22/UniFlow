@@ -1,103 +1,151 @@
+/* Aprovações: o que espera a SUA decisão vem primeiro. Cada pedido mostra as
+   "assinaturas" — o avatar de cada aprovador com a marca da decisão — e o
+   prazo em linguagem de gente (vencido em vermelho). */
 .page { padding: 36px 32px; display: flex; flex-direction: column; gap: 20px; }
 .loading { display: flex; align-items: center; justify-content: center; height: 60vh; color: var(--text-muted); }
 
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
-.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.title { font-size: 2rem; font-weight: 600; letter-spacing: -.032em; line-height: 1.1; }
+.sub { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
 
-/* ── Tabs (Recebidas / Enviadas) ── */
-.tabs { display: flex; gap: 6px; }
+/* ── Abas sublinhadas ── */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
 .tab {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border2);
-  background: var(--surface); color: var(--text-muted); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all .12s;
+  position: relative; display: flex; align-items: center; gap: 6px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 14px; font-weight: 500; padding: 10px 12px 12px; cursor: pointer; white-space: nowrap; transition: color .15s;
 }
-.tab:hover { border-color: var(--brand); color: var(--text); }
-.tabActive { background: var(--brand); border-color: var(--brand); color: white; }
+.tab:hover { color: var(--text); }
+.tabActive { color: var(--text); }
+.tabActive::after {
+  content: ''; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--text);
+}
 .tabCount {
-  background: var(--danger, var(--danger)); color: #fff; border-radius: 999px;
-  font-size: 10px; font-weight: 700; padding: 1px 6px; min-width: 16px; text-align: center;
+  color: var(--warning-text); background: color-mix(in srgb, var(--warning) 16%, transparent);
+  border-radius: 999px; font-size: 12px; font-weight: 500; padding: 0 7px; line-height: 18px; font-variant-numeric: tabular-nums;
 }
 
-/* ── Empty state ── */
-.empty { text-align: center; padding: 72px 24px; }
-.empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
-.empty p { color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 13px; }
+/* ── Vazio ── */
+.empty {
+  text-align: center; padding: 64px 24px; background: var(--surface); border: 1px dashed var(--border); border-radius: 14px;
+}
+.empty h2 { margin: 0 0 8px; font-size: 1.1rem; font-weight: 600; }
+.empty p { color: var(--text-muted); max-width: 46ch; margin: 0 auto; line-height: 1.6; font-size: 13.5px; }
 
-/* ── Lista ── */
-.list { display: flex; flex-direction: column; gap: 8px; }
+/* ── Grupos e lista ── */
+.groups { display: flex; flex-direction: column; gap: 24px; }
+.group { display: flex; flex-direction: column; gap: 10px; }
+.groupTitle { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text); }
+.groupCount {
+  color: var(--text-muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
+  background: var(--surface-2); padding: 0 6px; border-radius: 999px; line-height: 18px;
+}
+.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.list > li { border-bottom: 1px solid var(--border); }
+.list > li:last-child { border-bottom: none; }
 .row {
-  display: flex; align-items: center; gap: 14px;
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow-sm);
-  cursor: pointer; transition: border-color .12s;
+  display: grid; grid-template-columns: minmax(0, 1fr) 150px 230px 104px; align-items: center; gap: 16px;
+  width: 100%; padding: 14px 18px; border: none; background: transparent; text-align: left; cursor: pointer; color: var(--text);
+  transition: background .12s;
 }
-.row:hover { border-color: var(--brand); }
-.rowMain { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-.rowTitle { font-size: 14px; font-weight: 700; color: var(--text); }
-.rowMeta { font-size: 12px; color: var(--text-muted); }
-.rowAvatars { display: flex; gap: -6px; }
-.rowAvatars > * { margin-left: -6px; border: 2px solid var(--surface); }
-.rowAvatars > *:first-child { margin-left: 0; }
+.row:hover { background: var(--surface-2); }
+.rowMain { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rowTitle { font-size: 14px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rowMeta { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); }
 
-/* ── Status badge (reutilizado na lista e no detalhe) ── */
+.due { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.late { color: var(--danger-text); font-weight: 500; }
+.soon { color: var(--warning-text); font-weight: 500; }
+
+/* ── Assinaturas ── */
+.signoffs { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.marks { display: inline-flex; }
+.marks .mark + .mark { margin-left: -6px; }
+.mark { position: relative; display: inline-flex; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); }
+.markIcon {
+  position: absolute; right: -3px; bottom: -3px; width: 14px; height: 14px; border-radius: 50%;
+  display: grid; place-items: center; color: #fff; box-shadow: 0 0 0 2px var(--surface);
+  background: var(--text-muted);
+}
+.markIcon svg { stroke-width: 3; }
+.mark[data-decision="approved"] .markIcon { background: var(--success); }
+.mark[data-decision="rejected"] .markIcon { background: var(--danger); }
+.mark[data-decision="pending"] { opacity: .85; }
+.signoffText { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ── Situação ── */
 .statusBadge {
-  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+  justify-self: end; font-size: 12px; font-weight: 500; padding: 0 9px; line-height: 22px; border-radius: 999px;
   white-space: nowrap; flex-shrink: 0;
 }
-.statusPending { background: color-mix(in srgb, var(--warning) 15%, transparent); color: #b45309; }
-[data-theme="dark"] .statusPending { color: #fbbf24; }
-.statusApproved { background: color-mix(in srgb, var(--success) 15%, transparent); color: #15803d; }
-[data-theme="dark"] .statusApproved { color: #4ade80; }
-.statusRejected { background: color-mix(in srgb, var(--danger) 15%, transparent); color: #b91c1c; }
-[data-theme="dark"] .statusRejected { color: #f87171; }
+.statusPending { background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning-text); }
+.statusApproved { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success-text); }
+.statusRejected { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger-text); }
 
-/* ── Chips de aprovadores (form de criação) ── */
+/* ── Formulário ── */
 .chipsRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
-  background: var(--surface-2); border-radius: 20px; padding: 3px 10px 3px 4px;
-  font-size: 12px; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 6px 2px 3px;
+  font-size: 12.5px; color: var(--text);
 }
-.chipRemove { background: none; border: none; color: var(--text-muted); font-size: 14px; line-height: 1; padding: 0 2px; }
-.chipRemove:hover { color: var(--danger); }
+.chipRemove { background: none; border: none; color: var(--text-muted); font-size: 15px; line-height: 1; padding: 0 3px; cursor: pointer; }
+.chipRemove:hover { color: var(--danger-text); }
 .inviteWrap { position: relative; }
-
 .attachmentRow {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 8px 12px; border: 1px solid var(--border2); border-radius: 8px;
-  background: var(--surface-2); font-size: 13px;
+  padding: 8px 12px; border: 1px solid var(--border2); border-radius: 8px; background: var(--surface-2); font-size: 13px;
 }
-.fileError { font-size: 12px; color: var(--danger, var(--danger)); margin-top: 6px; }
+.attachmentRow span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.fileError { font-size: 12.5px; color: var(--danger-text); margin-top: 6px; }
 
 /* ── Detalhe ── */
-.detailHeader { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
-.dueBadge { font-size: 12px; color: var(--text-muted); }
-.metaRow { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
-.description { font-size: 13px; color: var(--text); line-height: 1.5; white-space: pre-line; margin-bottom: 10px; }
-.cardLink {
-  font: inherit; font-size: 12.5px; color: var(--brand); font-weight: 600; text-decoration: none;
-  border: none; background: none; padding: 0; margin: 0 0 10px; cursor: pointer; text-align: left; width: fit-content;
-  display: block;
-}
-.cardLink:hover { text-decoration: underline; }
+.detailHeader { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.metaRow { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+.metaRow strong { color: var(--text); font-weight: 500; }
+.description { font-size: 14px; color: var(--text); line-height: 1.6; white-space: pre-line; margin: 0 0 12px; }
+.attachBtn { margin-bottom: 4px; }
 
-.section { border-top: 1px solid var(--border2); padding-top: 14px; margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
-.sectionTitle { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.section { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.sectionHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sectionTitle { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--text); }
+.sectionTitle label { cursor: default; }
 
-.approverList { display: flex; flex-direction: column; gap: 10px; }
-.approverRow { display: flex; align-items: center; gap: 10px; }
+.approverList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.approverRow { display: flex; align-items: center; gap: 12px; }
 .approverInfo { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.approverName { font-size: 13px; font-weight: 600; color: var(--text); }
-.approverComment { font-size: 12px; color: var(--text-muted); font-style: italic; }
+.approverName { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.you { color: var(--text-muted); font-weight: 400; }
+.approverComment { font-size: 12.5px; color: var(--text-muted); line-height: 1.45; }
 
 .decideRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.decideButtons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.decideBtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; border-radius: 10px;
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s;
+}
+.decideBtn:disabled { opacity: .6; cursor: default; }
+.approve { background: var(--success); color: #fff; border: 1px solid transparent; }
+.approve:hover:not(:disabled) { background: color-mix(in srgb, var(--success) 85%, #000); }
+.reject { background: transparent; color: var(--danger-text); border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent); }
+.reject:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 10%, transparent); }
 
-.dangerZone { border-top: 1px solid var(--border2); padding-top: 14px; margin-top: 10px; }
+.dangerZone { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; }
+.dangerBtn { color: var(--danger-text); }
 
+@media (max-width: 900px) {
+  .row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "main status" "due signoffs"; row-gap: 8px; }
+  .rowMain { grid-area: main; }
+  .statusBadge { grid-area: status; }
+  .due { grid-area: due; }
+  .signoffs { grid-area: signoffs; justify-self: end; }
+}
 @media (max-width: 768px) {
   .page { padding: 20px 16px; gap: 16px; }
   .header { flex-direction: column; }
-  .row { flex-wrap: wrap; }
+  .title { font-size: 1.6rem; }
+  .row { padding: 12px 14px; }
+}
+@media (max-width: 420px) {
+  .signoffText { display: none; }
 }
