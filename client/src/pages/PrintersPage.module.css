@@ -1,41 +1,88 @@
+/* Impressoras: inventário do prédio numa tabela. O IP é o dado que o técnico
+   mais usa (cola na hora de instalar), então vira um botão de copiar. */
 .page { padding: 36px 32px; display: flex; flex-direction: column; gap: 20px; }
 .loading { display: flex; align-items: center; justify-content: center; height: 60vh; color: var(--text-muted); }
 
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
-.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.headerActions { display: flex; gap: 8px; flex-wrap: wrap; }
+.title { font-size: 2rem; font-weight: 600; letter-spacing: -.032em; line-height: 1.1; }
+.sub { font-size: 14px; color: var(--text-muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
 
-/* ── Empty state ── */
-.empty { text-align: center; padding: 72px 24px; }
-.empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
-.empty p { color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 13px; }
-
-/* ── Grid de impressoras ── */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-.card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm);
-  display: flex; flex-direction: column; gap: 8px;
+/* ── Prédios: abas sublinhadas ── */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.tab {
+  position: relative; display: flex; align-items: center; gap: 6px; text-decoration: none;
+  color: var(--text-muted); font-size: 14px; font-weight: 500; padding: 10px 12px 12px; white-space: nowrap;
+  transition: color .15s;
 }
-.cardHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.cardActions { display: flex; gap: 2px; }
+.tab:hover { color: var(--text); }
+.tabActive { color: var(--text); }
+.tabActive::after {
+  content: ''; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px;
+  border-radius: 2px; background: var(--text);
+}
+.tabCount {
+  color: var(--text-muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
+  background: var(--surface-2); padding: 0 6px; border-radius: 999px; line-height: 18px;
+}
+
+/* ── Vazio ── */
+.empty {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+  padding: 64px 24px; background: var(--surface); border: 1px dashed var(--border); border-radius: 14px;
+}
+.empty h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.empty p { margin: 0 0 6px; color: var(--text-muted); max-width: 46ch; line-height: 1.6; font-size: 13.5px; }
+
+/* ── Tabela ── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 760px; }
+.table th {
+  text-align: left; font-size: 12px; font-weight: 500; color: var(--text-muted);
+  padding: 10px 16px; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; background: var(--surface); }
+.table tbody tr:last-child td { border-bottom: none; }
+.foot { margin: 0; padding: 10px 16px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); }
+
+.model { display: block; font-weight: 500; color: var(--text); }
+.dept { display: block; font-size: 12.5px; color: var(--text-muted); margin-top: 1px; }
+.none { font-size: 12.5px; color: var(--text-muted); }
+
+.ip {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); cursor: pointer;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 13px; color: var(--text);
+  font-variant-numeric: tabular-nums; transition: border-color .15s;
+}
+.ip svg { color: var(--text-muted); }
+.ip:hover { border-color: color-mix(in srgb, var(--text) 30%, transparent); }
+.ip:hover svg { color: var(--text); }
+
+.links { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.linkBtn {
+  display: inline-flex; align-items: center; gap: 6px; border: none; background: none; padding: 3px 0;
+  font: inherit; font-size: 13px; color: var(--info-text); cursor: pointer; text-decoration: none; white-space: nowrap;
+}
+.linkBtn svg { color: var(--text-muted); }
+.linkBtn:hover { text-decoration: underline; }
+
+.gripCol { width: 1%; padding-right: 0 !important; }
+.dragHandle {
+  width: 28px; height: 28px; display: grid; place-items: center; border: none; background: transparent;
+  color: var(--text-muted); cursor: grab; border-radius: 6px; touch-action: none;
+}
+.dragHandle:hover { background: var(--surface-2); color: var(--text); }
+.dragHandle:active { cursor: grabbing; }
+
+.actionsCol { width: 1%; text-align: right; white-space: nowrap; }
+.rowActions { display: inline-flex; align-items: center; gap: 2px; }
 .iconBtn {
-  width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent;
-  cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
-  transition: background .12s;
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer;
 }
-.iconBtn:hover { background: var(--surface-2); }
-.iconBtn:disabled { opacity: .35; cursor: default; background: transparent; }
-.cardTitle { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
-.cardIp { font-size: 12.5px; color: var(--text-muted); }
-.mono { font-family: var(--font-mono, ui-monospace, monospace); color: var(--text); }
-.cardLink {
-  font: inherit; font-size: 12.5px; color: var(--brand); font-weight: 600; text-decoration: none;
-  border: none; background: none; padding: 0; margin: 0; cursor: pointer; text-align: left; width: fit-content;
-}
-.cardLink:hover { text-decoration: underline; }
-.cardFooter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 6px; }
-.cardMeta { font-size: 11.5px; color: var(--text-muted); }
+.iconBtn:hover:not(:disabled) { border-color: var(--border); color: var(--text); }
+.iconBtn:disabled { opacity: .3; cursor: default; }
 
 /* ── Anexo (editor) ── */
 .attachmentRow {
@@ -43,22 +90,22 @@
   padding: 8px 12px; border: 1px solid var(--border2); border-radius: 8px;
   background: var(--surface-2); font-size: 13px;
 }
-.fileError { font-size: 12px; color: var(--danger, var(--danger)); margin-top: 6px; }
+.attachmentRow span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.fileError { font-size: 12px; color: var(--danger-text); margin-top: 6px; }
 
-@media (max-width: 768px) {
+/* celular: cada impressora vira um bloco, sem rolar de lado */
+@media (max-width: 760px) {
   .page { padding: 20px 16px; gap: 16px; }
   .header { flex-direction: column; }
+  .title { font-size: 1.6rem; }
+  .table { min-width: 0; }
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { position: relative; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .table tr:has(.gripCol) { padding-left: 44px; }
+  .table tbody tr:last-child { border-bottom: none; }
+  .table td { border: none; padding: 4px 0; background: transparent; }
+  .gripCol { position: absolute; left: 10px; top: 12px; width: auto; }
+  .actionsCol { position: absolute; top: 8px; right: 8px; width: auto; }
+  .modelCell { padding-right: 110px !important; }
 }
-
-/* ── Reordenar (arrastar pela alça ⠿, só Super Admin) ── */
-.sortWrap { display: flex; }
-.sortWrap > * { flex: 1; min-width: 0; }
-.cardHeader .cardTitle { margin-right: auto; }
-.dragHandle {
-  width: 22px; height: 22px; flex-shrink: 0; border: none; background: transparent;
-  color: var(--text-muted); cursor: grab; font-size: 15px; line-height: 1;
-  display: flex; align-items: center; justify-content: center; border-radius: 6px;
-  touch-action: none;
-}
-.dragHandle:hover { background: var(--surface-2); color: var(--text); }
-.dragHandle:active { cursor: grabbing; }

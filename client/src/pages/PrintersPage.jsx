@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { DndContext, closestCenter } from '@dnd-kit/core'
-import { SortableContext, rectSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable'
+import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import api from '../services/api'
 import { useLiveRefresh } from '../hooks/useLiveRefresh'
@@ -9,7 +9,7 @@ import { useAuthStore } from '../store/authStore'
 import { confirmDialog, alertDialog } from '../store/dialogStore'
 import { downloadFile } from '../utils/download'
 import Modal from '../components/common/Modal'
-import Reveal from '../components/common/Reveal'
+import RowMenu from '../components/common/RowMenu'
 import s from './PrintersPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
@@ -32,27 +32,15 @@ const LOCATIONS = [
 ]
 const LOCATION_MAP = Object.fromEntries(LOCATIONS.map(l => [l.key, l]))
 
-function timeAgo(iso) {
-  if (!iso) return null
-  const mins = Math.round((Date.now() - new Date(iso.replace(' ', 'T') + 'Z').getTime()) / 60000)
-  if (mins < 1) return 'agora mesmo'
-  if (mins < 60) return `há ${mins} min`
-  const hours = Math.round(mins / 60)
-  if (hours < 24) return `há ${hours}h`
-  const days = Math.round(hours / 24)
-  if (days < 30) return `há ${days}d`
-  return new Date(iso.replace(' ', 'T') + 'Z').toLocaleDateString('pt-BR')
-}
-
-// Envolve um card pra poder arrastá-lo; entrega as props da alça (⠿) via
-// render-prop — só ela inicia o arrasto, pra não atrapalhar os botões do card.
-function SortableCard({ id, disabled, className, children }) {
+// Linha da tabela que pode ser arrastada; entrega as props da alça via
+// render-prop — só ela inicia o arrasto, pra não atrapalhar os botões da linha.
+function SortableRow({ id, disabled, children }) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id, disabled, attributes: { roleDescription: 'item reordenável' } })
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+  const style = { transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0.5 : 1, position: 'relative', zIndex: isDragging ? 2 : undefined }
   return (
-    <div ref={setNodeRef} style={style} className={className}>
+    <tr ref={setNodeRef} style={style}>
       {children({ ...attributes, ...listeners })}
-    </div>
+    </tr>
   )
 }
 
@@ -134,23 +122,23 @@ function Editor({ printer, defaultLocation, onClose, onSaved }) {
         <input id="printers-ip" value={form.ip} onChange={e => setForm(f => ({ ...f, ip: e.target.value }))} placeholder="Ex: 192.168.1.50" />
       </div>
       <div className="form-group">
-        <label htmlFor="printers-departamento" className="label">Departamento</label>
+        <label htmlFor="printers-departamento" className="label">Setor onde fica</label>
         <input id="printers-departamento" value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} placeholder="Ex: Financeiro, TI, Secretaria..." />
       </div>
       <div className="form-group">
-        <label className="label">Driver (opcional, até 95 MB)</label>
+        <label htmlFor="printers-driver" className="label">Driver (opcional, até 95 MB)</label>
         {newAttachmentFile ? (
           <div className={s.attachmentRow}>
-            <span>📎 {newAttachmentFile.name}</span>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setNewAttachmentFile(null)}>✕ Cancelar</button>
+            <span><LineIcon name="download" size={14} /> {newAttachmentFile.name}</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setNewAttachmentFile(null)}>Cancelar</button>
           </div>
         ) : existingAttachment ? (
           <div className={s.attachmentRow}>
-            <span>📎 {existingAttachment.name}</span>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={removeExisting}>✕ Remover</button>
+            <span><LineIcon name="download" size={14} /> {existingAttachment.name}</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={removeExisting}>Remover driver</button>
           </div>
         ) : (
-          <input type="file" onChange={onFileChange} />
+          <input id="printers-driver" type="file" onChange={onFileChange} />
         )}
         {fileError && <p role="alert" className={s.fileError}>{fileError}</p>}
       </div>
@@ -164,7 +152,7 @@ function Editor({ printer, defaultLocation, onClose, onSaved }) {
       </div>
       <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.model.trim() || saving || uploadingFile} onClick={save}>
-        {uploadingFile ? 'Enviando driver...' : saving ? 'Salvando...' : 'Salvar'}
+        {uploadingFile ? 'Enviando driver...' : saving ? 'Salvando...' : printer ? 'Salvar alterações' : 'Cadastrar impressora'}
       </button>
     </Modal>
   )
@@ -172,14 +160,15 @@ function Editor({ printer, defaultLocation, onClose, onSaved }) {
 
 export default function PrintersPage() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const { location: locationParam } = useParams()
-  // O local vem da rota (/impressoras/sede|adm|centro — controlada pelo
-  // dropdown da sidebar, igual "Chamados"); se vier algo inválido, cai em sede.
+  // O local vem da rota (/impressoras/sede|adm|centro); se vier algo inválido, cai em sede.
   const locationTab = LOCATION_MAP[locationParam] ? locationParam : 'sede'
   const [printers, setPrinters] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null) // null = fechado, {} = novo, impressora = editar
   const [suppliesFor, setSuppliesFor] = useState(null) // impressora cujo histórico de insumos está aberto
+  const [copiedIp, setCopiedIp] = useState(null)
 
   useLiveRefresh(['printers'], () => load()) // alguém mexeu em outro aparelho
   const load = () => {
@@ -191,6 +180,11 @@ export default function PrintersPage() {
   useEffect(() => { load() }, [])
 
   const filtered = useMemo(() => (printers || []).filter(p => p.location === locationTab), [printers, locationTab])
+  const countByLoc = useMemo(() => {
+    const c = {}
+    for (const p of printers || []) c[p.location] = (c[p.location] || 0) + 1
+    return c
+  }, [printers])
 
   const onSaved = printer => {
     setPrinters(prev => {
@@ -198,6 +192,7 @@ export default function PrintersPage() {
       return exists ? prev.map(p => p.id === printer.id ? printer : p) : [...(prev || []), printer]
     })
     setEditing(null)
+    if (printer.location !== locationTab) navigate(`/impressoras/${printer.location}`)
   }
 
   const deletePrinter = async p => {
@@ -209,6 +204,14 @@ export default function PrintersPage() {
     } catch (e) {
       await alertDialog(e.response?.data?.error || 'Erro ao excluir a impressora.', { title: 'Erro', danger: true })
     }
+  }
+
+  const copyIp = async p => {
+    try {
+      await navigator.clipboard.writeText(p.ip)
+      setCopiedIp(p.id)
+      setTimeout(() => setCopiedIp(prev => (prev === p.id ? null : prev)), 1600)
+    } catch { /* clipboard indisponível — ignora */ }
   }
 
   const canEdit = p => p.created_by === user?.id || user?.system_role === 'super_admin'
@@ -224,7 +227,7 @@ export default function PrintersPage() {
     moveTo(filtered.findIndex(p => p.id === active.id), filtered.findIndex(p => p.id === over.id))
   }
 
-  // Também usado pelos botões ‹ › (quem não consegue arrastar).
+  // Também usado pelos botões ↑ ↓ (quem não consegue arrastar).
   const moveTo = async (oldIndex, newIndex) => {
     if (oldIndex === -1 || newIndex < 0 || newIndex >= filtered.length) return
     const reordered = arrayMove(filtered, oldIndex, newIndex)
@@ -238,69 +241,132 @@ export default function PrintersPage() {
 
   if (loading) return <div className={s.loading}>Carregando impressoras...</div>
 
+  const withIp = filtered.filter(p => p.ip).length
+  const withDriver = filtered.filter(p => p.has_attachment || p.link_url).length
+
   return (
     <div className={s.page}>
       <div className={s.header}>
         <div>
-          <h1 className={s.title}>Impressoras — {LOCATION_MAP[locationTab].label}</h1>
-          <p className={s.sub}>Modelo, IP configurado e driver de instalação. Troque o local pelo menu "Impressoras" na barra lateral.</p>
+          <h1 className={s.title}>Impressoras</h1>
+          <p className={s.sub}>
+            {filtered.length
+              ? `${filtered.length} em ${LOCATION_MAP[locationTab].label}: ${withIp} com IP, ${withDriver} com driver ou link de instalação.`
+              : 'Modelo, IP e driver de instalação de cada impressora, por prédio.'}
+          </p>
         </div>
-        {user?.system_role === 'super_admin' && (
-          <button className="btn btn-primary" onClick={() => setEditing({})}>+ Nova impressora</button>
-        )}
+        <div className={s.headerActions}>
+          <Link className="btn btn-ghost" to={`/estoque-insumos/${locationTab}`}><LineIcon name="list" size={15} /> Estoque de insumos</Link>
+          {user?.system_role === 'super_admin' && (
+            <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Nova impressora</button>
+          )}
+        </div>
       </div>
+
+      <nav className={s.tabs} aria-label="Prédios">
+        {LOCATIONS.map(l => (
+          <Link key={l.key} to={`/impressoras/${l.key}`} aria-current={l.key === locationTab ? 'page' : undefined}
+            className={`${s.tab} ${l.key === locationTab ? s.tabActive : ''}`}>
+            {l.label}<span className={s.tabCount}>{countByLoc[l.key] || 0}</span>
+          </Link>
+        ))}
+      </nav>
 
       {filtered.length === 0 ? (
         <div className={s.empty}>
-          <h3>Nenhuma impressora em {LOCATION_MAP[locationTab].label}</h3>
-          <p>{user?.system_role === 'super_admin' ? 'Cadastre a primeira impressora desse local.' : 'Peça pra um Super Admin cadastrar.'}</p>
+          <h2>Nenhuma impressora em {LOCATION_MAP[locationTab].label}</h2>
+          <p>{user?.system_role === 'super_admin' ? 'Cadastre a primeira impressora deste prédio.' : 'Peça para um Super Admin cadastrar.'}</p>
+          {user?.system_role === 'super_admin' && (
+            <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Nova impressora</button>
+          )}
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}
-          accessibility={sortableAccessibility(filtered, p => p.model)}>
-          <SortableContext items={filtered.map(p => p.id)} strategy={rectSortingStrategy}>
-            <div className={s.grid}>
-              {filtered.map((p, i) => (
-                <SortableCard key={p.id} id={p.id} disabled={!canReorder} className={s.sortWrap}>
-                  {handleProps => (
-                    <Reveal delay={Math.min(i, 10) * 50} className={s.card}>
-                      <div className={s.cardHeader}>
+        <div className={s.card}>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}
+            accessibility={sortableAccessibility(filtered, p => p.model)}>
+            <SortableContext items={filtered.map(p => p.id)} strategy={verticalListSortingStrategy}>
+              <table className={s.table}>
+                <thead>
+                  <tr>
+                    {canReorder && <th className={s.gripCol}><span className="sr-only">Ordem</span></th>}
+                    <th>Impressora</th>
+                    <th>IP</th>
+                    <th>Instalação</th>
+                    <th>Insumos</th>
+                    <th className={s.actionsCol}><span className="sr-only">Ações</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((p, i) => (
+                    <SortableRow key={p.id} id={p.id} disabled={!canReorder}>
+                      {handleProps => <>
                         {canReorder && (
-                          <button type="button" className={s.dragHandle} title="Arrastar para reordenar" aria-label={`Reordenar ${p.model}`} {...handleProps}>⠿</button>
+                          <td className={s.gripCol}>
+                            <button type="button" className={s.dragHandle} title="Arrastar para reordenar" aria-label={`Reordenar ${p.model}`} {...handleProps}>
+                              <LineIcon name="grip" size={16} />
+                            </button>
+                          </td>
                         )}
-                        <h3 className={s.cardTitle}>{p.model}</h3>
-                        {canEdit(p) && (
-                          <div className={s.cardActions}>
+                        <td className={s.modelCell}>
+                          <span className={s.model}>{p.model}</span>
+                          <span className={s.dept}>{p.department || 'Sem setor informado'}</span>
+                        </td>
+                        <td>
+                          {p.ip ? (
+                            <button type="button" className={s.ip} onClick={() => copyIp(p)}
+                              aria-label={copiedIp === p.id ? `IP ${p.ip} copiado` : `Copiar o IP ${p.ip}`} title="Copiar IP">
+                              <span>{p.ip}</span>
+                              <LineIcon name={copiedIp === p.id ? 'check' : 'copy'} size={13} />
+                            </button>
+                          ) : <span className={s.none}>Sem IP</span>}
+                        </td>
+                        <td>
+                          <span className={s.links}>
+                            {!!p.has_attachment && ( /* vem 0/1 do banco — sem o !! o React desenha o "0" */
+                              <button type="button" className={s.linkBtn} onClick={() => downloadFile(`/printers/${p.id}/attachment`, p.attachment_name || 'driver')}
+                                title={p.attachment_name}>
+                                <LineIcon name="download" size={14} /> Baixar driver
+                              </button>
+                            )}
+                            {p.link_url && (
+                              <a className={s.linkBtn} href={safeHref(p.link_url)} target="_blank" rel="noreferrer">
+                                <LineIcon name="link" size={14} /> Link de instalação
+                              </a>
+                            )}
+                            {!p.has_attachment && !p.link_url && <span className={s.none}>Sem driver</span>}
+                          </span>
+                        </td>
+                        <td>
+                          <button type="button" className={s.linkBtn} onClick={() => setSuppliesFor(p)}>
+                            <LineIcon name="clock" size={14} /> Histórico
+                          </button>
+                        </td>
+                        <td className={s.actionsCol}>
+                          <span className={s.rowActions}>
                             {canReorder && <>
-                              <button type="button" className={s.iconBtn} title="Mover para antes" aria-label={`Mover ${p.model} para antes`} data-move={`${p.id}:-1`} disabled={i === 0} onClick={() => { moveTo(i, i - 1); refocusMoveButton(p.id, -1) }}><LineIcon name="chevronLeft" /></button>
-                              <button type="button" className={s.iconBtn} title="Mover para depois" aria-label={`Mover ${p.model} para depois`} data-move={`${p.id}:1`} disabled={i === filtered.length - 1} onClick={() => { moveTo(i, i + 1); refocusMoveButton(p.id, 1) }}><LineIcon name="chevronRight" /></button>
+                              <button type="button" className={s.iconBtn} title="Mover para cima" aria-label={`Mover ${p.model} para cima`} data-move={`${p.id}:-1`} disabled={i === 0} onClick={() => { moveTo(i, i - 1); refocusMoveButton(p.id, -1) }}><LineIcon name="chevronUp" size={15} /></button>
+                              <button type="button" className={s.iconBtn} title="Mover para baixo" aria-label={`Mover ${p.model} para baixo`} data-move={`${p.id}:1`} disabled={i === filtered.length - 1} onClick={() => { moveTo(i, i + 1); refocusMoveButton(p.id, 1) }}><LineIcon name="chevronDown" size={15} /></button>
                             </>}
-                            <button className={s.iconBtn} title="Editar" onClick={() => setEditing(p)}>✏️</button>
-                            <button className={s.iconBtn} title="Excluir" onClick={() => deletePrinter(p)}>🗑️</button>
-                          </div>
-                        )}
-                      </div>
-                      {p.department && <p className={s.cardIp}>Depto: {p.department}</p>}
-                      {p.ip && <p className={s.cardIp}>IP: <span className={s.mono}>{p.ip}</span></p>}
-                      {!!p.has_attachment && (
-                        <button type="button" className={s.cardLink} onClick={() => downloadFile(`/printers/${p.id}/attachment`, p.attachment_name || 'driver')}>
-                          📎 Baixar driver ({p.attachment_name})
-                        </button>
-                      )}
-                      {p.link_url && (
-                        <a className={s.cardLink} href={safeHref(p.link_url)} target="_blank" rel="noreferrer">🔗 Link de instalação</a>
-                      )}
-                      <button type="button" className={s.cardLink} onClick={() => setSuppliesFor(p)}>🧴 Histórico de insumos</button>
-                      <div className={s.cardFooter}>
-                        <span className={s.cardMeta}>{p.author_name || 'Alguém'} · {timeAgo(p.updated_at)}</span>
-                      </div>
-                    </Reveal>
-                  )}
-                </SortableCard>
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+                            {canEdit(p) && (
+                              <RowMenu name={p.model} items={[
+                                { label: 'Editar impressora', icon: 'edit', onClick: () => setEditing(p) },
+                                { label: 'Excluir impressora', icon: 'trash', danger: true, onClick: () => deletePrinter(p) },
+                              ]} />
+                            )}
+                          </span>
+                        </td>
+                      </>}
+                    </SortableRow>
+                  ))}
+                </tbody>
+              </table>
+            </SortableContext>
+          </DndContext>
+          <p className={s.foot}>
+            {canReorder ? 'Arraste pela alça ou use as setas para mudar a ordem. ' : ''}
+            Clique no IP para copiar.
+          </p>
+        </div>
       )}
 
       {suppliesFor && <PrinterSupplyHistory printer={suppliesFor} onClose={() => setSuppliesFor(null)} />}

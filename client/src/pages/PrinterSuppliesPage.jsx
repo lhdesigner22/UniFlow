@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import api from '../services/api'
 import { useLiveRefresh } from '../hooks/useLiveRefresh'
 import { useAuthStore } from '../store/authStore'
@@ -8,6 +8,8 @@ import { confirmDialog, alertDialog } from '../store/dialogStore'
 import { exportPrinterSuppliesXlsx } from '../utils/exports'
 import ExportXlsxButton from '../components/common/ExportXlsxButton'
 import Modal from '../components/common/Modal'
+import LineIcon from '../components/common/LineIcon'
+import RowMenu from '../components/common/RowMenu'
 import s from './PrinterSuppliesPage.module.css'
 
 // Impressoras → Estoque de insumos: saldo POR PRÉDIO de toner, cilindro, tinta...
@@ -20,13 +22,13 @@ export const SUPPLY_LOCATIONS = [
 ]
 const LOC_LABEL = Object.fromEntries(SUPPLY_LOCATIONS.map(l => [l.key, l.label]))
 export const SUPPLY_TYPES = {
-  toner: '🖨️ Toner', cilindro: '🥁 Cilindro / fotocondutor', tinta: '💧 Tinta (garrafa)', cartucho: '🧴 Cartucho',
-  fusor: '🔥 Fusor', residuo: '🗑️ Caixa de resíduo', kit: '🧰 Kit de manutenção', outro: '📦 Outro',
+  toner: 'Toner', cilindro: 'Cilindro / fotocondutor', tinta: 'Tinta (garrafa)', cartucho: 'Cartucho',
+  fusor: 'Fusor', residuo: 'Caixa de resíduo', kit: 'Kit de manutenção', outro: 'Outro',
 }
 const COLORS = { '': '—', preto: 'Preto', ciano: 'Ciano', magenta: 'Magenta', amarelo: 'Amarelo', colorido: 'Colorido' }
 const COLOR_DOT = { preto: '#111827', ciano: '#06B6D4', magenta: '#DB2777', amarelo: '#EAB308', colorido: 'conic-gradient(#06B6D4, #DB2777, #EAB308, #06B6D4)' }
 const KIND_LABEL = {
-  entrada: '➕ Entrada', troca: '🔄 Troca', transferencia_saida: '⇄ Transferido para', transferencia_entrada: '⇄ Recebido de', ajuste: '✎ Ajuste',
+  entrada: 'Entrada', troca: 'Troca', transferencia_saida: 'Transferido para', transferencia_entrada: 'Recebido de', ajuste: 'Ajuste',
 }
 
 const pad = n => String(n).padStart(2, '0')
@@ -130,7 +132,7 @@ function SupplyEditor({ supply, knownModels, onClose, onSaved }) {
 }
 
 // ── Movimento (entrada, troca, transferência, ajuste) ──────────────────────
-const MOVE_TITLES = { entrada: '➕ Entrada no estoque', troca: '🔄 Troca na impressora', transferencia: '⇄ Transferir para outro prédio', ajuste: '✎ Ajustar saldo (contagem)' }
+const MOVE_TITLES = { entrada: 'Entrada no estoque', troca: 'Troca na impressora', transferencia: 'Transferir para outro prédio', ajuste: 'Ajustar saldo (contagem)' }
 
 function MovementModal({ supply, location, kind, printers, onClose, onSaved }) {
   const current = supply.stocks?.[location]?.quantity || 0
@@ -235,7 +237,6 @@ function HistoryModal({ supply, location, onClose }) {
 
 export default function PrinterSuppliesPage() {
   const { location = 'sede' } = useParams()
-  const navigate = useNavigate()
   const { user } = useAuthStore()
   const [supplies, setSupplies] = useState(null)
   const [printers, setPrinters] = useState([])
@@ -285,37 +286,46 @@ export default function PrinterSuppliesPage() {
     <div className={s.page}>
       <div className={s.header}>
         <div>
-          <h1 className={s.title}>Estoque de insumos — {LOC_LABEL[location] || location.toUpperCase()}</h1>
-          <p className={s.sub}>Toner, cilindro, tinta e demais insumos das impressoras: saldo por prédio, cada troca registrada na impressora e aviso quando chega no mínimo.</p>
+          <h1 className={s.title}>Estoque de insumos</h1>
+          <p className={s.sub}>Saldo de toner, cilindro e tinta por prédio. Cada troca fica ligada à impressora e dá a previsão de quando acaba.</p>
         </div>
         <div className={s.headerActions}>
+          <Link className="btn btn-ghost" to={`/impressoras/${location}`}><LineIcon name="chevronLeft" size={15} /> Impressoras</Link>
           <ExportXlsxButton onExport={() => exportPrinterSuppliesXlsx()} />
-          {writable && <button className="btn btn-primary" onClick={() => setEditing({})}>+ Novo insumo</button>}
+          {writable && <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Novo insumo</button>}
         </div>
       </div>
 
-      <div className={s.tabs}>
+      <nav className={s.tabs} aria-label="Prédios">
         {SUPPLY_LOCATIONS.map(l => (
-          <button key={l.key} className={`${s.tab} ${l.key === location ? s.tabOn : ''}`} onClick={() => navigate(`/estoque-insumos/${l.key}`)}>
-            {l.label}{lowByLoc[l.key] ? <span className={s.tabBadge}>{lowByLoc[l.key]}</span> : null}
-          </button>
+          <Link key={l.key} to={`/estoque-insumos/${l.key}`} aria-current={l.key === location ? 'page' : undefined}
+            className={`${s.tab} ${l.key === location ? s.tabOn : ''}`}>
+            {l.label}
+            {lowByLoc[l.key] ? <span className={s.tabBadge} title={`${lowByLoc[l.key]} no mínimo ou abaixo`}>{lowByLoc[l.key]}<span className="sr-only"> no mínimo ou abaixo</span></span> : null}
+          </Link>
         ))}
-      </div>
+      </nav>
 
       <div className={s.stats}>
         <div className={s.stat}><strong>{stats.units}</strong><span>Unidades em estoque</span></div>
-        <button className={`${s.stat} ${s.statWarn} ${onlyLow ? s.statOn : ''}`} onClick={() => setOnlyLow(v => !v)}><strong>{stats.low}</strong><span>No mínimo ou abaixo</span></button>
+        <button type="button" className={`${s.stat} ${s.statButton} ${stats.low ? s.statWarn : ''} ${onlyLow ? s.statOn : ''}`} aria-pressed={onlyLow} onClick={() => setOnlyLow(v => !v)}>
+          <strong>{stats.low}</strong><span>{onlyLow ? 'Mostrando só estes' : 'No mínimo ou abaixo'}</span>
+        </button>
         <div className={s.stat}><strong>{stats.swaps}</strong><span>Trocas nos últimos 90 dias</span></div>
         <div className={s.stat}><strong>{stats.items}</strong><span>Itens no catálogo</span></div>
       </div>
 
       <div className={s.toolbar}>
-        <input className={s.search} value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por insumo, código ou modelo de impressora..." />
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+        <label className={s.search}>
+          <LineIcon name="search" size={15} />
+          <span className="sr-only">Buscar insumos</span>
+          <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por insumo, código ou modelo de impressora" />
+        </label>
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} aria-label="Tipo de insumo">
           <option value="">Todos os tipos</option>
           {Object.entries(SUPPLY_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <label className={s.check}><input type="checkbox" checked={onlyLow} onChange={e => setOnlyLow(e.target.checked)} /> Só no mínimo / abaixo</label>
+        <label className={s.check}><input type="checkbox" checked={onlyLow} onChange={e => setOnlyLow(e.target.checked)} /> Só no mínimo ou abaixo</label>
       </div>
 
       {filtered.length === 0 ? (
@@ -328,39 +338,48 @@ export default function PrinterSuppliesPage() {
           <div className={s.tableWrap}>
             <table className={s.table}>
               <thead>
-                <tr><th>Insumo</th><th>Tipo</th><th>Serve em</th><th className={s.num}>Saldo</th><th className={s.num}>Mínimo</th><th className={s.num}>Consumo/mês</th><th className={s.num}>Dura</th><th>Ações</th></tr>
+                <tr><th>Insumo</th><th>Tipo</th><th>Serve em</th><th className={s.num}>Saldo</th><th className={s.num}>Mínimo</th><th className={s.num}>Consumo/mês</th><th className={s.num}>Dura</th><th className={s.actionsCol}><span className="sr-only">Ações</span></th></tr>
               </thead>
               <tbody>
                 {filtered.map(sp => {
                   const st = sp.stocks[location]
                   const low = isLow(sp, location)
                   const f = forecast(sp, location)
-                  const otherStock = SUPPLY_LOCATIONS.filter(l => l.key !== location && sp.stocks[l.key]?.quantity > 0).map(l => `${l.label}: ${sp.stocks[l.key].quantity}`).join(' · ')
+                  const otherStock = SUPPLY_LOCATIONS.filter(l => l.key !== location && sp.stocks[l.key]?.quantity > 0).map(l => `${l.label} ${sp.stocks[l.key].quantity}`).join(', ')
                   return (
-                    <tr key={sp.id} className={low ? s.rowLow : ''}>
+                    <tr key={sp.id}>
                       <td>
                         <div className={s.supplyName}><ColorDot color={sp.color} />{sp.name}</div>
-                        <div className={s.supplyMeta}>{sp.code ? `Cód. ${sp.code}` : ''}{otherStock ? `${sp.code ? ' · ' : ''}outros prédios — ${otherStock}` : ''}</div>
+                        <div className={s.supplyMeta}>{[sp.code && `Cód. ${sp.code}`, otherStock && `outros prédios: ${otherStock}`].filter(Boolean).join('; ')}</div>
                       </td>
                       <td className={s.typeCell}>{SUPPLY_TYPES[sp.type] || sp.type}</td>
                       <td className={s.modelsCell} title={sp.models.join(', ')}>{sp.models.length ? sp.models.join(', ') : <span className={s.muted}>—</span>}</td>
-                      <td className={`${s.num} ${s.qty} ${low ? s.qtyLow : ''}`}>{st.quantity}</td>
+                      <td className={`${s.num} ${s.qty} ${low ? s.qtyLow : ''}`}>{low && <span className={s.lowDot} aria-hidden="true" />}{st.quantity}{low && <span className="sr-only"> (no mínimo ou abaixo)</span>}</td>
                       <td className={`${s.num} ${s.muted}`}>{st.min_quantity || '—'}</td>
                       <td className={`${s.num} ${s.muted}`}>{f.perMonth ? f.perMonth.toFixed(1).replace('.', ',') : '—'}</td>
                       <td className={`${s.num} ${f.months != null && f.months < 1 ? s.qtyLow : s.muted}`} title="Saldo ÷ consumo médio dos últimos 90 dias">
-                        {f.months == null ? '—' : f.months < 1 ? `~${Math.max(1, Math.round(f.months * 30))} dias` : `~${f.months.toFixed(1).replace('.', ',')} meses`}
+                        {f.months == null ? '—' : f.months < 1
+                          ? (d => `~${d} ${d === 1 ? 'dia' : 'dias'}`)(Math.max(1, Math.round(f.months * 30)))
+                          : `~${f.months.toFixed(1).replace('.', ',')} ${f.months.toFixed(1) === '1.0' ? 'mês' : 'meses'}`}
                       </td>
                       <td>
                         <div className={s.actions}>
                           {writable && <>
-                            <button className={s.actBtn} title="Entrada (compra/recebimento)" onClick={() => setMoving({ supply: sp, kind: 'entrada' })}>➕</button>
-                            <button className={s.actBtn} title="Troca na impressora" disabled={!st.quantity} onClick={() => setMoving({ supply: sp, kind: 'troca' })}>🔄</button>
-                            <button className={s.actBtn} title="Transferir para outro prédio" disabled={!st.quantity} onClick={() => setMoving({ supply: sp, kind: 'transferencia' })}>⇄</button>
-                            <button className={s.actBtn} title="Ajustar saldo (contagem)" onClick={() => setMoving({ supply: sp, kind: 'ajuste' })}>✎</button>
+                            <button type="button" className={s.actBtn} disabled={!st.quantity} onClick={() => setMoving({ supply: sp, kind: 'troca' })}
+                              title={st.quantity ? 'Registrar a troca numa impressora' : 'Sem saldo neste prédio'}>
+                              <LineIcon name="refresh" size={14} /> Trocar
+                            </button>
+                            <button type="button" className={s.actBtn} onClick={() => setMoving({ supply: sp, kind: 'entrada' })} title="Compra ou recebimento">
+                              <LineIcon name="plus" size={14} /> Entrada
+                            </button>
                           </>}
-                          <button className={s.actBtn} title="Histórico" onClick={() => setHistory(sp)}>🕘</button>
-                          {writable && <button className={s.actBtn} title="Editar insumo" onClick={() => setEditing(sp)}>✏️</button>}
-                          {user?.system_role === 'super_admin' && <button className={s.actBtn} title="Remover do catálogo" onClick={() => remove(sp)}>🗑️</button>}
+                          <RowMenu name={sp.name} items={[
+                            writable && { label: 'Transferir para outro prédio', icon: 'transfer', disabled: !st.quantity, onClick: () => setMoving({ supply: sp, kind: 'transferencia' }) },
+                            writable && { label: 'Ajustar saldo', hint: 'Depois de uma contagem', icon: 'sliders', onClick: () => setMoving({ supply: sp, kind: 'ajuste' }) },
+                            { label: 'Ver histórico', icon: 'clock', onClick: () => setHistory(sp) },
+                            writable && { label: 'Editar insumo', icon: 'edit', onClick: () => setEditing(sp) },
+                            user?.system_role === 'super_admin' && { label: 'Remover do catálogo', hint: 'Com histórico, só é desativado', icon: 'trash', danger: true, onClick: () => remove(sp) },
+                          ]} />
                         </div>
                       </td>
                     </tr>

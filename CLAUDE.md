@@ -194,7 +194,11 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   **Base de Conhecimento** refeita (out/2026): estante de leitura — lista com busca (destaca o termo) à esquerda, artigo inteiro à
   direita; texto pronto aparece como bloco de resposta com "Copiar texto" em destaque; no celular, lista → toca → artigo (com "Voltar").
   Categorias em abas sublinhadas; Padronização de máquinas = tabela comparativa por cargo/setor (o seletor de emoji saiu do editor,
-  fica só a cor; o campo `icon` continua no banco). Próximas telas pela crítica: Impressoras < Agenda < Aprovações.
+  fica só a cor; o campo `icon` continua no banco).
+  **Impressoras** refeita (out/2026): inventário em tabela com abas por prédio na própria tela, IP = botão de copiar, driver/link/histórico
+  na linha, ordem com alça + ↑ ↓, editar/excluir no menu "⋯" (`components/common/RowMenu.jsx`, menu reutilizável). **Estoque de insumos**:
+  abas sublinhadas, KPIs num painel só (o "No mínimo" filtra), linha com só "Trocar" e "Entrada" + o resto no "⋯", saldo baixo = ponto
+  vermelho (sem pintar a linha). Próximas telas pela crítica: Agenda < Aprovações.
 - **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
   `all: unset` dos módulos). Cores (1ª etapa feita): hex/rgba com o MESMO valor de um token viraram `var(--x)` / `color-mix(in srgb, var(--x) N%, transparent)`
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`

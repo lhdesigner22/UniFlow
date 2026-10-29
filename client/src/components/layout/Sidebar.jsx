@@ -617,7 +617,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
                 <span>CLÍNICAS</span>
               </NavLink>
               <NavLink to="/estoque-insumos/sede" className={() => `${s.navSubItem} ${suppliesActive ? s.active : ''}`}>
-                <span>📦 Estoque de insumos</span>
+                <span>Estoque de insumos</span>
                 {!!suppliesLow && <span className={s.navCount} title="Itens no estoque mínimo ou abaixo">{suppliesLow}</span>}
               </NavLink>
             </div>
