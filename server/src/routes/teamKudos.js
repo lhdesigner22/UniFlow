@@ -34,6 +34,24 @@ app.get('/members', async c => {
   return c.json(members)
 })
 
+// GET /recent — mural com os últimos reconhecimentos da equipe. Só estrelas:
+// a lua é privada (quem recebeu + Super Admin), então nunca entra aqui.
+app.get('/recent', async c => {
+  const db = c.get('db')
+  const dept = departmentFilter(await accessOf(c), 'u.department_id')
+  const rows = await db.prepare(`
+    SELECT ev.id, ev.member_id, ev.comment, ev.created_at, u.name as user_name, u.avatar as user_avatar, tkm.user_id,
+      g.name as given_by_name
+    FROM team_kudos_events ev
+    JOIN team_kudos_members tkm ON tkm.id = ev.member_id
+    JOIN users u ON u.id = tkm.user_id
+    JOIN users g ON g.id = ev.given_by
+    WHERE ev.type = 'star'${dept.sql}
+    ORDER BY ev.created_at DESC LIMIT 12
+  `).all(...dept.args)
+  return c.json(rows)
+})
+
 // GET /members/:id/events — histórico de um membro. As luas aparecem pra
 // quem recebeu e pro Super Admin.
 app.get('/members/:id/events', async c => {

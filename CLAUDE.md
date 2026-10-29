@@ -34,7 +34,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0063). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0064). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -48,7 +48,7 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **`cd server && npm test`** (`test-e2e/run-all.mjs`) sobe o node-server e roda tudo abaixo na ordem certa — é o que o **GitHub Actions**
   roda a cada push (`.github/workflows/e2e.yml`, sem secrets, sem produção). Suíte nova = incluir em `GROUPS` do `run-all.mjs`.
   `secrets` precisa de `RATE_LIMIT=1` (limitador de mentira); `POST /__mock/sql` no node-server prepara/confere o banco.
-- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `labels`, `machine-standards`, `audit`, `security`, `download-ticket` (nesta ordem: o `security` força novo login do analista e
+- Suítes: `roles`, `dept`, `developments`, `lab-incidents`, `printer-supplies`, `success-cases`, `dept-modules`, `labels`, `machine-standards`, `kudos`, `audit`, `security`, `download-ticket` (nesta ordem: o `security` força novo login do analista e
   invalida o token tv:0 dele; o `download-ticket` faz o mesmo com o colaborador). `xlsx` conta linhas — rode em banco limpo (servidor recém-subido); passe uma pasta como argumento pra
   salvar os .xlsx e abrir no Excel. `entity` precisa do `mock-glpi.mjs`; `loan-replies` precisa de `MOCK_GMAIL=1`.
 - **Exportações são XLSX montado no navegador** (`client/src/utils/xlsxExport.js` + `exports.js`, ExcelJS por import dinâmico, fora do
@@ -215,6 +215,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   pede ao servidor com `purpose` → log; mostrada, uma barra esvazia nos 30 s até esconder). Cofre = lista agrupada por categoria, editar/
   excluir no "⋯" (`RowMenu`), aviso de que mostrar/copiar fica no histórico. VLANs: títulos em caixa normal, observações em cinza neutro.
   Para testar o Cofre/VLANs local: o node-server novo tem `/__mock/sql` (o de 3001 antigo não tinha) — VLANs não têm seed no repo, use dados fictícios.
+  **Time → Desempenho** refeito (out/2026): equipe em linhas (👍/👎, "Reconhecer", "Apontar ponto de melhoria", histórico, "Tirar do quadro"
+  no "⋯") + **Mural de reconhecimentos** (`GET /api/team-kudos/recent`: últimos 12, SÓ estrelas — a lua/👎 é privada e nunca entra;
+  suíte `kudos-e2e.mjs` garante isso). Migração 0064 = índices de `team_kudos_events` (não tinha nenhum).
 - **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
   `all: unset` dos módulos). Cores (1ª etapa feita): hex/rgba com o MESMO valor de um token viraram `var(--x)` / `color-mix(in srgb, var(--x) N%, transparent)`
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`

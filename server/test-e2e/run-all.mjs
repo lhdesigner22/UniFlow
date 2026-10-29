@@ -11,7 +11,7 @@ const BASE = 'http://127.0.0.1:8799'
 
 // Ordem importa: `security` e `download-ticket` derrubam a sessão de usuários de teste.
 const GROUPS = [
-  { env: {}, suites: ['roles', 'dept', 'developments', 'lab-incidents', 'printer-supplies', 'success-cases', 'dept-modules', 'labels', 'machine-standards', 'audit', 'security', 'download-ticket'] },
+  { env: {}, suites: ['roles', 'dept', 'developments', 'lab-incidents', 'printer-supplies', 'success-cases', 'dept-modules', 'labels', 'machine-standards', 'kudos', 'audit', 'security', 'download-ticket'] },
   { env: { RATE_LIMIT: '1' }, suites: ['secrets'] },
 ]
 

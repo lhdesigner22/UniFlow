@@ -6,7 +6,8 @@ import { confirmDialog, alertDialog } from '../store/dialogStore'
 import { parseDbTimestamp } from '../utils/formatDuration'
 import MemberPicker from '../components/common/MemberPicker'
 import Modal from '../components/common/Modal'
-import Reveal from '../components/common/Reveal'
+import LineIcon from '../components/common/LineIcon'
+import RowMenu from '../components/common/RowMenu'
 import Avatar from '../components/common/Avatar'
 import s from './TeamPerformancePage.module.css'
 
@@ -40,16 +41,6 @@ function fmtDateTime(v) {
 function HistoryModal({ member, onClose, onEventRemoved, canRemove }) {
   const [events, setEvents] = useState(null)
   const [removingId, setRemovingId] = useState(null)
-  const [expandedIds, setExpandedIds] = useState(() => new Set())
-
-  const toggleExpanded = id => {
-    setExpandedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
 
   useEffect(() => {
     api.get(`/team-kudos/members/${member.id}/events`)
@@ -71,7 +62,7 @@ function HistoryModal({ member, onClose, onEventRemoved, canRemove }) {
   }
 
   return (
-    <Modal title={`Histórico — ${member.user_name}`} onClose={onClose} width={480}>
+    <Modal title={`Histórico de ${member.user_name}`} onClose={onClose} width={520}>
       {events === null ? (
         <p className={s.emptyHint}>Carregando...</p>
       ) : events.length === 0 ? (
@@ -80,30 +71,27 @@ function HistoryModal({ member, onClose, onEventRemoved, canRemove }) {
         <div className={s.historyList}>
           {events.map(ev => (
             <div key={ev.id} className={s.historyRow}>
-              <span className={`${s.historyIcon} ${ev.type === 'star' ? s.iconLike : s.iconDislike}`}>
+              <span className={`${s.historyIcon} ${ev.type === 'star' ? s.iconLike : s.iconDislike}`}
+                aria-label={ev.type === 'star' ? 'Reconhecimento' : 'Ponto de melhoria'} role="img">
                 {ev.type === 'star' ? <IconThumbsUp size={14} /> : <IconThumbsDown size={14} />}
               </span>
               <div className={s.historyInfo}>
-                <span className={s.historyGiver}>{ev.given_by_name}</span>
-                {ev.comment ? (
-                  <span
-                    className={`${s.historyMeta} ${expandedIds.has(ev.id) ? s.historyMetaExpanded : ''}`}
-                    onClick={() => toggleExpanded(ev.id)}
-                    title={expandedIds.has(ev.id) ? 'Clique para recolher' : 'Clique para ver o comentário completo'}
-                  >
-                    {fmtDateTime(ev.created_at)} · "{ev.comment}"
-                  </span>
-                ) : (
+                <span className={s.historyHead}>
+                  <span className={s.historyGiver}>{ev.given_by_name}</span>
                   <span className={s.historyMeta}>{fmtDateTime(ev.created_at)}</span>
-                )}
+                </span>
+                {ev.comment
+                  ? <span className={s.historyComment}>{ev.comment}</span>
+                  : <span className={s.historyMeta}>Sem motivo escrito.</span>}
               </div>
               {canRemove && (
                 <button
                   className={s.historyRemoveBtn}
                   title="Remover este lançamento"
+                  aria-label="Remover este lançamento"
                   disabled={removingId === ev.id}
                   onClick={() => removeEvent(ev)}
-                >✕</button>
+                ><LineIcon name="trash" size={14} /></button>
               )}
             </div>
           ))}
@@ -132,7 +120,8 @@ function GiveKudosModal({ member, type, onClose, onGiven }) {
   }
 
   return (
-    <Modal title={`${isLike ? 'Dar 👍' : 'Dar 👎'} — ${member.user_name}`} onClose={onClose} width={440}>
+    <Modal title={isLike ? `Reconhecer ${member.user_name}` : `Ponto de melhoria para ${member.user_name}`} onClose={onClose} width={440}>
+      {!isLike && <p className={s.modalNote}>Fica visível só para {member.user_name} e para o Super Admin.</p>}
       <div className="form-group">
         <label htmlFor="team-performance-motivo-opcional" className="label">Motivo (opcional)</label>
         <textarea id="team-performance-motivo-opcional"
@@ -149,15 +138,28 @@ function GiveKudosModal({ member, type, onClose, onGiven }) {
         disabled={saving}
         onClick={submit}
       >
-        {saving ? 'Salvando...' : `Confirmar ${isLike ? '👍' : '👎'}`}
+        {saving ? 'Salvando...' : isLike ? 'Registrar reconhecimento' : 'Registrar ponto de melhoria'}
       </button>
     </Modal>
   )
 }
 
+// "hoje, 13:48" / "ontem" / "3 dias atrás" / "26/10" — o mural lê melhor com tempo relativo
+function relTime(v) {
+  const d = parseDbTimestamp(v)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const day = new Date(d); day.setHours(0, 0, 0, 0)
+  const diff = Math.round((today - day) / 86400000)
+  if (diff === 0) return `hoje, ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+  if (diff === 1) return 'ontem'
+  if (diff < 7) return `${diff} dias atrás`
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+}
+
 export default function TeamPerformancePage() {
   const { user } = useAuthStore()
   const [members, setMembers] = useState(null)
+  const [recent, setRecent] = useState([])
   const [loading, setLoading] = useState(true)
   const [showPicker, setShowPicker] = useState(false)
   const [historyFor, setHistoryFor] = useState(null)
@@ -171,6 +173,7 @@ export default function TeamPerformancePage() {
       .then(r => setMembers(r.data || []))
       .catch(() => setMembers([]))
       .finally(() => setLoading(false))
+    api.get('/team-kudos/recent').then(r => setRecent(r.data || [])).catch(() => {})
   }
   useEffect(() => { load() }, [])
 
@@ -185,11 +188,12 @@ export default function TeamPerformancePage() {
   }
 
   const removeMember = async m => {
-    const ok = await confirmDialog(`Remover "${m.user_name}" do quadro de desempenho? O histórico de estrelas/luas dele some junto.`, { title: 'Remover colaborador' })
+    const ok = await confirmDialog(`Tirar "${m.user_name}" do quadro de desempenho? O histórico de reconhecimentos dele some junto.`, { title: 'Tirar do quadro' })
     if (!ok) return
     try {
       await api.delete(`/team-kudos/members/${m.id}`)
       setMembers(prev => (prev || []).filter(x => x.id !== m.id))
+      setRecent(prev => prev.filter(r => r.member_id !== m.id))
     } catch (e) {
       await alertDialog(e.response?.data?.error || 'Erro ao remover.', { title: 'Erro', danger: true })
     }
@@ -200,19 +204,23 @@ export default function TeamPerformancePage() {
   const onGiven = memberId => data => {
     setMembers(prev => prev.map(x => x.id === memberId ? { ...x, stars: data.stars, moons: data.moons } : x))
     setGivingFor(null)
+    api.get('/team-kudos/recent').then(r => setRecent(r.data || [])).catch(() => {})
     // Pop rápido no placar pra dar feedback visual imediato de que o
-    // like/dislike foi mesmo registrado (some sozinho depois da animação).
+    // reconhecimento foi mesmo registrado (some sozinho depois da animação).
     setPoppedId(memberId)
     setTimeout(() => setPoppedId(id => id === memberId ? null : id), 350)
   }
 
-  // Atualiza os totais do card na hora, quando um lançamento é removido
-  // pelo histórico (ver HistoryModal).
+  // Atualiza os totais na hora, quando um lançamento é removido pelo histórico.
   const onHistoryEventRemoved = (memberId, stars, moons) => {
     setMembers(prev => prev.map(x => x.id === memberId ? { ...x, stars, moons } : x))
+    api.get('/team-kudos/recent').then(r => setRecent(r.data || [])).catch(() => {})
   }
 
   if (loading) return <div className={s.loading}>Carregando desempenho...</div>
+
+  const list = members || []
+  const totalStars = list.reduce((a, m) => a + (m.stars || 0), 0)
 
   return (
     <div className={s.page}>
@@ -220,24 +228,19 @@ export default function TeamPerformancePage() {
         <div>
           <h1 className={s.title}>Desempenho</h1>
           <p className={s.sub}>
-            {isSuperAdmin ? (
-              <>
-                Dê <IconThumbsUp size={13} className={`${s.inlineIcon} ${s.likeText}`} /> pra reconhecer algo positivo e{' '}
-                <IconThumbsDown size={13} className={`${s.inlineIcon} ${s.dislikeText}`} /> pra sinalizar algo que precisa melhorar
-                {' '}(o <IconThumbsDown size={13} className={`${s.inlineIcon} ${s.dislikeText}`} /> só aparece pra quem recebeu e pro Super Admin).
-              </>
-            ) : (
-              'Acompanhe o reconhecimento da equipe — dar e remover é só pro Super Admin.'
-            )}
+            {list.length
+              ? `${totalStars} ${totalStars === 1 ? 'reconhecimento' : 'reconhecimentos'} para ${list.length} ${list.length === 1 ? 'pessoa' : 'pessoas'} da equipe.`
+              : 'Reconhecimento da equipe.'}{' '}
+            Os pontos de melhoria só aparecem para quem recebeu e para o Super Admin.
           </p>
         </div>
         {isSuperAdmin && (
           <div className={s.inviteWrap}>
-            <button className="btn btn-primary" onClick={() => setShowPicker(v => !v)}>+ Adicionar colaborador</button>
+            <button className="btn btn-primary" onClick={() => setShowPicker(v => !v)}><LineIcon name="plus" size={15} /> Adicionar pessoa</button>
             {showPicker && (
               <MemberPicker
                 align="right"
-                existingIds={(members || []).map(m => m.user_id)}
+                existingIds={list.map(m => m.user_id)}
                 onPick={addMember}
                 onClose={() => setShowPicker(false)}
               />
@@ -246,33 +249,69 @@ export default function TeamPerformancePage() {
         )}
       </div>
 
-      {(members || []).length === 0 ? (
+      {list.length === 0 ? (
         <div className={s.empty}>
-          <h3>Ninguém no quadro ainda</h3>
-          <p>{isSuperAdmin ? 'Adicione o primeiro colaborador.' : 'Peça pra um Super Admin adicionar colaboradores aqui.'}</p>
+          <h2>Ninguém no quadro ainda</h2>
+          <p>{isSuperAdmin ? 'Adicione a primeira pessoa da equipe com "Adicionar pessoa".' : 'Peça para um Super Admin adicionar a equipe aqui.'}</p>
         </div>
       ) : (
-        <div className={s.grid}>
-          {members.map((m, i) => (
-            <Reveal key={m.id} delay={Math.min(i, 10) * 50} className={s.card}>
-              {isSuperAdmin && (
-                <button className={s.removeBtn} title="Remover do quadro" onClick={() => removeMember(m)}>✕</button>
-              )}
-              <Avatar id={m.user_id} name={m.user_name} photo={m.user_avatar} size={64} />
-              <h3 className={s.cardName}>{m.user_name}</h3>
-              <div className={`${s.scoreRow} ${poppedId === m.id ? s.scorePop : ''}`}>
-                <span className={s.scoreStars}><IconThumbsUp size={14} /> {m.stars}</span>
-                {m.moons != null && <span className={s.scoreMoons}><IconThumbsDown size={14} /> {m.moons}</span>}
-              </div>
-              {isSuperAdmin && (
-                <div className={s.actionsRow}>
-                  <button className={`btn btn-ghost btn-sm ${s.likeBtn}`} onClick={() => setGivingFor({ member: m, type: 'star' })}>+ <IconThumbsUp size={13} /></button>
-                  <button className={`btn btn-ghost btn-sm ${s.dislikeBtn}`} onClick={() => setGivingFor({ member: m, type: 'moon' })}>+ <IconThumbsDown size={13} /></button>
-                </div>
-              )}
-              <button className={s.historyLink} onClick={() => setHistoryFor(m)}>📋 Histórico</button>
-            </Reveal>
-          ))}
+        <div className={s.layout}>
+          <section className={s.panel} aria-labelledby="tp-team">
+            <h2 id="tp-team" className={s.panelTitle}>Equipe<span className={s.count}>{list.length}</span></h2>
+            <ul className={s.roster}>
+              {list.map(m => (
+                <li key={m.id} className={s.person}>
+                  <Avatar id={m.user_id} name={m.user_name} photo={m.user_avatar} size={36} />
+                  <span className={s.personMain}>
+                    <span className={s.personName}>{m.user_name}</span>
+                    <span className={`${s.score} ${poppedId === m.id ? s.scorePop : ''}`}>
+                      <span className={s.likes} title="Reconhecimentos"><IconThumbsUp size={13} /> {m.stars}</span>
+                      {m.moons != null && <span className={s.dislikes} title="Pontos de melhoria (privado)"><IconThumbsDown size={13} /> {m.moons}</span>}
+                    </span>
+                  </span>
+                  <span className={s.personActions}>
+                    {isSuperAdmin && <>
+                      <button type="button" className={`${s.actBtn} ${s.likeBtn}`} onClick={() => setGivingFor({ member: m, type: 'star' })}
+                        aria-label={`Reconhecer ${m.user_name}`} title="Reconhecer"><IconThumbsUp size={14} /><span className={s.actLabel}>Reconhecer</span></button>
+                      <button type="button" className={`${s.actBtn} ${s.dislikeBtn}`} onClick={() => setGivingFor({ member: m, type: 'moon' })}
+                        aria-label={`Apontar ponto de melhoria para ${m.user_name}`} title="Apontar ponto de melhoria"><IconThumbsDown size={14} /></button>
+                    </>}
+                    <button type="button" className={s.actBtn} onClick={() => setHistoryFor(m)} aria-label={`Histórico de ${m.user_name}`} title="Histórico">
+                      <LineIcon name="clock" size={14} />
+                    </button>
+                    {isSuperAdmin && <RowMenu name={m.user_name} items={[
+                      { label: 'Tirar do quadro', hint: 'Apaga o histórico dessa pessoa aqui', icon: 'trash', danger: true, onClick: () => removeMember(m) },
+                    ]} />}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className={s.panel} aria-labelledby="tp-wall">
+            <h2 id="tp-wall" className={s.panelTitle}>Mural de reconhecimentos</h2>
+            {recent.length === 0 ? (
+              <p className={s.wallEmpty}>Nenhum reconhecimento ainda. {isSuperAdmin ? 'Use "Reconhecer" ao lado do nome de alguém da equipe.' : ''}</p>
+            ) : (
+              <ol className={s.wall}>
+                {recent.map(r => (
+                  <li key={r.id} className={s.post}>
+                    <Avatar id={r.user_id} name={r.user_name} photo={r.user_avatar} size={30} />
+                    <div className={s.postBody}>
+                      <p className={s.postHead}>
+                        <strong>{r.user_name}</strong> recebeu um reconhecimento
+                        <span className={s.postWhen}>{relTime(r.created_at)}</span>
+                      </p>
+                      {r.comment
+                        ? <blockquote className={s.postQuote}>{r.comment}</blockquote>
+                        : <p className={s.postNoComment}>Sem motivo escrito.</p>}
+                      <p className={s.postBy}>por {r.given_by_name}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
         </div>
       )}
 

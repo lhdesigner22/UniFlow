@@ -1,105 +1,98 @@
+/* Time → Desempenho: a equipe em linhas (com os totais e as ações) e, ao lado,
+   o mural com os últimos reconhecimentos e o motivo de cada um. */
 .page { padding: 36px 32px; display: flex; flex-direction: column; gap: 20px; }
 .loading { display: flex; align-items: center; justify-content: center; height: 60vh; color: var(--text-muted); }
 
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
-.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.title { font-size: 2rem; font-weight: 600; letter-spacing: -.032em; line-height: 1.1; }
+.sub { font-size: 14px; color: var(--text-muted); margin-top: 6px; max-width: 80ch; }
 .inviteWrap { position: relative; }
 
-/* ── Empty state ── */
-.empty { text-align: center; padding: 72px 24px; }
-.empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
-.empty p { color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 13px; }
+.empty { text-align: center; padding: 64px 24px; background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; }
+.empty h2 { margin: 0 0 8px; font-size: 1.1rem; font-weight: 600; }
+.empty p { color: var(--text-muted); max-width: 46ch; margin: 0 auto; line-height: 1.6; font-size: 13.5px; }
 
-/* ── Grid de colaboradores ── */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
-.card {
-  position: relative;
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: var(--radius); padding: 20px 16px; box-shadow: var(--shadow-sm);
-  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
-  transition: transform .18s var(--ease), box-shadow .18s var(--ease);
-  /* Entrada é o <Reveal> (componente), ao rolar até aqui. */
+.layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.panelTitle { margin: 0; padding: 14px 18px; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; border-bottom: 1px solid var(--border); }
+.count {
+  color: var(--text-muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
+  background: var(--surface-2); padding: 0 6px; border-radius: 999px; line-height: 18px;
 }
-.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
-.removeBtn {
-  position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 6px;
-  border: none; background: transparent; color: var(--text-muted); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; font-size: 12px;
-}
-.removeBtn:hover { background: var(--surface-2); color: var(--danger); }
 
-.avatar {
-  border-radius: 50%; color: #fff; font-weight: 700;
-  display: inline-flex; align-items: center; justify-content: center;
-  flex-shrink: 0; overflow: hidden;
-}
-.avatarPhoto { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-
-.cardName { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.3; }
-
-.scoreRow { display: flex; gap: 12px; font-size: 13px; font-weight: 700; }
+/* ── Equipe ── */
+.roster { list-style: none; margin: 0; padding: 0; }
+.person { display: flex; align-items: center; gap: 12px; padding: 11px 12px 11px 18px; border-bottom: 1px solid var(--border); }
+.person:last-child { border-bottom: none; }
+.personMain { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.personName { font-size: 14px; font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.score { display: inline-flex; gap: 12px; font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .scorePop { animation: pop .35s var(--ease-spring); }
-.scoreStars, .scoreMoons { display: inline-flex; align-items: center; gap: 4px; }
-.scoreStars { color: var(--accent-dark); }
-[data-theme="dark"] .scoreStars { color: #4ade80; }
-.scoreMoons { color: #dc2626; }
-[data-theme="dark"] .scoreMoons { color: #f87171; }
-
-.actionsRow { display: flex; gap: 6px; margin-top: 4px; }
-.actionsRow button:hover { transform: scale(1.1) rotate(-4deg); }
-.actionsRow button:active { transform: scale(.92); }
-.likeBtn { color: var(--accent-dark) !important; border-color: color-mix(in srgb, var(--success) 35%, transparent) !important; }
-.likeBtn:hover { background: color-mix(in srgb, var(--success) 12%, transparent) !important; border-color: var(--accent-dark) !important; }
-.dislikeBtn { color: #dc2626 !important; border-color: color-mix(in srgb, var(--danger) 35%, transparent) !important; }
-.dislikeBtn:hover { background: color-mix(in srgb, var(--danger) 12%, transparent) !important; border-color: #dc2626 !important; }
-[data-theme="dark"] .likeBtn { color: #4ade80 !important; }
-[data-theme="dark"] .dislikeBtn { color: #f87171 !important; }
-/* Botão de confirmar no modal de "dar like/dislike" — fundo sólido, cor
-   consegue distinguir de longe qual dos dois será registrado. */
-.confirmLikeBtn { background: var(--accent-dark); color: #fff; }
-.confirmLikeBtn:hover { background: #15803d; }
-.confirmDislikeBtn { background: #dc2626; color: #fff; }
-.confirmDislikeBtn:hover { background: #b91c1c; }
-
-.historyLink {
-  border: none; background: none; color: var(--text-muted); font-size: 11px;
-  cursor: pointer; padding: 2px 4px; margin-top: -2px;
+.likes, .dislikes { display: inline-flex; align-items: center; gap: 4px; }
+.likes { color: var(--success-text); }
+.dislikes { color: var(--danger-text); }
+.personActions { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.actBtn {
+  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 9px; border-radius: 8px;
+  border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 500;
 }
-.historyLink:hover { color: var(--brand); text-decoration: underline; }
+.actBtn:hover { color: var(--text); background: var(--surface-2); }
+.likeBtn { color: var(--success-text); border-color: color-mix(in srgb, var(--success) 40%, transparent); }
+.likeBtn:hover { color: var(--success-text); background: color-mix(in srgb, var(--success) 10%, transparent); }
+.dislikeBtn { color: var(--danger-text); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+.dislikeBtn:hover { color: var(--danger-text); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 
-/* ── Modal de histórico (só Super Admin) ── */
+/* ── Mural ── */
+.wall { list-style: none; margin: 0; padding: 4px 0; max-height: 620px; overflow-y: auto; }
+.post { display: flex; gap: 12px; padding: 12px 18px; }
+.post + .post { border-top: 1px solid var(--border); }
+.postBody { min-width: 0; flex: 1; }
+.postHead { margin: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; font-size: 13px; color: var(--text-muted); }
+.postHead strong { color: var(--text); font-weight: 500; }
+.postWhen { margin-left: auto; font-size: 12px; white-space: nowrap; }
+.postQuote {
+  margin: 6px 0 0; padding: 8px 12px; border-left: 2px solid var(--success); border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--success) 7%, transparent); font-size: 14px; line-height: 1.5; color: var(--text);
+}
+.postNoComment { margin: 4px 0 0; font-size: 12.5px; color: var(--text-muted); }
+.postBy { margin: 6px 0 0; font-size: 12px; color: var(--text-muted); }
+.wallEmpty { margin: 0; padding: 24px 18px; font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+
+/* ── Modais ── */
+.modalNote { margin: 0 0 12px; font-size: 13px; color: var(--text-muted); }
+.confirmLikeBtn { background: var(--success); color: #fff; }
+.confirmLikeBtn:hover { background: color-mix(in srgb, var(--success) 85%, #000); }
+.confirmDislikeBtn { background: var(--danger); color: #fff; }
+.confirmDislikeBtn:hover { background: color-mix(in srgb, var(--danger) 85%, #000); }
+
 .emptyHint { font-size: 13px; color: var(--text-muted); text-align: center; padding: 20px 0; }
-.historyList { display: flex; flex-direction: column; gap: 10px; }
-.historyRow { display: flex; align-items: flex-start; gap: 10px; }
-.historyRow .historyIcon { margin-top: 2px; }
+.historyList { display: flex; flex-direction: column; }
+.historyRow { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.historyRow:last-child { border-bottom: none; }
 .historyIcon {
-  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; margin-top: 1px;
   display: flex; align-items: center; justify-content: center;
 }
-.historyIcon.iconLike { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--accent-dark); }
-.historyIcon.iconDislike { background: color-mix(in srgb, var(--danger) 14%, transparent); color: #dc2626; }
-[data-theme="dark"] .historyIcon.iconLike { color: #4ade80; }
-[data-theme="dark"] .historyIcon.iconDislike { color: #f87171; }
-
-/* Ícone inline no texto de descrição (header) */
-.inlineIcon { vertical-align: -2px; }
-.likeText { color: var(--accent-dark); }
-.dislikeText { color: #dc2626; }
-[data-theme="dark"] .likeText { color: #4ade80; }
-[data-theme="dark"] .dislikeText { color: #f87171; }
-.historyInfo { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.historyGiver { font-size: 13px; font-weight: 600; color: var(--text); }
-.historyMeta { font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.historyMeta.historyMetaExpanded { white-space: normal; overflow: visible; text-overflow: unset; }
+.historyIcon.iconLike { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success-text); }
+.historyIcon.iconDislike { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger-text); }
+.historyInfo { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.historyHead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.historyGiver { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.historyMeta { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.historyComment { font-size: 13.5px; line-height: 1.5; color: var(--text); }
 .historyRemoveBtn {
-  border: none; background: transparent; color: var(--text-muted); cursor: pointer;
-  width: 22px; height: 22px; border-radius: 6px; font-size: 12px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; background: transparent; color: var(--text-muted); cursor: pointer;
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; display: grid; place-items: center;
 }
-.historyRemoveBtn:hover { background: var(--surface-2); color: var(--danger); }
+.historyRemoveBtn:hover { border-color: var(--border); color: var(--danger-text); }
 
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; }
+}
 @media (max-width: 768px) {
   .page { padding: 20px 16px; gap: 16px; }
   .header { flex-direction: column; }
+  .title { font-size: 1.6rem; }
+  .actLabel { display: none; }
+  .person { padding-left: 14px; }
 }
