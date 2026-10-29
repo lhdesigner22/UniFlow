@@ -18,6 +18,12 @@ const PATHS = {
   more: <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>,
   chevronLeft: <><path d="m15 18-6-6 6-6" /></>,
   chevronRight: <><path d="m9 18 6-6-6-6" /></>,
+  lock: <><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>,
+  eye: <><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
+  pause: <><path d="M9 5v14M15 5v14" /></>,
+  play: <><path d="M7 4.5v15l12-7.5-12-7.5Z" /></>,
+  check: <><path d="M20 6 9 17l-5-5" /></>,
+  send: <><path d="m22 2-7 20-4-9-9-4 20-7Z" /><path d="M22 2 11 13" /></>,
   logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></>,
 }
 

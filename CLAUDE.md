@@ -187,7 +187,10 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   Empréstimos; ícones de ação em `components/common/LineIcon.jsx` (usar no lugar de emoji). Outras telas: aplicar o mesmo tela a tela.
   **Admin** (out/2026, skills design-critique + design-taste-frontend): título "Administração" com o retrato do acesso embaixo, abas sublinhadas
   sem emoji, aba Usuários = `components/admin/UsersTab.jsx` (tabela real, busca, filtros por cargo/departamento, ações no menu "⋯").
-  Falta nas abas Cargos/Departamentos/Notificações/GLPI (ainda com emoji). Crítica das 5 telas restantes: Admin < KB < Impressoras < Agenda < Aprovações.
+  Abas Cargos/Departamentos/Notificações/GLPI refeitas (out/2026, skill frontend-design): uma frase `.lead` no lugar da caixa azul "Como
+  funciona", Cargos = lista à esquerda + editor, permissões num seletor de 3 posições (`components/admin/LevelSwitch.jsx`, rádios de
+  verdade — também no modal "O que aparece"), Departamentos = tabela com linha de criar, GLPI/Notificações = painel com linhas.
+  `?tab=` abre qualquer aba do Admin. Próximas telas pela crítica: KB < Impressoras < Agenda < Aprovações.
 - **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
   `all: unset` dos módulos). Cores (1ª etapa feita): hex/rgba com o MESMO valor de um token viraram `var(--x)` / `color-mix(in srgb, var(--x) N%, transparent)`
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`

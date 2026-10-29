@@ -1,0 +1,25 @@
+/* Segmento de 3 posições. A opção marcada ganha fundo no tom do nível
+   (neutro / âmbar / verde) — a cor só reforça o texto, nunca o substitui. */
+.switch {
+  display: inline-flex; padding: 2px; gap: 2px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2);
+}
+.seg { position: relative; display: flex; }
+.seg input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; width: 100%; height: 100%; }
+.seg span {
+  display: block; padding: 5px 12px; border-radius: 7px; white-space: nowrap;
+  font-size: 12.5px; font-weight: 500; color: var(--text-muted);
+  transition: background .15s, color .15s;
+}
+.seg:hover span { color: var(--text); }
+.seg input:checked + span { background: var(--surface); color: var(--text); box-shadow: 0 0 0 1px var(--border); }
+.seg[data-tone="view"] input:checked + span {
+  background: color-mix(in srgb, var(--warning) 16%, var(--surface)); color: var(--warning-text); box-shadow: none;
+}
+.seg[data-tone="edit"] input:checked + span {
+  background: color-mix(in srgb, var(--success) 16%, var(--surface)); color: var(--success-text); box-shadow: none;
+}
+.seg input:focus-visible + span { outline: 2px solid var(--brand); outline-offset: 1px; }
+.switch[data-disabled] .seg input { cursor: default; }
+.switch[data-disabled] .seg:hover span { color: var(--text-muted); }
+.switch[data-disabled] .seg input:checked + span { opacity: .85; }

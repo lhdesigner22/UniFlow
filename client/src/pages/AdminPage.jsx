@@ -11,6 +11,7 @@ import { confirmDialog, alertDialog } from '../store/dialogStore'
 import { avatarColor } from '../utils/avatarColor'
 import { parseDbTimestamp } from '../utils/formatDuration'
 import Reveal from '../components/common/Reveal'
+import LineIcon from '../components/common/LineIcon'
 import s from './AdminPage.module.css'
 
 const COLORS = ['#4a7cf7','#22c55e','#f59e0b','#ef4444','#8b5cf6','#14b8a6','#ec4899','#f97316','#64748b']
@@ -21,7 +22,9 @@ const ROLE_LABELS = {
   user:        { label: '👤 Usuário',     color: '#64748b' },
 }
 
-const WEEKDAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+const GLPI_TICKET = 'https://glpi.inventario.unifecaf.edu.br/front/ticket.form.php?id='
+const OUTBOX_STATUS = { sent: 'Enviado', failed: 'Falhou', pending: 'Na fila' }
+const WEEKDAYS =['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
 
 /**
@@ -42,24 +45,25 @@ function RecipientChips({ recipients, onAddUser, onAddEmail, onRemove }) {
 
   return (
     <div className={s.recipientsBox}>
+      <span className={s.fieldLabel}>Quem recebe</span>
       <div className={s.chipsRow}>
         {recipients.map(r => (
           <span key={r.id} className={s.chip}>
-            {r.user_id && (
+            {r.user_id ? (
               <span className={s.chipDot} style={{ background: avatarColor(r.user_id) }}>
                 {(r.user_name || '?').charAt(0).toUpperCase()}
               </span>
-            )}
+            ) : <LineIcon name="mail" size={13} className={s.chipMail} />}
             {r.user_name || r.email}
-            <button type="button" className={s.chipRemove} onClick={() => onRemove(r.id)}>×</button>
+            <button type="button" className={s.chipRemove} onClick={() => onRemove(r.id)} aria-label={`Tirar ${r.user_name || r.email}`}>×</button>
           </span>
         ))}
-        {recipients.length === 0 && <span className={s.emptyHint}>Nenhum destinatário ainda.</span>}
+        {recipients.length === 0 && <span className={s.emptyHint}>Ninguém ainda. Adicione uma pessoa do UniFlow ou um e-mail de fora.</span>}
       </div>
       <div className={s.addRecipientRow}>
         <div className={s.inviteWrap}>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowPicker(v => !v)}>
-            + Adicionar destinatário
+            <LineIcon name="user" size={14} /> Adicionar pessoa
           </button>
           {showPicker && (
             <MemberPicker
@@ -69,16 +73,17 @@ function RecipientChips({ recipients, onAddUser, onAddEmail, onRemove }) {
             />
           )}
         </div>
-        <span className={s.orSep}>ou digite um e-mail externo</span>
         <input
           className={s.emailInput}
-          placeholder="email@externo.com"
+          type="email"
+          placeholder="E-mail de fora (ex: diretoria@fecaf.com.br)"
+          aria-label="E-mail de fora do UniFlow"
           value={emailInput}
           onChange={e => setEmailInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && submitEmail()}
         />
         <button type="button" className="btn btn-ghost btn-sm" onClick={submitEmail} disabled={!emailInput.trim()}>
-          + Adicionar
+          Adicionar e-mail
         </button>
       </div>
     </div>
@@ -109,21 +114,19 @@ function GlpiPauseCard() {
   if (!state) return null
   const when = state.at ? new Date(state.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 16,
-      padding: '14px 18px', borderRadius: 'var(--radius)', border: `1px solid ${state.paused ? 'var(--danger, #EF4444)' : 'var(--border2)'}`,
-      background: state.paused ? 'color-mix(in srgb, var(--danger, #EF4444) 10%, transparent)' : 'var(--surface)',
-    }}>
-      <div>
-        <strong style={{ fontSize: 14 }}>{state.paused ? '⏸️ Consultas ao GLPI PAUSADAS' : '▶️ Consultas ao GLPI ativas'}</strong>
-        <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 3 }}>
+    <div className={`${s.statusBar} ${state.paused ? s.statusPaused : ''}`} role="status">
+      <span className={s.statusDot} aria-hidden="true" />
+      <div className={s.statusText}>
+        <strong>{state.paused ? 'Consultas ao GLPI pausadas' : 'Consultas ao GLPI ativas'}</strong>
+        <p>
           {state.paused
-            ? `O UniFlow não está falando com o GLPI${when ? ` (desde ${when}${state.by ? `, por ${state.by}` : ''})` : ''}. Backlog e Total mostram o último resumo salvo.`
+            ? `O UniFlow não está falando com o GLPI${when ? ` desde ${when}${state.by ? `, por ${state.by}` : ''}` : ''}. Backlog e Total mostram o último resumo salvo.`
             : 'Backlog a cada 1 min; técnicos, Total e Eventos a cada 15 min. Pause se o GLPI estiver fora do ar ou lento.'}
         </p>
       </div>
-      <button className={`btn ${state.paused ? 'btn-primary' : 'btn-ghost'}`} disabled={busy} onClick={toggle}>
-        {busy ? 'Salvando...' : state.paused ? '▶️ Religar GLPI' : '⏸️ Pausar GLPI'}
+      <button className={`btn btn-sm ${state.paused ? 'btn-primary' : 'btn-ghost'}`} disabled={busy} onClick={toggle}>
+        <LineIcon name={state.paused ? 'play' : 'pause'} size={14} />
+        {busy ? 'Salvando...' : state.paused ? 'Religar GLPI' : 'Pausar GLPI'}
       </button>
     </div>
   )
@@ -132,9 +135,12 @@ function GlpiPauseCard() {
 export default function AdminPage() {
   const navigate = useNavigate()
   const { user: me } = useAuthStore()
-  // ?tab=logs&category=vault: link do aviso no sininho e do botão do Cofre.
+  // ?tab=logs&category=vault: link do aviso no sininho e do botão do Cofre (vale pra qualquer aba).
   const [searchParams] = useSearchParams()
-  const [tab, setTab] = useState(searchParams.get('tab') === 'logs' ? 'logs' : 'users')
+  const [tab, setTab] = useState(() => {
+    const t = searchParams.get('tab')
+    return ['users', 'roles', 'departments', 'notifications', 'glpi', 'logs'].includes(t) ? t : 'users'
+  })
   const [users, setUsers] = useState([])
   const [departments, setDepartments] = useState([])
   const [roles, setRoles] = useState([])       // cargos (perfis de acesso)
@@ -476,51 +482,107 @@ export default function AdminPage() {
       {/* ── Tab: Departamentos ── */}
       {tab === 'departments' && (
         <Reveal as="div" className={s.section}>
-          <div className={s.info}>
-            <strong>🏢 Departamentos</strong> agrupam usuários por equipe e separam o conteúdo do sistema. Em cada um, escolha a <em>entidade do GLPI</em>: é ela que define quais chamados a equipe vê em Chamados (Backlog e Total). Sem entidade, o departamento não vê chamados.
-          </div>
+          <p className={s.lead}>
+            Departamentos agrupam as pessoas por equipe e separam o conteúdo do sistema. A entidade do GLPI define quais
+            chamados a equipe vê no Backlog e no Total; sem entidade, o departamento não vê chamados.
+          </p>
 
           <datalist id="glpi-entities">
             {glpiEntities.map(e => <option key={e} value={e} />)}
           </datalist>
-          <div className={s.deptGrid}>
-            {departments.map(d => (
-              <div key={d.id} className={s.deptCard} style={{ borderColor: d.color + '60' }}>
-                <div className={s.deptDot} style={{ background: d.color }} />
-                <div className={s.deptInfo}>
-                  <span className={s.deptName}>{d.name}</span>
-                  <span className={s.deptCount}>{d.member_count} {d.member_count === 1 ? 'membro' : 'membros'}</span>
-                  <input
-                    list="glpi-entities"
-                    defaultValue={d.glpi_entity_name || ''}
-                    key={`${d.id}-${d.glpi_entity_name || ''}`}
-                    placeholder="Entidade do GLPI (Chamados)"
-                    title="Entidade do GLPI cujos chamados este departamento vê no Backlog e no Total de Chamados. Escolha da lista (vem do GLPI) ou digite o nome."
-                    onBlur={e => saveDeptEntity(d, e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
-                    style={{ marginTop: 6, fontSize: 12, padding: '4px 8px', width: '100%', minWidth: 190 }}
-                  />
-                  {(() => {
-                    const lim = d.module_limits || {}
-                    const hidden = Object.values(lim).filter(v => v === 'none').length
-                    const viewOnly = Object.values(lim).filter(v => v === 'view').length
-                    return (
-                      <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6, fontSize: 12, justifyContent: 'flex-start' }}
-                        disabled={isAuditor} onClick={() => setDeptModules(d)}
-                        title="Quais áreas do sistema aparecem para quem é deste departamento">
-                        👁 O que aparece{hidden || viewOnly ? ` · ${[hidden && `${hidden} oculta(s)`, viewOnly && `${viewOnly} só ver`].filter(Boolean).join(', ')}` : ' · tudo conforme o cargo'}
-                      </button>
-                    )
-                  })()}
+          <div className={s.card}>
+            <table className={s.table}>
+              <thead>
+                <tr>
+                  <th>Departamento</th>
+                  <th className={s.num}>Pessoas</th>
+                  <th>Entidade do GLPI</th>
+                  <th>O que aparece</th>
+                  <th className={s.actionsCol}><span className="sr-only">Ações</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {departments.map(d => {
+                  const lim = d.module_limits || {}
+                  const hidden = Object.values(lim).filter(v => v === 'none').length
+                  const viewOnly = Object.values(lim).filter(v => v === 'view').length
+                  const summary = hidden || viewOnly
+                    ? [hidden && `${hidden} ${hidden === 1 ? 'oculta' : 'ocultas'}`, viewOnly && `${viewOnly} só ver`].filter(Boolean).join(', ')
+                    : 'Tudo conforme o cargo'
+                  return (
+                    <tr key={d.id}>
+                      <td>
+                        <span className={s.deptName}>
+                          <span className={s.deptDot} style={{ background: d.color }} aria-hidden="true" />
+                          {d.name}
+                        </span>
+                      </td>
+                      <td className={s.num}>{d.member_count}</td>
+                      <td>
+                        <input
+                          className={s.cellInput}
+                          list="glpi-entities"
+                          defaultValue={d.glpi_entity_name || ''}
+                          key={`${d.id}-${d.glpi_entity_name || ''}`}
+                          placeholder="Sem entidade"
+                          aria-label={`Entidade do GLPI de ${d.name}`}
+                          title="Escolha da lista (vem do GLPI) ou digite o nome. Salva ao sair do campo."
+                          disabled={isAuditor}
+                          onBlur={e => saveDeptEntity(d, e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+                        />
+                      </td>
+                      <td>
+                        <button type="button" className={s.linkBtn} disabled={isAuditor} onClick={() => setDeptModules(d)}
+                          title="Quais áreas do sistema aparecem para quem é deste departamento">
+                          <LineIcon name="eye" size={14} /> {summary}
+                        </button>
+                      </td>
+                      <td className={s.actionsCol}>
+                        {!isAuditor && (
+                          <button type="button" className={s.iconBtn} onClick={() => deleteDept(d.id)}
+                            aria-label={`Excluir o departamento ${d.name}`} title="Excluir departamento">
+                            <LineIcon name="trash" size={15} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+                {departments.length === 0 && (
+                  <tr><td colSpan={5} className={s.empty}>Nenhum departamento ainda. Crie o primeiro abaixo.</td></tr>
+                )}
+              </tbody>
+            </table>
+
+            {!isAuditor && (
+              <div className={s.addRow}>
+                <label htmlFor="new-dept" className={s.addLabel}>Novo departamento</label>
+                <input
+                  id="new-dept"
+                  className={s.addInput}
+                  placeholder="Ex: RH, Marketing, Secretaria"
+                  value={newDept.name}
+                  onChange={e => { setNewDept(d => ({ ...d, name: e.target.value })); setDeptMsg(null) }}
+                  onKeyDown={e => e.key === 'Enter' && addDept()}
+                />
+                <div className={s.swatches} role="radiogroup" aria-label="Cor do departamento">
+                  {COLORS.map(c => (
+                    <button type="button" key={c} role="radio" aria-checked={newDept.color === c} aria-label={`Cor ${c}`}
+                      className={s.swatch} style={{ '--c': c }} onClick={() => setNewDept(d => ({ ...d, color: c }))} />
+                  ))}
                 </div>
-                <button className="btn btn-icon btn-sm" style={{ color:'var(--red)', marginLeft:'auto' }}
-                  onClick={() => deleteDept(d.id)}>🗑️</button>
+                <button className="btn btn-primary btn-sm" onClick={addDept} disabled={!newDept.name.trim()}>
+                  Criar departamento
+                </button>
               </div>
-            ))}
-            {departments.length === 0 && (
-              <p style={{ color:'var(--muted)', fontSize:13 }}>Nenhum departamento criado ainda.</p>
             )}
           </div>
+          {deptMsg && (
+            <p role={deptMsg.type === 'error' ? 'alert' : 'status'} className={deptMsg.type === 'error' ? s.msgErr : s.msgOk}>
+              {deptMsg.text}
+            </p>
+          )}
           {deptModules && (
             <DepartmentModulesModal
               dept={deptModules}
@@ -532,52 +594,26 @@ export default function AdminPage() {
               }}
             />
           )}
-
-          {/* Add form */}
-          <div className={s.addDeptForm}>
-            <p style={{ fontSize:13, fontWeight:600, margin:'0 0 10px', color:'var(--white)' }}>+ Criar departamento</p>
-            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-              <input
-                placeholder="Ex: TI, RH, Marketing..."
-                value={newDept.name}
-                onChange={e => { setNewDept(d => ({ ...d, name: e.target.value })); setDeptMsg(null) }}
-                onKeyDown={e => e.key === 'Enter' && addDept()}
-                style={{ flex:1 }}
-              />
-              <div style={{ display:'flex', gap:5 }}>
-                {COLORS.map(c => (
-                  <button type="button" key={c} onClick={() => setNewDept(d => ({ ...d, color: c }))}
-                    style={{ width:22, height:22, borderRadius:'50%', background:c, border: newDept.color === c ? '2px solid #fff' : '2px solid transparent', cursor:'pointer', flexShrink:0 }} />
-                ))}
-              </div>
-              <button className="btn btn-primary btn-sm" onClick={addDept} disabled={!newDept.name.trim()}>
-                + Criar
-              </button>
-            </div>
-            {deptMsg && (
-              <p role={deptMsg.type === 'error' ? 'alert' : 'status'} style={{ fontSize:12, color: deptMsg.type === 'error' ? 'var(--red)' : 'var(--green)', marginTop:6 }}>
-                {deptMsg.text}
-              </p>
-            )}
-          </div>
         </Reveal>
       )}
 
       {/* ── Tab: Notificações ── */}
       {tab === 'notifications' && (
         <Reveal as="div" className={s.section}>
-          <div className={s.info}>
-            <strong>📧 Como funciona:</strong> Configure o resumo semanal e o alerta diário por e-mail. Destinatários que são usuários do sistema também recebem uma notificação dentro do app.
-          </div>
+          <p className={s.lead}>
+            Avisos por e-mail com os eventos da Agenda. Quem é usuário do UniFlow também recebe o aviso no sininho.
+          </p>
 
+          <div className={s.panel}>
           {/* Resumo semanal */}
-          <div className={s.digestCard}>
+          <section className={s.panelRow} aria-labelledby="dg-weekly">
             <div className={s.digestHeader}>
               <div>
-                <h3 className={s.digestTitle}>Resumo semanal</h3>
-                <p className={s.digestSub}>Envia um resumo dos eventos da semana.</p>
+                <h3 id="dg-weekly" className={s.digestTitle}>Resumo semanal</h3>
+                <p className={s.digestSub}>Os eventos da semana, num e-mail só.</p>
               </div>
               <label className={s.switch}>
+                <span className="sr-only">Enviar o resumo semanal</span>
                 <input
                   type="checkbox"
                   checked={settings.weekly_digest_enabled === 'true'}
@@ -628,16 +664,17 @@ export default function AdminPage() {
               onAddEmail={email => addDigestEmail('weekly', email)}
               onRemove={id => removeDigestRecipient('weekly', id)}
             />
-          </div>
+          </section>
 
           {/* Alerta diário */}
-          <div className={s.digestCard}>
+          <section className={s.panelRow} aria-labelledby="dg-daily">
             <div className={s.digestHeader}>
               <div>
-                <h3 className={s.digestTitle}>Alerta diário</h3>
-                <p className={s.digestSub}>Envia um aviso diário com os eventos do próprio dia, no horário configurado.</p>
+                <h3 id="dg-daily" className={s.digestTitle}>Alerta diário</h3>
+                <p className={s.digestSub}>Os eventos do dia, no horário escolhido.</p>
               </div>
               <label className={s.switch}>
+                <span className="sr-only">Enviar o alerta diário</span>
                 <input
                   type="checkbox"
                   checked={settings.daily_digest_enabled === 'true'}
@@ -671,57 +708,67 @@ export default function AdminPage() {
               onAddEmail={email => addDigestEmail('daily', email)}
               onRemove={id => removeDigestRecipient('daily', id)}
             />
+          </section>
           </div>
 
           {settingsMsg && (
-            <p role="alert" style={{ fontSize:12, color:'var(--red)' }}>{settingsMsg.text}</p>
+            <p role="alert" className={s.msgErr}>{settingsMsg.text}</p>
           )}
 
           {/* Fila de e-mail */}
-          <div className={s.outboxCard}>
-            <h3 className={s.digestTitle}>Fila de e-mail</h3>
-
-            <div className={s.addRecipientRow} style={{ marginBottom: 12 }}>
-              <input
-                className={s.emailInput}
-                placeholder="seu-email@teste.com"
-                value={testEmail}
-                onChange={e => setTestEmail(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendTestEmail()}
-              />
-              <button type="button" className="btn btn-primary btn-sm" onClick={sendTestEmail} disabled={!testEmail.trim() || testStatus?.type === 'loading'}>
-                📨 Enviar e-mail de teste
-              </button>
+          <section className={s.card} aria-labelledby="outbox-title">
+            <div className={s.cardHead}>
+              <div>
+                <h3 id="outbox-title" className={s.digestTitle}>Fila de e-mail</h3>
+                <p className={s.digestSub}>
+                  {pendingOutboxCount > 0
+                    ? `${pendingOutboxCount} ${pendingOutboxCount === 1 ? 'e-mail espera' : 'e-mails esperam'} o próximo envio (a cada 15 min).`
+                    : 'Nada esperando envio. Os últimos 20 aparecem abaixo.'}
+                </p>
+              </div>
+              <div className={s.testRow}>
+                <input
+                  className={s.emailInput}
+                  type="email"
+                  placeholder="Seu e-mail"
+                  aria-label="E-mail para receber o teste"
+                  value={testEmail}
+                  onChange={e => setTestEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendTestEmail()}
+                />
+                <button type="button" className="btn btn-ghost btn-sm" onClick={sendTestEmail} disabled={!testEmail.trim() || testStatus?.type === 'loading'}>
+                  <LineIcon name="send" size={14} /> Enviar teste
+                </button>
+              </div>
             </div>
             {testStatus && (
-              <p role="status" style={{ fontSize: 12, marginBottom: 12, color: testStatus.type === 'success' ? 'var(--green)' : testStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
+              <p role="status" className={`${s.cardNote} ${testStatus.type === 'success' ? s.msgOk : testStatus.type === 'error' ? s.msgErr : ''}`}>
                 {testStatus.text}
               </p>
             )}
 
-            {pendingOutboxCount > 0 && (
-              <p className={s.outboxNote}>
-                <strong>{pendingOutboxCount} {pendingOutboxCount === 1 ? 'e-mail' : 'e-mails'}</strong> na fila aguardando o próximo despacho (o cron roda a cada 15 min).
-              </p>
-            )}
             {outboxRows.length > 0 && (
-              <div className={s.outboxTable}>
-                <div className={s.outboxHead}>
-                  <span>Assunto</span><span>Para</span><span>Status</span><span>Criado em</span>
-                </div>
-                {outboxRows.slice(0, 20).map(o => (
-                  <div key={o.id} className={s.outboxRow}>
-                    <span className={s.outboxSubject}>{o.subject}</span>
-                    <span>{o.to_email || o.to_user_name || o.to_user_id || '—'}</span>
-                    <span className={`badge ${o.status === 'sent' ? 'badge-green' : o.status === 'failed' ? 'badge-red' : 'badge-amber'}`}>
-                      {o.status}
-                    </span>
-                    <span>{o.created_at ? parseDbTimestamp(o.created_at).toLocaleString('pt-BR') : '—'}</span>
-                  </div>
-                ))}
-              </div>
+              <table className={s.table}>
+                <thead>
+                  <tr><th>Assunto</th><th>Para</th><th>Situação</th><th className={s.num}>Criado em</th></tr>
+                </thead>
+                <tbody>
+                  {outboxRows.slice(0, 20).map(o => (
+                    <tr key={o.id}>
+                      <td className={s.outboxSubject}>{o.subject}</td>
+                      <td className={s.muted}>{o.to_email || o.to_user_name || o.to_user_id || '—'}</td>
+                      <td>
+                        <span className={`badge ${o.status === 'sent' ? 'badge-green' : o.status === 'failed' ? 'badge-red' : 'badge-amber'}`}>
+                          {OUTBOX_STATUS[o.status] || o.status}
+                        </span>
+                      </td>
+                      <td className={`${s.num} ${s.muted}`}>{o.created_at ? parseDbTimestamp(o.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
-          </div>
+          </section>
         </Reveal>
       )}
 
@@ -729,193 +776,194 @@ export default function AdminPage() {
       {tab === 'glpi' && (
         <Reveal as="div" className={s.section}>
           <GlpiPauseCard />
-          <div className={s.info}>
-            <strong>🖥️ Como funciona:</strong> A cada 15 min, o sistema busca no GLPI os chamados da fila "Eventos" (status configurado) da entidade configurada, extrai data/hora da descrição (formato do sistema de reservas de sala) e cria automaticamente um evento na Agenda. Chamados cuja descrição não segue o formato esperado ficam na lista abaixo pra você criar o evento manualmente.
-          </div>
+          <p className={s.lead}>
+            A cada 15 min o UniFlow traz do GLPI os chamados da fila Eventos e cria o evento na Agenda com a data e a hora
+            da descrição. O que não segue o formato do sistema de reservas fica em "Chamados não reconhecidos", no fim da página.
+          </p>
 
-          <div className={s.outboxCard}>
-            <h3 className={s.digestTitle}>Configuração</h3>
-            <div className={s.formRow} style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                <input
-                  type="checkbox"
-                  checked={settings.glpi_enabled === 'true'}
-                  onChange={e => updateSetting('glpi_enabled', e.target.checked ? 'true' : 'false')}
-                />
-                Sincronização ativa
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                Status do GLPI:
-                <input
-                  type="number"
-                  style={{ width: 70 }}
-                  value={settings.glpi_status_id ?? '17'}
-                  onChange={e => updateSetting('glpi_status_id', e.target.value)}
-                />
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                Entidade (ID):
-                <input
-                  type="number"
-                  style={{ width: 70 }}
-                  value={settings.glpi_entity_id ?? '4'}
-                  onChange={e => updateSetting('glpi_entity_id', e.target.value)}
-                />
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                Departamento dos eventos:
-                <select
-                  style={{ width: 'auto' }}
-                  value={settings.glpi_department_id ?? ''}
-                  onChange={e => updateSetting('glpi_department_id', e.target.value)}
-                  title="Em qual departamento os eventos que vêm do GLPI aparecem na Agenda"
-                >
+          <section className={s.card} aria-labelledby="glpi-import">
+            <div className={s.cardHead}>
+              <div>
+                <h3 id="glpi-import" className={s.digestTitle}>Importação de eventos</h3>
+                <p className={s.digestSub}>De onde vêm os chamados e em qual departamento os eventos aparecem na Agenda.</p>
+              </div>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={syncGlpiNow} disabled={syncingGlpi}>
+                <LineIcon name="refresh" size={14} /> Sincronizar agora
+              </button>
+            </div>
+            <div className={s.formGrid}>
+              <div className={s.formField}>
+                <span className={s.fieldLabel} id="glpi-on-label">Sincronização</span>
+                <label className={s.switchRow}>
+                  <span className={s.switch}>
+                    <input
+                      type="checkbox" aria-labelledby="glpi-on-label"
+                      checked={settings.glpi_enabled === 'true'}
+                      onChange={e => updateSetting('glpi_enabled', e.target.checked ? 'true' : 'false')}
+                    />
+                    <span className={s.switchTrack} />
+                  </span>
+                  {settings.glpi_enabled === 'true' ? 'Ligada' : 'Desligada'}
+                </label>
+              </div>
+              <div className={s.formField}>
+                <label className={s.fieldLabel} htmlFor="glpi-status">Status da fila no GLPI</label>
+                <input id="glpi-status" type="number" value={settings.glpi_status_id ?? '17'}
+                  onChange={e => updateSetting('glpi_status_id', e.target.value)} />
+              </div>
+              <div className={s.formField}>
+                <label className={s.fieldLabel} htmlFor="glpi-entity">Entidade (ID)</label>
+                <input id="glpi-entity" type="number" value={settings.glpi_entity_id ?? '4'}
+                  onChange={e => updateSetting('glpi_entity_id', e.target.value)} />
+              </div>
+              <div className={s.formField}>
+                <label className={s.fieldLabel} htmlFor="glpi-dept">Departamento dos eventos</label>
+                <select id="glpi-dept" value={settings.glpi_department_id ?? ''}
+                  onChange={e => updateSetting('glpi_department_id', e.target.value)}>
                   <option value="">Geral (todos)</option>
                   {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
-              </label>
-              <button type="button" className="btn btn-primary btn-sm" onClick={syncGlpiNow} disabled={syncingGlpi}>
-                🔄 Sincronizar agora
-              </button>
+              </div>
             </div>
             {glpiSyncStatus && (
-              <p role="status" style={{ fontSize: 12, marginBottom: 4, color: glpiSyncStatus.type === 'success' ? 'var(--green)' : glpiSyncStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
+              <p role="status" className={`${s.cardNote} ${glpiSyncStatus.type === 'success' ? s.msgOk : glpiSyncStatus.type === 'error' ? s.msgErr : ''}`}>
                 {glpiSyncStatus.text}
               </p>
             )}
-          </div>
+          </section>
 
-          <div className={s.outboxCard}>
-            <h3 className={s.digestTitle}>Solucionar chamados retroativos</h3>
-            <p className={s.emptyHint} style={{ marginBottom: 10 }}>
-              Chamados da Agenda cujo evento já terminou. Veja a lista e confirme para marcá-los como Solucionado no GLPI (até 20 por clique).
-            </p>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={loadRetro} disabled={retroBusy}>
-                🔎 Ver chamados retroativos
-              </button>
-              {retroList?.length > 0 && (
-                <button type="button" className="btn btn-primary btn-sm" onClick={resolveRetro} disabled={retroBusy}>
-                  ✅ Solucionar {Math.min(retroList.length, 20)} no GLPI
-                </button>
-              )}
-            </div>
-            {retroStatus && (
-              <p role="status" style={{ fontSize: 12, marginBottom: 8, color: retroStatus.type === 'success' ? 'var(--green)' : retroStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
-                {retroStatus.text}
-              </p>
-            )}
-            {retroList && (retroList.length === 0 ? (
-              <p className={s.emptyHint}>Nenhum chamado retroativo pendente.</p>
-            ) : (
-              <div style={{ maxHeight: 260, overflowY: 'auto', fontSize: 13 }}>
-                <p style={{ marginBottom: 6, color: 'var(--muted)' }}>{retroList.length} chamado(s) pendente(s):</p>
-                {retroList.map(t => (
-                  <div key={t.event_id} style={{ padding: '4px 0', borderBottom: '1px solid var(--border2)' }}>
-                    <a href={`https://glpi.inventario.unifecaf.edu.br/front/ticket.form.php?id=${t.glpi_ticket_id}`} target="_blank" rel="noreferrer">
-                      #{t.glpi_ticket_id}
-                    </a>{' '}— {t.title} <span style={{ color: 'var(--muted)' }}>(terminou {t.ended_at})</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          <div className={s.outboxCard}>
-            <h3 className={s.digestTitle}>Chamados duplicados na Agenda</h3>
-            <p className={s.emptyHint} style={{ marginBottom: 10 }}>
-              Vários chamados do mesmo evento (mesmo título, data e hora, em qualquer sala — ex: um feriado com um chamado por sala). Fica o chamado mais antigo, com as salas somadas na descrição; os outros são solucionados no GLPI (apontando pro original) e o evento repetido sai da Agenda. Os lotes continuam sozinhos em segundo plano, um por minuto.
-            </p>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 10 }}>
-              <input
-                type="checkbox"
-                style={{ width: 'auto', flexShrink: 0 }}
-                checked={settings.glpi_dup_auto === 'true'}
-                onChange={e => updateSetting('glpi_dup_auto', e.target.checked ? 'true' : 'false')}
-              />
-              Solucionar duplicatas automaticamente no GLPI (a cada minuto, sem precisar clicar)
-            </label>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={loadDups} disabled={dupBusy}>
-                🔎 Ver duplicatas
-              </button>
-              {(dupCount > 0 || cleanCount > 0) && (
-                <button type="button" className="btn btn-primary btn-sm" onClick={resolveDups} disabled={dupBusy}>
-                  ✅ Limpar duplicatas{dupCount > 0 ? ` · solucionar ${dupCount} no GLPI` : ''}
-                </button>
-              )}
-            </div>
-            {dupStatus && (
-              <p role="status" style={{ fontSize: 12, marginBottom: 8, color: dupStatus.type === 'success' ? 'var(--green)' : dupStatus.type === 'error' ? 'var(--red)' : 'var(--muted)' }}>
-                {dupStatus.text}
-              </p>
-            )}
-            {dupList && (dupList.items.length === 0 ? (
-              <p className={s.emptyHint}>Nenhuma duplicata encontrada.</p>
-            ) : (
-              <div style={{ maxHeight: 260, overflowY: 'auto', fontSize: 13 }}>
-                <p style={{ marginBottom: 6, color: 'var(--muted)' }}>
-                  {dupList.importing ? '⏳ importando chamados novos para a Agenda… · ' : ''}{dupList.background ? '⚙️ solucionando em segundo plano… · ' : ''}{dupCount} a solucionar no GLPI{cleanCount > 0 ? ` · ${cleanCount} já tratado(s) no GLPI, só saem da Agenda` : ''} · {dupList.items.length} evento(s):
-                </p>
-                {dupList.items.map(g => (
-                  <div key={g.keep_ticket_id} style={{ padding: '4px 0', borderBottom: '1px solid var(--border2)' }}>
-                    {g.title} <span style={{ color: 'var(--muted)' }}>({g.event_date}{g.event_time ? ` ${g.event_time}` : ''})</span>
-                    <br />
-                    <span style={{ color: 'var(--muted)' }}>fica </span>
-                    <a href={`https://glpi.inventario.unifecaf.edu.br/front/ticket.form.php?id=${g.keep_ticket_id}`} target="_blank" rel="noreferrer">#{g.keep_ticket_id}</a>
-                    {g.duplicate_ticket_ids.length > 0 && <span style={{ color: 'var(--muted)' }}> · solucionar </span>}
-                    {g.duplicate_ticket_ids.map((id, i) => (
-                      <span key={id}>
-                        {i > 0 && ', '}
-                        <a href={`https://glpi.inventario.unifecaf.edu.br/front/ticket.form.php?id=${id}`} target="_blank" rel="noreferrer">#{id}</a>
-                      </span>
-                    ))}
-                    {(g.cleanup_ticket_ids || []).length > 0 && <span style={{ color: 'var(--muted)' }}> · só sai da Agenda: </span>}
-                    {(g.cleanup_ticket_ids || []).map((id, i) => (
-                      <span key={id}>
-                        {i > 0 && ', '}
-                        <a href={`https://glpi.inventario.unifecaf.edu.br/front/ticket.form.php?id=${id}`} target="_blank" rel="noreferrer">#{id}</a>
-                      </span>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          <div className={s.outboxCard}>
-            <h3 className={s.digestTitle}>Chamados não reconhecidos {unparsedTickets.length > 0 && `(${unparsedTickets.length})`}</h3>
-            {unparsedTickets.length === 0 ? (
-              <p className={s.emptyHint}>Nenhum chamado pendente de revisão.</p>
-            ) : (
-              <div className={s.outboxTable}>
-                <div className={s.outboxHead}>
-                  <span>Chamado</span><span>Motivo</span><span></span>
+          <div className={s.panel}>
+            <section className={s.panelRow} aria-labelledby="glpi-retro">
+              <div className={s.digestHeader}>
+                <div>
+                  <h3 id="glpi-retro" className={s.digestTitle}>Chamados de eventos que já passaram</h3>
+                  <p className={s.digestSub}>Marca como Solucionado no GLPI os chamados cujo evento já terminou, até 20 por vez.</p>
                 </div>
-                {unparsedTickets.map(t => (
-                  <div key={t.id} style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--border2)', padding: '10px 0' }}>
-                    <div className={s.outboxRow} style={{ borderBottom: 'none', padding: 0 }}>
-                      <span>
-                        <a href={`${'https://glpi.inventario.unifecaf.edu.br'}/front/ticket.form.php?id=${t.glpi_ticket_id}`} target="_blank" rel="noreferrer">
-                          #{t.glpi_ticket_id} — {t.title || 'sem título'}
-                        </a>
-                      </span>
-                      <span>{t.reason}</span>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => dismissUnparsed(t.id)}>Dispensar</button>
-                    </div>
-                    {t.raw_description && (
-                      <pre style={{
-                        fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface-2)',
-                        borderRadius: 6, padding: '8px 10px', marginTop: 8, whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word', fontFamily: 'inherit', maxHeight: 160, overflowY: 'auto',
-                      }}>
-                        {t.raw_description.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()}
-                      </pre>
-                    )}
-                  </div>
-                ))}
+                <div className={s.rowActions}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={loadRetro} disabled={retroBusy}>
+                    <LineIcon name="search" size={14} /> Ver lista
+                  </button>
+                  {retroList?.length > 0 && (
+                    <button type="button" className="btn btn-primary btn-sm" onClick={resolveRetro} disabled={retroBusy}>
+                      <LineIcon name="check" size={14} /> Solucionar {Math.min(retroList.length, 20)} no GLPI
+                    </button>
+                  )}
+                </div>
               </div>
-            )}
+              {retroStatus && (
+                <p role="status" className={retroStatus.type === 'success' ? s.msgOk : retroStatus.type === 'error' ? s.msgErr : s.muted}>{retroStatus.text}</p>
+              )}
+              {retroList && (retroList.length === 0 ? (
+                <p className={s.emptyHint}>Nenhum chamado pendente.</p>
+              ) : (
+                <div className={s.resultList}>
+                  <p className={s.resultCount}>{retroList.length} {retroList.length === 1 ? 'chamado pendente' : 'chamados pendentes'}</p>
+                  {retroList.map(t => (
+                    <div key={t.event_id} className={s.resultItem}>
+                      <a href={`${GLPI_TICKET}${t.glpi_ticket_id}`} target="_blank" rel="noreferrer">#{t.glpi_ticket_id}</a>
+                      <span>{t.title}</span>
+                      <span className={s.muted}>terminou {t.ended_at}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </section>
+
+            <section className={s.panelRow} aria-labelledby="glpi-dups">
+              <div className={s.digestHeader}>
+                <div>
+                  <h3 id="glpi-dups" className={s.digestTitle}>Chamados duplicados na Agenda</h3>
+                  <p className={s.digestSub}>
+                    Mesmo título, data e hora, em qualquer sala (ex: um feriado com um chamado por sala). Fica o mais antigo,
+                    com as salas somadas; os outros são solucionados no GLPI apontando pro original e saem da Agenda.
+                  </p>
+                </div>
+                <div className={s.rowActions}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={loadDups} disabled={dupBusy}>
+                    <LineIcon name="search" size={14} /> Ver duplicatas
+                  </button>
+                  {(dupCount > 0 || cleanCount > 0) && (
+                    <button type="button" className="btn btn-primary btn-sm" onClick={resolveDups} disabled={dupBusy}>
+                      <LineIcon name="check" size={14} /> Limpar duplicatas{dupCount > 0 ? ` (${dupCount} no GLPI)` : ''}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <label className={s.switchRow}>
+                <span className={s.switch}>
+                  <input
+                    type="checkbox"
+                    checked={settings.glpi_dup_auto === 'true'}
+                    onChange={e => updateSetting('glpi_dup_auto', e.target.checked ? 'true' : 'false')}
+                  />
+                  <span className={s.switchTrack} />
+                </span>
+                Solucionar duplicatas sozinho, a cada minuto
+              </label>
+              {dupStatus && (
+                <p role="status" className={dupStatus.type === 'success' ? s.msgOk : dupStatus.type === 'error' ? s.msgErr : s.muted}>{dupStatus.text}</p>
+              )}
+              {dupList && (dupList.items.length === 0 ? (
+                <p className={s.emptyHint}>Nenhuma duplicata encontrada.</p>
+              ) : (
+                <div className={s.resultList}>
+                  <p className={s.resultCount}>
+                    {[
+                      dupList.importing && 'importando chamados novos para a Agenda',
+                      dupList.background && 'solucionando em segundo plano',
+                      `${dupCount} a solucionar no GLPI`,
+                      cleanCount > 0 && `${cleanCount} já tratados no GLPI (só saem da Agenda)`,
+                      `${dupList.items.length} ${dupList.items.length === 1 ? 'evento' : 'eventos'}`,
+                    ].filter(Boolean).join('; ')}
+                  </p>
+                  {dupList.items.map(g => (
+                    <div key={g.keep_ticket_id} className={s.resultItem}>
+                      <span>{g.title} <span className={s.muted}>({g.event_date}{g.event_time ? ` ${g.event_time}` : ''})</span></span>
+                      <span className={s.muted}>
+                        fica <a href={`${GLPI_TICKET}${g.keep_ticket_id}`} target="_blank" rel="noreferrer">#{g.keep_ticket_id}</a>
+                        {g.duplicate_ticket_ids.length > 0 && <>; solucionar {g.duplicate_ticket_ids.map((id, i) => (
+                          <span key={id}>{i > 0 && ', '}<a href={`${GLPI_TICKET}${id}`} target="_blank" rel="noreferrer">#{id}</a></span>
+                        ))}</>}
+                        {(g.cleanup_ticket_ids || []).length > 0 && <>; só sai da Agenda: {g.cleanup_ticket_ids.map((id, i) => (
+                          <span key={id}>{i > 0 && ', '}<a href={`${GLPI_TICKET}${id}`} target="_blank" rel="noreferrer">#{id}</a></span>
+                        ))}</>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </section>
+
+            <section className={s.panelRow} aria-labelledby="glpi-unparsed">
+              <div>
+                <h3 id="glpi-unparsed" className={s.digestTitle}>
+                  Chamados não reconhecidos{unparsedTickets.length > 0 && <span className={s.titleCount}>{unparsedTickets.length}</span>}
+                </h3>
+                <p className={s.digestSub}>A descrição não segue o formato do sistema de reservas: crie o evento na Agenda à mão e dispense daqui.</p>
+              </div>
+              {unparsedTickets.length === 0 ? (
+                <p className={s.emptyHint}>Nenhum chamado esperando revisão.</p>
+              ) : (
+                <div className={s.resultList}>
+                  {unparsedTickets.map(t => (
+                    <div key={t.id} className={s.unparsed}>
+                      <div className={s.unparsedHead}>
+                        <a href={`${GLPI_TICKET}${t.glpi_ticket_id}`} target="_blank" rel="noreferrer">
+                          #{t.glpi_ticket_id} {t.title || 'sem título'}
+                        </a>
+                        <span className={s.muted}>{t.reason}</span>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => dismissUnparsed(t.id)}>Dispensar</button>
+                      </div>
+                      {t.raw_description && (
+                        <p className={s.rawDesc}>
+                          {t.raw_description.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         </Reveal>
       )}
