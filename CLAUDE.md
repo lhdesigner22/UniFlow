@@ -211,6 +211,10 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   Resolvidos, Todos), lista em linhas com foto/ícone do tipo (`INCIDENT_CATEGORIES[].icon` = nome do `LineIcon`), "hoje, 08:40" e a
   gravidade como escala de 4 barras (`Severity`); detalhe com o andamento em passo a passo + "Começar atendimento", "Marcar como
   resolvido", "Reabrir", "Salvar anotação".
+  **Cofre de Senhas e VLANs** refeitos (out/2026): senha = `components/common/SecretField.jsx` (bolinhas + Mostrar/Copiar, cada clique
+  pede ao servidor com `purpose` → log; mostrada, uma barra esvazia nos 30 s até esconder). Cofre = lista agrupada por categoria, editar/
+  excluir no "⋯" (`RowMenu`), aviso de que mostrar/copiar fica no histórico. VLANs: títulos em caixa normal, observações em cinza neutro.
+  Para testar o Cofre/VLANs local: o node-server novo tem `/__mock/sql` (o de 3001 antigo não tinha) — VLANs não têm seed no repo, use dados fictícios.
 - **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
   `all: unset` dos módulos). Cores (1ª etapa feita): hex/rgba com o MESMO valor de um token viraram `var(--x)` / `color-mix(in srgb, var(--x) N%, transparent)`
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`

@@ -6,6 +6,9 @@ import { useAuthStore } from '../store/authStore'
 import { confirmDialog, alertDialog } from '../store/dialogStore'
 import Modal from '../components/common/Modal'
 import MemberPicker from '../components/common/MemberPicker'
+import LineIcon from '../components/common/LineIcon'
+import RowMenu from '../components/common/RowMenu'
+import SecretField from '../components/common/SecretField'
 import s from './VaultPage.module.css'
 import { safeHref } from '../utils/safeHref'
 
@@ -90,7 +93,7 @@ function Editor({ entry, existingCategories, onClose, onSaved }) {
         disabled={!form.title.trim() || (!entry && !form.password) || saving}
         onClick={save}
       >
-        {saving ? 'Salvando...' : 'Salvar'}
+        {saving ? 'Salvando...' : entry ? 'Salvar alterações' : 'Guardar no cofre'}
       </button>
     </Modal>
   )
@@ -133,8 +136,8 @@ function AccessModal({ onClose }) {
 
   return (
     <Modal title="Quem tem acesso ao cofre" onClose={onClose} width={440}>
-      <p className={s.hint} style={{ marginTop: 0, marginBottom: 12 }}>
-        Super Admin sempre tem acesso. As pessoas listadas aqui são as autorizadas além disso.
+      <p className={s.modalLead}>
+        Super Admin sempre tem acesso. As pessoas abaixo foram autorizadas além disso; cada senha que elas veem fica no histórico.
       </p>
       {list === null ? (
         <p className={s.hint}>Carregando...</p>
@@ -146,14 +149,14 @@ function AccessModal({ onClose }) {
                 <span className={s.accessName}>{row.user_name}</span>
                 <span className={s.accessEmail}>{row.user_email}</span>
               </div>
-              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => revoke(row)}>Revogar</button>
+              <button className={`btn btn-ghost btn-sm ${s.danger}`} onClick={() => revoke(row)}>Tirar acesso</button>
             </div>
           ))}
           {list.length === 0 && <p className={s.hint}>Ninguém além dos Super Admins tem acesso ainda.</p>}
         </div>
       )}
       <div className={s.inviteWrap}>
-        <button className="btn btn-ghost btn-sm" onClick={() => setShowPicker(v => !v)}>+ Dar acesso a alguém</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => setShowPicker(v => !v)}><LineIcon name="user" size={14} /> Dar acesso a alguém</button>
         {showPicker && (
           <MemberPicker
             existingIds={(list || []).map(r => r.user_id)}
@@ -167,82 +170,29 @@ function AccessModal({ onClose }) {
   )
 }
 
-function EntryCard({ entry, canManage, onEdit, onDelete }) {
-  const [revealed, setRevealed] = useState(false)
-  const [password, setPassword] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  // A senha não fica guardada na tela: cada "Mostrar" e cada "Copiar" pede de
-  // novo ao servidor, que registra no log de auditoria qual dos dois foi.
-  // Mostrada, ela se esconde sozinha depois de 30 s.
-  useEffect(() => {
-    if (!revealed) return
-    const t = setTimeout(() => { setRevealed(false); setPassword(null) }, 30000)
-    return () => clearTimeout(t)
-  }, [revealed])
-
-  const fetchPassword = async (purpose) => {
-    setLoading(true)
-    try {
-      const { data } = await api.get(`/vault/${entry.id}/reveal`, { params: { purpose } })
-      return data.password
-    } catch {
-      await alertDialog('Erro ao revelar a senha. Tenta de novo?', { title: 'Erro', danger: true })
-      return null
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const toggleReveal = async () => {
-    if (revealed) { setRevealed(false); setPassword(null); return }
-    const pwd = await fetchPassword('show')
-    if (pwd !== null) { setPassword(pwd); setRevealed(true) }
-  }
-
-  const copyPassword = async () => {
-    const pwd = await fetchPassword('copy')
-    if (pwd === null) return
-    try {
-      await navigator.clipboard.writeText(pwd)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
-    } catch { /* clipboard indisponível — ignora silenciosamente */ }
-  }
-
+function EntryRow({ entry, onEdit, onDelete }) {
+  const fetchSecret = async purpose => (await api.get(`/vault/${entry.id}/reveal`, { params: { purpose } })).data.password
   return (
-    <div className={s.card}>
-      <div className={s.cardHeader}>
-        <h3 className={s.cardTitle}>{entry.title}</h3>
-        {canManage && (
-          <div className={s.cardActions}>
-            <button className={s.iconBtn} title="Editar" onClick={() => onEdit(entry)}>✏️</button>
-            <button className={s.iconBtn} title="Excluir" onClick={() => onDelete(entry)}>🗑️</button>
-          </div>
-        )}
-      </div>
-      {entry.category && <span className={s.badge}>{entry.category}</span>}
-      {entry.username && (
-        <div className={s.field}>
-          <span className={s.fieldLabel}>Usuário</span>
-          <span className={s.fieldValue}>{entry.username}</span>
-        </div>
-      )}
-      <div className={s.field}>
-        <span className={s.fieldLabel}>Senha</span>
-        <div className={s.passwordRow}>
-          <span className={s.passwordValue}>{loading ? '...' : revealed ? password : '••••••••'}</span>
-          <button className={s.smallBtn} title={revealed ? 'Esconder' : 'Mostrar'} onClick={toggleReveal}>{revealed ? '🙈' : '👁'}</button>
-          <button className={s.smallBtn} title="Copiar senha" onClick={copyPassword}>{copied ? '✓' : '📋'}</button>
-        </div>
-      </div>
-      {entry.notes && <p className={s.notes}>{entry.notes}</p>}
-      {entry.url && <a className={s.cardLink} href={safeHref(entry.url)} target="_blank" rel="noreferrer">🔗 Abrir link</a>}
-      <div className={s.cardFooter}>
-        <span className={s.cardMeta}>{entry.author_name || 'Alguém'} · {timeAgo(entry.updated_at)}</span>
-      </div>
-    </div>
+    <li className={s.row}>
+      <span className={s.rowMain}>
+        <span className={s.rowTitle}>{entry.title}</span>
+        <span className={s.rowMeta}>
+          {entry.username ? <>Usuário <span className={s.mono}>{entry.username}</span></> : 'Sem usuário'}
+          {entry.notes && <span className={s.rowNotes} title={entry.notes}>{entry.notes}</span>}
+        </span>
+      </span>
+      <SecretField fetchSecret={fetchSecret} />
+      <span className={s.rowEnd}>
+        {entry.url
+          ? <a className={s.iconLink} href={safeHref(entry.url)} target="_blank" rel="noreferrer" aria-label={`Abrir o link de ${entry.title}`} title="Abrir link"><LineIcon name="link" size={15} /></a>
+          : <span className={s.iconLink} aria-hidden="true" />}
+        <span className={s.updated} title={`Atualizado por ${entry.author_name || 'alguém'}`}>{timeAgo(entry.updated_at)}</span>
+        <RowMenu name={entry.title} items={[
+          { label: 'Editar item', hint: 'A senha só muda se você digitar outra', icon: 'edit', onClick: () => onEdit(entry) },
+          { label: 'Excluir item', icon: 'trash', danger: true, onClick: () => onDelete(entry) },
+        ]} />
+      </span>
+    </li>
   )
 }
 
@@ -278,6 +228,19 @@ export default function VaultPage() {
     )
   }, [entries, search])
 
+  // grupos por categoria, em ordem alfabética ("Sem categoria" por último)
+  const groups = useMemo(() => {
+    const map = new Map()
+    for (const e of filtered) {
+      const k = e.category?.trim() || 'Sem categoria'
+      if (!map.has(k)) map.set(k, [])
+      map.get(k).push(e)
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => (a === 'Sem categoria') - (b === 'Sem categoria') || a.localeCompare(b, 'pt-BR'))
+      .map(([k, list]) => [k, list.sort((x, y) => x.title.localeCompare(y.title, 'pt-BR'))])
+  }, [filtered])
+
   // Sugestões de categoria pro autocomplete do Editor — as já usadas +
   // algumas de partida, pra sempre ter algo pra escolher mesmo com o cofre vazio.
   const existingCategories = useMemo(() => {
@@ -311,45 +274,61 @@ export default function VaultPage() {
     return (
       <div className={s.page}>
         <div className={s.denied}>
-          <h3>🔒 Sem acesso ao Cofre de Senhas</h3>
-          <p>Só quem um Super Admin autorizar consegue ver esse conteúdo. Peça acesso a um Super Admin, se precisar.</p>
+          <span className={s.deniedIcon}><LineIcon name="lock" size={22} /></span>
+          <h1>Você não tem acesso ao Cofre de Senhas</h1>
+          <p>Só quem um Super Admin autorizar consegue ver este conteúdo. Se precisar, peça o acesso a um Super Admin.</p>
         </div>
       </div>
     )
   }
 
+  const total = (entries || []).length
   return (
     <div className={s.page}>
       <div className={s.header}>
         <div>
           <h1 className={s.title}>Cofre de Senhas</h1>
-          <p className={s.sub}>Senhas de wifi, painéis administrativos e outros acessos — visíveis só pra quem tem autorização.</p>
+          <p className={s.sub}>{total} {total === 1 ? 'acesso guardado' : 'acessos guardados'} com criptografia, visíveis só para quem tem autorização.</p>
         </div>
         <div className={s.headerRight}>
           {user?.system_role === 'super_admin' && (
             <>
-              <button className="btn btn-ghost" onClick={() => navigate('/admin?tab=logs&category=vault')}>🕵️ Histórico de acesso</button>
-              <button className="btn btn-ghost" onClick={() => setShowAccess(true)}>🔑 Gerenciar acesso</button>
+              <button className="btn btn-ghost" onClick={() => navigate('/admin?tab=logs&category=vault')}><LineIcon name="clock" size={15} /> Histórico de acesso</button>
+              <button className="btn btn-ghost" onClick={() => setShowAccess(true)}><LineIcon name="key" size={15} /> Quem tem acesso</button>
             </>
           )}
-          <button className="btn btn-primary" onClick={() => setEditing({})}>+ Novo item</button>
+          <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Novo item</button>
         </div>
       </div>
 
+      <p className={s.notice}>
+        <LineIcon name="shield" size={15} />
+        Cada senha mostrada ou copiada fica registrada no histórico, com o seu nome. Mostrada, ela se esconde sozinha em 30 segundos.
+      </p>
+
       <div className={s.searchRow}>
-        <input className={s.searchInput} value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por título, usuário ou categoria..." />
-        <span className={s.count}>{filtered.length} item(ns)</span>
+        <label className={s.search}>
+          <LineIcon name="search" size={15} />
+          <span className="sr-only">Buscar no cofre</span>
+          <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por título, usuário ou categoria" />
+        </label>
+        {search.trim() && <span className={s.count}>{filtered.length} de {total}</span>}
       </div>
 
       {filtered.length === 0 ? (
         <div className={s.empty}>
-          <h3>Nenhum item ainda</h3>
-          <p>{(entries || []).length > 0 ? 'Nenhum item bate com esse filtro.' : 'Cadastre a primeira senha do cofre.'}</p>
+          <h2>{total > 0 ? `Nada com "${search.trim()}"` : 'O cofre está vazio'}</h2>
+          <p>{total > 0 ? 'Tente o nome do sistema, o usuário ou a categoria.' : 'Guarde aqui a primeira senha: painel de equipamento, Wi-Fi, conta de serviço.'}</p>
         </div>
       ) : (
-        <div className={s.grid}>
-          {filtered.map(entry => (
-            <EntryCard key={entry.id} entry={entry} canManage onEdit={setEditing} onDelete={deleteEntry} />
+        <div className={s.groups}>
+          {groups.map(([cat, list]) => (
+            <section key={cat} className={s.group} aria-label={cat}>
+              <h2 className={s.groupTitle}>{cat}<span className={s.groupCount}>{list.length}</span></h2>
+              <ul className={s.list}>
+                {list.map(entry => <EntryRow key={entry.id} entry={entry} onEdit={setEditing} onDelete={deleteEntry} />)}
+              </ul>
+            </section>
           ))}
         </div>
       )}

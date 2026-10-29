@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import api from '../services/api'
-import Reveal from '../components/common/Reveal'
+import LineIcon from '../components/common/LineIcon'
+import SecretField from '../components/common/SecretField'
 import s from './VlansPage.module.css'
 
 const SITES = {
@@ -16,13 +17,13 @@ const SEGMENTS = [
 
 function NetworkTable({ title, rows }) {
   return (
-    <Reveal as="div" className={s.card}>
-      <h2 className={s.cardTitle}>{title}<span className={s.cardCount}>{rows.length} VLAN(s)</span></h2>
+    <section className={s.card} aria-label={title}>
+      <h2 className={s.cardTitle}>{title}<span className={s.cardCount}>{rows.length}</span></h2>
       <div className={s.tableWrap}>
         <table className={s.table}>
           <thead>
             <tr>
-              <th>VLAN</th><th>ID</th><th>Rede</th><th>Máscara</th><th>Gateway</th><th>Broadcast</th><th>Range DHCP</th><th className={s.num}>IPs utilizáveis</th>
+              <th>VLAN</th><th>ID</th><th>Rede</th><th>Máscara</th><th>Gateway</th><th>Broadcast</th><th>Faixa do DHCP</th><th className={s.num}>IPs utilizáveis</th>
             </tr>
           </thead>
           <tbody>
@@ -38,71 +39,23 @@ function NetworkTable({ title, rows }) {
                 <td className={`${s.mono} ${s.num}`}>{r.usable_ips?.toLocaleString('pt-BR')}</td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={8} className={s.empty}>Nenhuma VLAN bate com a busca.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={8} className={s.empty}>Nenhuma VLAN com essa busca.</td></tr>}
           </tbody>
         </table>
       </div>
-    </Reveal>
+    </section>
   )
 }
 
-// Senha do Wi-Fi: só é buscada no servidor quando a pessoa clica em
-// "Mostrar" ou "Copiar" (igual ao Cofre de Senhas).
+// Senha do Wi-Fi: o mesmo campo do Cofre — só é buscada no servidor ao clicar
+// em "Mostrar" ou "Copiar" (log de auditoria) e some sozinha em 30 s.
 function SsidRow({ ssid }) {
-  const [password, setPassword] = useState(null)
-  const [revealed, setRevealed] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  // Como no Cofre: sem guardar a senha na tela — cada "Mostrar"/"Copiar" passa
-  // pelo servidor (log de auditoria) e a senha mostrada some sozinha em 30 s.
-  useEffect(() => {
-    if (!revealed) return
-    const t = setTimeout(() => { setRevealed(false); setPassword(null) }, 30000)
-    return () => clearTimeout(t)
-  }, [revealed])
-
-  const fetchPassword = async (purpose) => {
-    setLoading(true)
-    try {
-      const { data } = await api.get(`/vlans/ssids/${ssid.id}/reveal`, { params: { purpose } })
-      return data.password
-    } catch {
-      return null
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const toggle = async () => {
-    if (revealed) { setRevealed(false); setPassword(null); return }
-    const pwd = await fetchPassword('show')
-    if (pwd !== null) { setPassword(pwd); setRevealed(true) }
-  }
-
-  const copy = async () => {
-    const pwd = await fetchPassword('copy')
-    if (!pwd) return
-    try {
-      await navigator.clipboard.writeText(pwd)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
-    } catch { /* clipboard indisponível — ignora */ }
-  }
-
+  const fetchSecret = async purpose => (await api.get(`/vlans/ssids/${ssid.id}/reveal`, { params: { purpose } })).data.password
   return (
     <tr>
       <td className={s.name}>{ssid.ssid}</td>
-      <td>
-        {ssid.has_password ? (
-          <div className={s.passwordRow}>
-            <span className={s.passwordValue}>{loading ? '...' : revealed ? password : '••••••••'}</span>
-            <button className={s.smallBtn} title={revealed ? 'Esconder' : 'Mostrar'} onClick={toggle}>{revealed ? '🙈' : '👁'}</button>
-            <button className={s.smallBtn} title="Copiar senha" onClick={copy}>{copied ? '✓' : '📋'}</button>
-          </div>
-        ) : <span className={s.note}>—</span>}
-      </td>
-      <td className={s.vlanId}>{ssid.vlan_id}</td>
+      <td>{ssid.has_password ? <SecretField fetchSecret={fetchSecret} /> : <span className={s.note}>Sem senha</span>}</td>
+      <td className={s.vlanId}>{ssid.vlan_id && ssid.vlan_id !== '-' ? ssid.vlan_id : <span className={s.note}>—</span>}</td>
       <td>{ssid.note && <span className={s.noteTag}>{ssid.note}</span>}</td>
     </tr>
   )
@@ -139,15 +92,14 @@ export default function VlansPage() {
     <div className={s.page}>
       <div className={s.header}>
         <div>
-          <h1 className={s.title}>Segmentação de VLANs — {info.label}</h1>
-          <p className={s.sub}>{info.desc} · redes, gateways, faixas de DHCP e SSIDs do Wi-Fi</p>
+          <h1 className={s.title}>VLANs: {info.label}</h1>
+          <p className={s.sub}>{info.desc}. Redes, gateways, faixas de DHCP e as redes Wi-Fi.</p>
         </div>
-        <input
-          className={s.searchInput}
-          placeholder="Buscar VLAN, ID, rede, SSID..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+        <label className={s.search}>
+          <LineIcon name="search" size={15} />
+          <span className="sr-only">Buscar VLAN</span>
+          <input type="search" placeholder="Buscar VLAN, ID, rede, SSID" value={search} onChange={e => setSearch(e.target.value)} />
+        </label>
       </div>
 
       {SEGMENTS.map(seg => {
@@ -157,18 +109,19 @@ export default function VlansPage() {
         return <NetworkTable key={seg.key} title={seg.label} rows={rows} />
       })}
 
-      <Reveal as="div" className={s.card}>
-        <h2 className={s.cardTitle}>Rede WLAN<span className={s.cardCount}>{ssids.length} SSID(s)</span></h2>
+      <section className={s.card} aria-label="Redes Wi-Fi">
+        <h2 className={s.cardTitle}>Redes Wi-Fi<span className={s.cardCount}>{ssids.length}</span></h2>
+        <p className={s.cardNote}><LineIcon name="shield" size={14} /> Cada senha mostrada ou copiada fica no histórico de acesso e some sozinha em 30 segundos.</p>
         <div className={s.tableWrap}>
           <table className={`${s.table} ${s.wlanTable}`}>
-            <thead><tr><th>SSID</th><th>Senha</th><th>VLAN ID</th><th></th></tr></thead>
+            <thead><tr><th>Nome da rede (SSID)</th><th>Senha</th><th>VLAN</th><th>Observação</th></tr></thead>
             <tbody>
               {ssids.map(w => <SsidRow key={w.id} ssid={w} />)}
-              {ssids.length === 0 && <tr><td colSpan={4} className={s.empty}>Nenhum SSID bate com a busca.</td></tr>}
+              {ssids.length === 0 && <tr><td colSpan={4} className={s.empty}>Nenhuma rede Wi-Fi com essa busca.</td></tr>}
             </tbody>
           </table>
         </div>
-      </Reveal>
+      </section>
     </div>
   )
 }
