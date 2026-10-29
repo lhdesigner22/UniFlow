@@ -16,6 +16,8 @@ const VALUES = [
 const DWELL_MS = 9000        // modo TV: tempo parado em cada seção
 const IDLE_MS = 15000        // modo TV volta a rolar depois de tanto tempo sem ninguém mexer
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+// ?embed=1: aberto dentro do UniFlow (aba Início, iframe) — não segura a tela acesa
+const embedded = new URLSearchParams(location.search).has('embed')
 const $ = id => document.getElementById(id)
 const slug = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '')
 
@@ -139,6 +141,7 @@ async function toggleFull() {
 $('full').addEventListener('click', toggleFull)
 let wakeLock = null
 async function keepAwake() {
+  if (embedded) return
   try { if (!wakeLock && 'wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null }) } } catch {}
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake() })

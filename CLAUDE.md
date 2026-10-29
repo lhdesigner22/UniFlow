@@ -153,8 +153,11 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 - **Telão PARISFE** (`/parisfe`, pública, sem login — pra TV): 2ª entrada do Vite (`client/parisfe.html` + `src/parisfe/`), fora do app
   React e do pré-cache do PWA (Three.js ~580 KB). Logo UniFECAF em 3D (`logo3d.js`, Three.js + bloom, desenhada do mesmo caminho SVG)
   gira e troca de lado com a rolagem; abertura + 7 valores + encerramento, uma tela cada. Modo TV: sem ninguém mexer, 9 s por seção e
-  volta ao início; espaço pausa, F tela cheia. Textos = `PRINCIPLES` do `DashboardPage.jsx` (mudou lá, mudar em `main.js`). Botão
-  "Abrir no telão" no Início. Prints: o painel do navegador para de desenhar com o app em 2º plano — usar Playwright (chrome headless).
+  volta ao início; espaço pausa, F tela cheia. Textos dos valores só em `VALUES` do `main.js`.
+  **O Início do app É o telão** (out/2026, pedido do Luiz): `DashboardPage.jsx` = iframe de `/parisfe?embed=1` (por isso o `_headers`
+  tem `frame-src 'self'`, `frame-ancestors 'self'` e `X-Frame-Options: SAMEORIGIN`) + faixa do cronômetro rodando; "Meus cartões" e
+  a grade de princípios saíram. Nitidez: o EffectComposer usa alvo com MSAA (`samples: 4`) — sem isso o pós-processamento perde o
+  antialias e serrilha; dithering no fim contra faixas no degradê escuro. Prints: o painel do navegador para de desenhar com o app em 2º plano — usar Playwright (chrome headless).
 - **Gestão → Cases de Sucesso** (`routes/successCases.js`, `SuccessCasesPage.jsx`, rota `/gestao/cases-de-sucesso`, módulo `gestao`, sem
   separação por departamento): vitrine das entregas da TI no ano **para apresentar à diretoria (C-Level)** — linguagem simples, cada case =
   antes → o que fizemos → resultado; detalhe técnico recolhido (nada de IP/senha). Pilares: conectividade, segurança, gestão, operação.

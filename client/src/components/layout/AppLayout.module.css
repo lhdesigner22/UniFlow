@@ -16,6 +16,7 @@
 .content {
   flex: 1;
   overflow: auto;
+  position: relative; /* o Início (telão) se estica com inset: 0 */
 }
 .pageTransition {
   min-height: 100%;

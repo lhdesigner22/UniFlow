@@ -2,12 +2,13 @@
 # este arquivo). As respostas de /api/* recebem os seus no worker.js.
 # Scripts: só do próprio site — por isso o index.html não tem script inline.
 # Estilos: 'unsafe-inline' é necessário para os style={...} do React.
-# frame-src: mapas do Google em Empresas e Links de Internet.
+# frame-src: mapas do Google em Empresas e Links de Internet; 'self' = telão PARISFE no Início.
+# frame-ancestors 'self' / SAMEORIGIN: só o próprio site pode emoldurar (o Início mostra o /parisfe).
 # connect-src: viacep (busca de CEP) além da própria API/WebSocket.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://viacep.com.br; frame-src https://www.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://viacep.com.br; frame-src 'self' https://www.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
   Strict-Transport-Security: max-age=31536000
   X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
+  X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
