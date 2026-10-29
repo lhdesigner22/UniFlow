@@ -207,6 +207,10 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   cada linha com prazo em linguagem de gente (`dueInfo`: "Venceu ontem" em vermelho) e as "assinaturas" (`SignOffs`: avatar de cada
   aprovador com ✓/✗/relógio + "1 de 2 aprovaram" ou "Fulano reprovou"); detalhe com botões grandes Aprovar/Reprovar. Botão = "Pedir aprovação".
   **Fila da crítica das 5 telas concluída** (Admin, KB, Impressoras, Agenda, Aprovações).
+  **Incidentes Laboratórios** refeita (out/2026): KPIs num painel, situação em abas (Pendentes = não resolvidos, Abertos, Em andamento,
+  Resolvidos, Todos), lista em linhas com foto/ícone do tipo (`INCIDENT_CATEGORIES[].icon` = nome do `LineIcon`), "hoje, 08:40" e a
+  gravidade como escala de 4 barras (`Severity`); detalhe com o andamento em passo a passo + "Começar atendimento", "Marcar como
+  resolvido", "Reabrir", "Salvar anotação".
 - **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
   `all: unset` dos módulos). Cores (1ª etapa feita): hex/rgba com o MESMO valor de um token viraram `var(--x)` / `color-mix(in srgb, var(--x) N%, transparent)`
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`

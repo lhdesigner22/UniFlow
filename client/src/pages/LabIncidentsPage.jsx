@@ -9,7 +9,7 @@ import { photoPair } from '../utils/imageResize'
 import { exportLabIncidentsXlsx } from '../utils/exports'
 import ExportXlsxButton from '../components/common/ExportXlsxButton'
 import Modal from '../components/common/Modal'
-import Reveal from '../components/common/Reveal'
+import LineIcon from '../components/common/LineIcon'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
 import s from './LabIncidentsPage.module.css'
@@ -20,12 +20,12 @@ import s from './LabIncidentsPage.module.css'
 
 export const INCIDENT_BUILDINGS = { sede: 'SEDE', centro: 'CENTRO', g5: 'G5' }
 export const INCIDENT_CATEGORIES = {
-  maquina: { label: 'Máquina com defeito', icon: '🖥️' },
-  sinistro: { label: 'Sinistro / dano', icon: '⚠️' },
-  projecao: { label: 'Projeção / TV', icon: '📽️' },
-  organizacao: { label: 'Bagunça / organização', icon: '🧹' },
-  rede: { label: 'Rede / internet', icon: '🌐' },
-  outro: { label: 'Outro', icon: '📌' },
+  maquina: { label: 'Máquina com defeito', icon: 'monitor' },
+  sinistro: { label: 'Sinistro / dano', icon: 'alert' },
+  projecao: { label: 'Projeção / TV', icon: 'tv' },
+  organizacao: { label: 'Bagunça / organização', icon: 'broom' },
+  rede: { label: 'Rede / internet', icon: 'wifi' },
+  outro: { label: 'Outro', icon: 'pin' },
 }
 export const INCIDENT_SEVERITIES = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' }
 export const INCIDENT_STATUSES = { aberto: 'Aberto', em_andamento: 'Em andamento', resolvido: 'Resolvido' }
@@ -39,6 +39,18 @@ const fmtDb = v => (v ? new Date(/Z$/.test(v) ? v : v.replace(' ', 'T') + 'Z').t
 function Badge({ kind, value }) {
   const label = kind === 'severity' ? INCIDENT_SEVERITIES[value] : INCIDENT_STATUSES[value]
   return <span className={`${s.badge} ${s[`${kind}_${value}`] || ''}`}>{label || value}</span>
+}
+
+// Gravidade como escala de 4 barras (baixa → crítica): a cor só aparece nas barras cheias
+const SEVERITY_LEVEL = { baixa: 1, media: 2, alta: 3, critica: 4 }
+function Severity({ value }) {
+  const level = SEVERITY_LEVEL[value] || 0
+  return (
+    <span className={s.severity} data-level={level}>
+      <span className={s.bars} aria-hidden="true">{[1, 2, 3, 4].map(n => <span key={n} className={n <= level ? s.barOn : ''} />)}</span>
+      <span>{INCIDENT_SEVERITIES[value] || value}</span>
+    </span>
+  )
 }
 
 // Escolher fotos: reduz no navegador e mostra a prévia (o envio é depois, ao salvar)
@@ -67,12 +79,12 @@ function PhotoPicker({ photos, setPhotos, max, onError }) {
       {photos.map((p, i) => (
         <div key={i} className={s.thumbWrap}>
           <img src={p.thumb} alt={`Foto ${i + 1}`} className={s.thumb} />
-          <button type="button" className={s.thumbRemove} title="Tirar esta foto" onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))}>×</button>
+          <button type="button" className={s.thumbRemove} title="Tirar esta foto" aria-label={`Tirar a foto ${i + 1}`} onClick={() => setPhotos(prev => prev.filter((_, j) => j !== i))}>×</button>
         </div>
       ))}
       {photos.length < max && (
         <label className={s.addPhoto}>
-          {busy ? 'Preparando...' : <>📷<span>Adicionar fotos</span></>}
+          {busy ? 'Preparando...' : <><LineIcon name="camera" size={20} /><span>Adicionar fotos</span></>}
           <input type="file" accept="image/*" multiple hidden onChange={pick} disabled={busy} />
         </label>
       )}
@@ -142,7 +154,7 @@ function IncidentForm({ incident, building, knownLabs, onClose, onSaved }) {
         <div className="form-group">
           <label htmlFor="lab-incidents-tipo" className="label">Tipo</label>
           <select id="lab-incidents-tipo" value={form.category} onChange={e => set('category', e.target.value)}>
-            {Object.entries(INCIDENT_CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+            {Object.entries(INCIDENT_CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
         </div>
         <div className="form-group">
@@ -188,7 +200,7 @@ function IncidentForm({ incident, building, knownLabs, onClose, onSaved }) {
       </div>
       {!incident && (
         <div className="form-group">
-          <label className="label">Fotos (até {MAX_PHOTOS})</label>
+          <span className="label">Fotos (até {MAX_PHOTOS})</span>
           <PhotoPicker photos={photos} setPhotos={setPhotos} max={MAX_PHOTOS} onError={setError} />
         </div>
       )}
@@ -209,7 +221,7 @@ function PhotoViewer({ incidentId, photo, onClose }) {
   return (
     <Modal title="Foto do incidente" onClose={onClose} width={1000}>
       <img src={full || photo.thumb} alt="Foto do incidente" className={s.fullPhoto} />
-      {full && <a className={s.downloadLink} href={full} download={`incidente-foto-${photo.id.slice(0, 8)}.jpg`}>⬇ Baixar foto</a>}
+      {full && <a className={`btn btn-ghost btn-sm ${s.downloadLink}`} href={full} download={`incidente-foto-${photo.id.slice(0, 8)}.jpg`}><LineIcon name="download" size={14} /> Baixar foto</a>}
     </Modal>
   )
 }
@@ -258,12 +270,11 @@ function IncidentDetail({ id, user, writable, onClose, onChanged, onEdit, onDele
   const Field = ({ label, children }) => children ? <div className={s.field}><span className={s.fieldLabel}>{label}</span><span className={s.fieldValue}>{children}</span></div> : null
 
   return (
-    <Modal title={`${cat.icon} ${inc.title}`} onClose={onClose} width={760}>
+    <Modal title={inc.title} onClose={onClose} width={760}>
       <div className={s.detailBadges}>
-        <Badge kind="status" value={inc.status} />
-        <Badge kind="severity" value={inc.severity} />
-        <span className={s.chip}>{cat.label}</span>
-        <span className={s.chip}>{INCIDENT_BUILDINGS[inc.building]} · {inc.lab}</span>
+        <Severity value={inc.severity} />
+        <span className={s.chip}><LineIcon name={cat.icon} size={13} />{cat.label}</span>
+        <span className={s.chip}><LineIcon name="pin" size={13} />{INCIDENT_BUILDINGS[inc.building]}, {inc.lab}</span>
       </div>
 
       <div className={s.fields}>
@@ -279,14 +290,14 @@ function IncidentDetail({ id, user, writable, onClose, onChanged, onEdit, onDele
       </div>
       {inc.description && <div className={s.description}>{inc.description}</div>}
 
-      <h4 className={s.sectionTitle}>Fotos ({inc.photos?.length || 0})</h4>
+      <h3 className={s.sectionTitle}>Fotos <span className={s.sectionCount}>{inc.photos?.length || 0}</span></h3>
       <div className={s.gallery}>
         {(inc.photos || []).map(p => (
           <div key={p.id} className={s.thumbWrap}>
-            <button type="button" className={s.thumbBtn} onClick={() => setViewing(p)} title="Ver em tamanho grande">
-              <img src={p.thumb} alt="Foto do incidente" className={s.thumb} />
+            <button type="button" className={s.thumbBtn} onClick={() => setViewing(p)} title="Ver em tamanho grande" aria-label="Ver em tamanho grande">
+              <img src={p.thumb} alt="" className={s.thumb} />
             </button>
-            {canEditData && <button type="button" className={s.thumbRemove} title="Remover foto" onClick={() => removePhoto(p)}>×</button>}
+            {canEditData && <button type="button" className={s.thumbRemove} title="Remover foto" aria-label="Remover esta foto" onClick={() => removePhoto(p)}>×</button>}
           </div>
         ))}
         {!inc.photos?.length && <span className={s.muted}>Nenhuma foto.</span>}
@@ -294,20 +305,32 @@ function IncidentDetail({ id, user, writable, onClose, onChanged, onEdit, onDele
       {writable && (inc.photos?.length || 0) < MAX_PHOTOS && (
         <div className={s.addPhotosRow}>
           <PhotoPicker photos={newPhotos} setPhotos={setNewPhotos} max={MAX_PHOTOS - (inc.photos?.length || 0)} onError={setError} />
-          {newPhotos.length > 0 && <button className="btn btn-primary btn-sm" disabled={!!busy} onClick={sendPhotos}>{busy || `Enviar ${newPhotos.length} foto(s)`}</button>}
+          {newPhotos.length > 0 && <button className="btn btn-primary btn-sm" disabled={!!busy} onClick={sendPhotos}>{busy || `Enviar ${newPhotos.length} ${newPhotos.length === 1 ? 'foto' : 'fotos'}`}</button>}
         </div>
       )}
 
-      <h4 className={s.sectionTitle}>Andamento</h4>
+      <h3 className={s.sectionTitle}>Andamento</h3>
+      {/* passo a passo de verdade: aberto → em andamento → resolvido */}
+      <ol className={s.steps} aria-label="Situação do incidente">
+        {Object.entries(INCIDENT_STATUSES).map(([k, v], idx) => {
+          const cur = Object.keys(INCIDENT_STATUSES).indexOf(inc.status)
+          return (
+            <li key={k} className={`${s.step} ${idx < cur ? s.stepDone : ''} ${idx === cur ? s.stepNow : ''}`} aria-current={idx === cur ? 'step' : undefined}>
+              <span className={s.stepDot}>{idx < cur || (idx === cur && k === 'resolvido') ? <LineIcon name="check" size={11} /> : idx + 1}</span>
+              <span>{v}</span>
+            </li>
+          )
+        })}
+      </ol>
       {writable ? (
         <>
-          <textarea rows={3} value={resolution} onChange={e => setResolution(e.target.value)} placeholder="O que foi feito / solução (ex: trocada a fonte do PC 12, cabo HDMI substituído...)" />
+          <label htmlFor="incident-resolution" className="sr-only">O que foi feito</label>
+          <textarea id="incident-resolution" rows={3} value={resolution} onChange={e => setResolution(e.target.value)} placeholder="O que foi feito / solução (ex: trocada a fonte do PC 12, cabo HDMI substituído...)" />
           <div className={s.statusRow}>
-            {Object.entries(INCIDENT_STATUSES).map(([k, v]) => (
-              <button key={k} className={`btn btn-sm ${inc.status === k ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === 'status'} onClick={() => changeStatus(k)}>
-                {k === 'resolvido' ? '✓ ' : ''}{inc.status === k && k !== 'resolvido' ? `${v} (salvar nota)` : v}
-              </button>
-            ))}
+            {inc.status === 'aberto' && <button className="btn btn-primary btn-sm" disabled={busy === 'status'} onClick={() => changeStatus('em_andamento')}><LineIcon name="wrench" size={14} /> Começar atendimento</button>}
+            {inc.status !== 'resolvido' && <button className={`btn btn-sm ${inc.status === 'em_andamento' ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === 'status'} onClick={() => changeStatus('resolvido')}><LineIcon name="check" size={14} /> Marcar como resolvido</button>}
+            {inc.status === 'resolvido' && <button className="btn btn-ghost btn-sm" disabled={busy === 'status'} onClick={() => changeStatus('aberto')}><LineIcon name="undo" size={14} /> Reabrir</button>}
+            <button className="btn btn-ghost btn-sm" disabled={busy === 'status' || resolution === (inc.resolution || '')} onClick={() => changeStatus(inc.status)}>Salvar anotação</button>
           </div>
         </>
       ) : (
@@ -317,8 +340,8 @@ function IncidentDetail({ id, user, writable, onClose, onChanged, onEdit, onDele
       {error && <p role="alert" className={s.error}>{error}</p>}
       {canEditData && (
         <div className={s.detailActions}>
-          <button className="btn btn-ghost btn-sm" onClick={() => onEdit(inc)}>✏️ Editar dados</button>
-          <button className="btn btn-ghost btn-sm" onClick={remove}>🗑️ Excluir</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => onEdit(inc)}><LineIcon name="edit" size={14} /> Editar dados</button>
+          <button className={`btn btn-ghost btn-sm ${s.dangerBtn}`} onClick={remove}><LineIcon name="trash" size={14} /> Excluir incidente</button>
         </div>
       )}
       {viewing && <PhotoViewer incidentId={id} photo={viewing} onClose={() => setViewing(null)} />}
@@ -326,11 +349,23 @@ function IncidentDetail({ id, user, writable, onClose, onChanged, onEdit, onDele
   )
 }
 
+// "hoje, 08:40" / "ontem, 14:00" / "26/10, 22:10" — a lista lê melhor com o dia relativo
+function whenShort(v) {
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+  if (!m) return '—'
+  const d = new Date(+m[1], +m[2] - 1, +m[3])
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const diff = Math.round((today - d) / 86400000)
+  const day = diff === 0 ? 'hoje' : diff === 1 ? 'ontem' : `${m[3]}/${m[2]}`
+  return `${day}, ${m[4]}:${m[5]}`
+}
+
 export default function LabIncidentsPage() {
   const { building = 'sede' } = useParams()
   const { user } = useAuthStore()
   const [items, setItems] = useState(null)
   const [statusFilter, setStatusFilter] = useState('abertos')
+  const [onlyUrgent, setOnlyUrgent] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState('')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState(null) // null | {} novo | incidente
@@ -342,13 +377,16 @@ export default function LabIncidentsPage() {
   useLiveRefresh(['lab-incidents'], () => load())
 
   const knownLabs = useMemo(() => [...new Set((items || []).map(i => i.lab))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [items])
+  const isUrgent = i => i.status !== 'resolvido' && (i.severity === 'critica' || i.severity === 'alta')
   const stats = useMemo(() => {
     const list = items || []
     return {
+      openAll: list.filter(i => i.status !== 'resolvido').length,
       open: list.filter(i => i.status === 'aberto').length,
       progress: list.filter(i => i.status === 'em_andamento').length,
       resolved: list.filter(i => i.status === 'resolvido').length,
-      urgent: list.filter(i => i.status !== 'resolvido' && (i.severity === 'critica' || i.severity === 'alta')).length,
+      urgent: list.filter(isUrgent).length,
+      all: list.length,
     }
   }, [items])
   const filtered = useMemo(() => {
@@ -356,11 +394,12 @@ export default function LabIncidentsPage() {
     return (items || []).filter(i => {
       if (statusFilter === 'abertos' && i.status === 'resolvido') return false
       if (statusFilter !== 'abertos' && statusFilter !== 'todos' && i.status !== statusFilter) return false
+      if (onlyUrgent && !isUrgent(i)) return false
       if (categoryFilter && i.category !== categoryFilter) return false
       if (q && ![i.title, i.lab, i.description, i.equipment, i.patrimony, i.reported_by_name, i.class_info, i.glpi_ticket].some(v => (v || '').toLowerCase().includes(q))) return false
       return true
     })
-  }, [items, statusFilter, categoryFilter, search])
+  }, [items, statusFilter, onlyUrgent, categoryFilter, search])
 
   const upsert = inc => setItems(prev => {
     const list = prev || []
@@ -369,69 +408,93 @@ export default function LabIncidentsPage() {
 
   if (!items) return <div className={s.loading}>Carregando incidentes...</div>
 
+  const tabs = [
+    ['abertos', 'Pendentes', stats.openAll],
+    ['aberto', 'Abertos', stats.open],
+    ['em_andamento', 'Em andamento', stats.progress],
+    ['resolvido', 'Resolvidos', stats.resolved],
+    ['todos', 'Todos', stats.all],
+  ]
+
   return (
     <div className={s.page}>
       <div className={s.header}>
         <div>
-          <h1 className={s.title}>Incidentes Laboratórios — {INCIDENT_BUILDINGS[building] || building.toUpperCase()}</h1>
-          <p className={s.sub}>Máquinas com defeito, sinistros, projeção/TV e organização dos laboratórios — com fotos, data e hora, até resolver.</p>
+          <h1 className={s.title}>Incidentes nos laboratórios</h1>
+          <p className={s.sub}>
+            {INCIDENT_BUILDINGS[building] || building.toUpperCase()}:{' '}
+            {stats.openAll ? `${stats.openAll} ${stats.openAll === 1 ? 'pendente' : 'pendentes'}${stats.urgent ? `, ${stats.urgent} de gravidade alta ou crítica` : ''}.` : 'nenhum incidente pendente.'}
+          </p>
         </div>
         <div className={s.headerActions}>
           <ExportXlsxButton onExport={() => exportLabIncidentsXlsx({ building })} />
-          {writable && <button className="btn btn-primary" onClick={() => setEditing({})}>+ Registrar incidente</button>}
+          {writable && <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Registrar incidente</button>}
         </div>
       </div>
 
       <div className={s.stats}>
-        <button className={`${s.stat} ${s.statOpen}`} onClick={() => setStatusFilter('aberto')}><strong>{stats.open}</strong><span>Abertos</span></button>
-        <button className={`${s.stat} ${s.statProgress}`} onClick={() => setStatusFilter('em_andamento')}><strong>{stats.progress}</strong><span>Em andamento</span></button>
-        <button className={`${s.stat} ${s.statUrgent}`} onClick={() => setStatusFilter('abertos')}><strong>{stats.urgent}</strong><span>Alta/crítica em aberto</span></button>
-        <button className={`${s.stat} ${s.statDone}`} onClick={() => setStatusFilter('resolvido')}><strong>{stats.resolved}</strong><span>Resolvidos</span></button>
+        <button type="button" className={s.stat} onClick={() => { setStatusFilter('aberto'); setOnlyUrgent(false) }}><strong>{stats.open}</strong><span>Abertos, sem atendimento</span></button>
+        <button type="button" className={s.stat} onClick={() => { setStatusFilter('em_andamento'); setOnlyUrgent(false) }}><strong>{stats.progress}</strong><span>Em andamento</span></button>
+        <button type="button" aria-pressed={onlyUrgent} className={`${s.stat} ${stats.urgent ? s.statWarn : ''} ${onlyUrgent ? s.statOn : ''}`} onClick={() => { setStatusFilter('abertos'); setOnlyUrgent(v => !v) }}>
+          <strong>{stats.urgent}</strong><span>{onlyUrgent ? 'Mostrando só estes' : 'Alta ou crítica pendentes'}</span>
+        </button>
+        <button type="button" className={s.stat} onClick={() => { setStatusFilter('resolvido'); setOnlyUrgent(false) }}><strong>{stats.resolved}</strong><span>Resolvidos</span></button>
       </div>
 
+      <nav className={s.tabs} aria-label="Situação">
+        {tabs.map(([k, label, n]) => (
+          <button key={k} type="button" aria-current={statusFilter === k ? 'true' : undefined}
+            className={`${s.tab} ${statusFilter === k ? s.tabActive : ''}`} onClick={() => setStatusFilter(k)}>
+            {label}<span className={s.tabCount}>{n}</span>
+          </button>
+        ))}
+      </nav>
+
       <div className={s.toolbar}>
-        <input className={s.search} value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por laboratório, equipamento, patrimônio, descrição..." />
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          <option value="abertos">Em aberto (sem resolvidos)</option>
-          <option value="todos">Todos</option>
-          {Object.entries(INCIDENT_STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+        <label className={s.search}>
+          <LineIcon name="search" size={15} />
+          <span className="sr-only">Buscar incidentes</span>
+          <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por laboratório, equipamento, patrimônio, descrição" />
+        </label>
+        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} aria-label="Tipo de incidente">
           <option value="">Todos os tipos</option>
-          {Object.entries(INCIDENT_CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+          {Object.entries(INCIDENT_CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
       </div>
 
       {filtered.length === 0 ? (
         <div className={s.empty}>
-          <h3>{items.length ? 'Nada com esse filtro' : 'Nenhum incidente registrado aqui'}</h3>
-          <p>{items.length ? 'Mude o filtro ou a busca.' : 'Quando um laboratório tiver um problema, registre aqui com fotos — fica o histórico de cada sala e equipamento.'}</p>
+          <h2>{items.length ? 'Nada com esse filtro' : 'Nenhum incidente registrado aqui'}</h2>
+          <p>{items.length ? 'Mude a situação, o tipo ou a busca.' : 'Quando um laboratório tiver um problema, registre aqui com fotos: fica o histórico de cada sala e equipamento.'}</p>
         </div>
       ) : (
-        <div className={s.grid}>
-          {filtered.map((i, idx) => {
+        <ul className={s.list}>
+          {filtered.map(i => {
             const cat = INCIDENT_CATEGORIES[i.category] || INCIDENT_CATEGORIES.outro
             return (
-              <Reveal key={i.id} delay={Math.min(idx, 10) * 40} className={`${s.card} ${s[`cardSev_${i.severity}`] || ''}`}>
-                <button type="button" className={s.cardBtn} onClick={() => setOpenId(i.id)}>
+              <li key={i.id}>
+                <button type="button" className={`${s.row} ${i.status === 'resolvido' ? s.rowDone : ''}`} onClick={() => setOpenId(i.id)}>
                   {i.cover
-                    ? <img src={i.cover} alt="" className={s.cover} />
-                    : <div className={s.coverEmpty}>{cat.icon}</div>}
-                  <div className={s.cardBody}>
-                    <div className={s.cardBadges}>
-                      <Badge kind="status" value={i.status} />
-                      <Badge kind="severity" value={i.severity} />
-                    </div>
-                    <h3 className={s.cardTitle}>{i.title}</h3>
-                    <p className={s.cardMeta}>{cat.icon} {cat.label} · <strong>{i.lab}</strong></p>
-                    <p className={s.cardMeta}>🕒 {fmtOccurred(i.occurred_at)}{i.photo_count ? ` · 📷 ${i.photo_count}` : ''}</p>
-                    {i.equipment && <p className={s.cardMeta}>🔧 {i.equipment}{i.patrimony ? ` (${i.patrimony})` : ''}</p>}
-                  </div>
+                    ? <img src={i.cover} alt="" className={s.rowPhoto} />
+                    : <span className={s.rowIcon} aria-hidden="true"><LineIcon name={cat.icon} size={20} /></span>}
+                  <span className={s.rowMain}>
+                    <span className={s.rowTitle}>{i.title}</span>
+                    <span className={s.rowMeta}>
+                      <strong>{i.lab}</strong>{cat.label}
+                      {i.equipment && <span>{i.equipment}{i.patrimony ? ` (${i.patrimony})` : ''}</span>}
+                    </span>
+                  </span>
+                  <span className={s.rowWhen}>
+                    {whenShort(i.occurred_at)}
+                    {!!i.photo_count && <span className={s.rowPhotos}><LineIcon name="camera" size={12} />{i.photo_count}</span>}
+                  </span>
+                  <Severity value={i.severity} />
+                  <Badge kind="status" value={i.status} />
                 </button>
-              </Reveal>
+              </li>
             )
           })}
-        </div>
+        </ul>
       )}
 
       {editing && (
