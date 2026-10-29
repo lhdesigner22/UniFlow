@@ -218,6 +218,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   **Time → Desempenho** refeito (out/2026): equipe em linhas (👍/👎, "Reconhecer", "Apontar ponto de melhoria", histórico, "Tirar do quadro"
   no "⋯") + **Mural de reconhecimentos** (`GET /api/team-kudos/recent`: últimos 12, SÓ estrelas — a lua/👎 é privada e nunca entra;
   suíte `kudos-e2e.mjs` garante isso). Migração 0064 = índices de `team_kudos_events` (não tinha nenhum).
+  **Time → Organograma** refeito (out/2026): prancheta pontilhada que rola nos dois sentidos e abre centralizada no topo; caixa = iniciais
+  coloridas + nome + cargo (topo com filete azul); ações (subordinado, ligar, voltar ao lugar, editar, excluir) em ícones que aparecem no
+  hover/foco (sempre no toque, `@media (hover: none)`; no modo "ligar" aparecem em todas). Arrastar/linhas/ligações/linhas soltas iguais.
 - **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
   `all: unset` dos módulos). Cores (1ª etapa feita): hex/rgba com o MESMO valor de um token viraram `var(--x)` / `color-mix(in srgb, var(--x) N%, transparent)`
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`

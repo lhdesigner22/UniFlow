@@ -4,6 +4,8 @@ import { useLiveRefresh } from '../hooks/useLiveRefresh'
 import { useAuthStore } from '../store/authStore'
 import { confirmDialog, alertDialog } from '../store/dialogStore'
 import Modal from '../components/common/Modal'
+import LineIcon from '../components/common/LineIcon'
+import { avatarColor } from '../utils/avatarColor'
 import s from './OrgChartPage.module.css'
 
 function Editor({ node, defaultParentId, nodes, onClose, onSaved }) {
@@ -61,13 +63,13 @@ function Editor({ node, defaultParentId, nodes, onClose, onSaved }) {
       <div className="form-group">
         <label htmlFor="org-chart-reporta-para" className="label">Reporta para</label>
         <select id="org-chart-reporta-para" value={form.parent_id} onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))}>
-          <option value="">— Nenhum (topo da hierarquia)</option>
-          {parentOptions.map(n => <option key={n.id} value={n.id}>{n.name}{n.role ? ` — ${n.role}` : ''}</option>)}
+          <option value="">Ninguém (topo da hierarquia)</option>
+          {parentOptions.map(n => <option key={n.id} value={n.id}>{n.name}{n.role ? ` (${n.role})` : ''}</option>)}
         </select>
       </div>
       {error && <p role="alert" className={s.fileError}>{error}</p>}
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.name.trim() || saving} onClick={save}>
-        {saving ? 'Salvando...' : 'Salvar'}
+        {saving ? 'Salvando...' : node ? 'Salvar alterações' : 'Adicionar ao organograma'}
       </button>
     </Modal>
   )
@@ -77,7 +79,9 @@ function Editor({ node, defaultParentId, nodes, onClose, onSaved }) {
 // fileira por nível em que o pai (OrgChartPage) a coloca, mais o
 // deslocamento de arrastar por cima. As linhas de hierarquia são só o SVG
 // (ver recomputeLines), então a caixa não precisa "morar dentro" do pai.
-function NodeBox({ node, canEdit, onAddChild, onEdit, onDelete, onLinkClick, linkingFrom, registerNodeEl, onNodeMouseDown, draggingId, drawMode }) {
+const initials = name => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
+
+function NodeBox({ node, isRoot, canEdit, onAddChild, onEdit, onDelete, onLinkClick, onReset, linkingFrom, registerNodeEl, onNodeMouseDown, draggingId, drawMode }) {
   const isLinking = linkingFrom === node.id
   const isDragging = draggingId === node.id
   const hasOffset = !!(node.offset_x || node.offset_y)
@@ -99,19 +103,22 @@ function NodeBox({ node, canEdit, onAddChild, onEdit, onDelete, onLinkClick, lin
     <div
       ref={el => registerNodeEl(node.id, el)}
       style={style}
-      className={`${s.node} ${isLinking ? s.nodeLinking : ''} ${isDragging ? s.nodeDragging : ''}`}
+      className={`${s.node} ${isRoot ? s.nodeRoot : ''} ${isLinking ? s.nodeLinking : ''} ${isDragging ? s.nodeDragging : ''}`}
       onMouseDown={canEdit ? handleMouseDown : undefined}
     >
-      <span className={s.nodeName}>{node.name}</span>
-      {node.role && <span className={s.nodeRole}>{node.role}</span>}
+      <span className={s.initials} style={{ '--hue': avatarColor(node.id) }} aria-hidden="true">{initials(node.name)}</span>
+      <span className={s.nodeText}>
+        <span className={s.nodeName}>{node.name}</span>
+        {node.role && <span className={s.nodeRole}>{node.role}</span>}
+      </span>
       {canEdit && (
-        <div className={s.nodeActions} onMouseDown={e => e.stopPropagation()}>
-          <button title="Adicionar subordinado" onClick={() => onAddChild(node.id)}>+ Subordinado</button>
-          <button title={isLinking ? 'Cancelar ligação' : 'Ligar a outro cargo (sem hierarquia)'} onClick={() => onLinkClick(node.id)}>
-            {isLinking ? '✕ Ligando...' : '🔗 Ligar'}
-          </button>
-          <button title="Editar" onClick={() => onEdit(node)}>✏️</button>
-          <button title="Excluir" onClick={() => onDelete(node)}>🗑️</button>
+        <div className={`${s.nodeActions} ${isLinking ? s.nodeActionsOn : ''}`} onMouseDown={e => e.stopPropagation()}>
+          <button aria-label={`Adicionar alguém abaixo de ${node.name}`} title="Adicionar subordinado" onClick={() => onAddChild(node.id)}><LineIcon name="plus" size={14} /></button>
+          <button aria-label={isLinking ? 'Cancelar ligação' : `Ligar ${node.name} a outro cargo`} title={isLinking ? 'Cancelar ligação' : 'Ligar a outro cargo (sem hierarquia)'}
+            className={isLinking ? s.actOn : ''} onClick={() => onLinkClick(node.id)}><LineIcon name={isLinking ? 'close' : 'link'} size={14} /></button>
+          {hasOffset && <button aria-label={`Voltar ${node.name} ao lugar original`} title="Voltar ao lugar original" onClick={() => onReset(node)}><LineIcon name="undo" size={14} /></button>}
+          <button aria-label={`Editar ${node.name}`} title="Editar" onClick={() => onEdit(node)}><LineIcon name="edit" size={14} /></button>
+          <button aria-label={`Excluir ${node.name}`} title="Excluir" className={s.actDanger} onClick={() => onDelete(node)}><LineIcon name="trash" size={14} /></button>
         </div>
       )}
     </div>
@@ -199,6 +206,13 @@ export default function OrgChartPage() {
   }, [nodes, links])
 
   useLayoutEffect(() => { recomputeLines() }, [recomputeLines])
+  const centeredRef = useRef(false)
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current
+    if (!wrap || centeredRef.current || !(nodes || []).length) return
+    centeredRef.current = true
+    wrap.scrollLeft = Math.max(0, (wrap.scrollWidth - wrap.clientWidth) / 2)
+  }, [nodes])
   useEffect(() => {
     window.addEventListener('resize', recomputeLines)
     return () => window.removeEventListener('resize', recomputeLines)
@@ -417,49 +431,55 @@ export default function OrgChartPage() {
       <div className={s.header}>
         <div>
           <h1 className={s.title}>Organograma</h1>
-          <p className={s.sub}>Estrutura hierárquica da equipe — arraste uma caixa pra reorganizar o desenho.</p>
+          <p className={s.sub}>
+            {(nodes || []).length
+              ? `${nodes.length} ${nodes.length === 1 ? 'pessoa' : 'pessoas'} em ${rows.length} ${rows.length === 1 ? 'nível' : 'níveis'}.`
+              : 'A estrutura da equipe.'}
+            {canEdit && (nodes || []).length ? ' Arraste uma caixa para ajeitar o desenho.' : ''}
+          </p>
         </div>
         {canEdit && (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className={s.headerActions}>
             <button
               className={`btn ${drawMode ? 'btn-primary' : 'btn-ghost'}`}
+              aria-pressed={drawMode}
               onClick={() => { setDrawMode(v => !v); setLinkingFrom(null) }}
             >
-              ✏️ {drawMode ? 'Desenhando (clique pra sair)' : 'Desenhar linha'}
+              <LineIcon name="edit" size={15} /> {drawMode ? 'Parar de desenhar' : 'Desenhar linha'}
             </button>
-            <button className="btn btn-primary" onClick={() => setEditing({})}>+ Novo cargo</button>
+            <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Novo cargo</button>
           </div>
         )}
       </div>
 
       {canEdit && drawMode && (
         <div className={s.linkBanner}>
-          Clique e arraste em qualquer ponto do canvas pra desenhar uma linha solta (estilo Canva), sem vínculo com nenhum cargo.
+          <LineIcon name="edit" size={14} /> Clique e arraste em qualquer ponto da prancheta para desenhar uma linha solta, sem ligar a nenhum cargo.
         </div>
       )}
       {canEdit && linkingFrom && (
         <div className={s.linkBanner}>
-          Clique em outro cargo pra ligar a <strong>{nodeById[linkingFrom]?.name}</strong> (sem virar hierarquia).
+          <LineIcon name="link" size={14} /> Agora clique no ícone de ligar de outro cargo para ligar a <strong>{nodeById[linkingFrom]?.name}</strong> (sem virar hierarquia).
           <button className="btn btn-ghost btn-sm" onClick={() => setLinkingFrom(null)}>Cancelar</button>
         </div>
       )}
       {canEdit && draggingNode && !!(draggingNode.offset_x || draggingNode.offset_y) && (
         <div className={s.linkBanner}>
           Movendo <strong>{draggingNode.name}</strong>...
-          <button className="btn btn-ghost btn-sm" onClick={() => resetPosition(draggingNode)}>↺ Repor no lugar original</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => resetPosition(draggingNode)}><LineIcon name="undo" size={14} /> Voltar ao lugar original</button>
         </div>
       )}
       {linkError && <p role="alert" className={s.fileError}>{linkError}</p>}
 
       {roots.length === 0 ? (
         <div className={s.empty}>
-          <h3>Organograma vazio</h3>
-          <p>{canEdit ? 'Comece adicionando o cargo do topo da hierarquia.' : 'Peça pra um Super Admin montar o organograma.'}</p>
+          <h2>O organograma está vazio</h2>
+          <p>{canEdit ? 'Comece pelo cargo do topo da hierarquia com "Novo cargo".' : 'Peça para um Super Admin montar o organograma.'}</p>
         </div>
       ) : (
         <>
           <div
-            className={s.treeWrap}
+            className={`${s.treeWrap} ${drawMode ? s.drawing : ''} ${linkingFrom ? s.linking : ''}`}
             ref={wrapRef}
             style={{ cursor: drawMode ? 'crosshair' : undefined }}
             onMouseDown={onCanvasMouseDown}
@@ -470,7 +490,8 @@ export default function OrgChartPage() {
                   {row.map(node => (
                     <NodeBox
                       key={node.id}
-                      node={node} canEdit={canEdit}
+                      node={node} canEdit={canEdit} isRoot={i === 0}
+                      onReset={resetPosition}
                       onAddChild={parentId => setEditing({ parent_id: parentId })}
                       onEdit={setEditing}
                       onDelete={deleteNode}
@@ -506,11 +527,11 @@ export default function OrgChartPage() {
 
           {links.length > 0 && (
             <div className={s.linkList}>
-              <span className={s.linkListTitle}>Conexões sem hierarquia:</span>
+              <span className={s.linkListTitle}><span className={s.legendLink} aria-hidden="true" /> Ligações sem hierarquia</span>
               {links.map(l => (
                 <span key={l.id} className={s.linkChip}>
-                  {nodeById[l.from_node_id]?.name || '?'} ↔ {nodeById[l.to_node_id]?.name || '?'}
-                  {canEdit && <button onClick={() => removeLink(l)} title="Remover ligação">✕</button>}
+                  {nodeById[l.from_node_id]?.name || '?'} <LineIcon name="transfer" size={12} /> {nodeById[l.to_node_id]?.name || '?'}
+                  {canEdit && <button onClick={() => removeLink(l)} title="Remover ligação" aria-label="Remover ligação"><LineIcon name="close" size={12} /></button>}
                 </span>
               ))}
             </div>
@@ -518,11 +539,11 @@ export default function OrgChartPage() {
 
           {freeLines.length > 0 && (
             <div className={s.linkList}>
-              <span className={s.linkListTitle}>Linhas soltas:</span>
+              <span className={s.linkListTitle}><span className={s.legendFree} aria-hidden="true" /> Linhas soltas</span>
               {freeLines.map((l, i) => (
                 <span key={l.id} className={s.linkChip}>
                   Linha {i + 1}
-                  {canEdit && <button onClick={() => removeFreeLine(l)} title="Remover linha">✕</button>}
+                  {canEdit && <button onClick={() => removeFreeLine(l)} title="Remover linha" aria-label={`Remover a linha ${i + 1}`}><LineIcon name="close" size={12} /></button>}
                 </span>
               ))}
             </div>
