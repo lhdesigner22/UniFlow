@@ -179,7 +179,10 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 
 ## Visual "premium" (out/2026)
 - Referências: site da Gcore (pedida pelo Luiz) + Linear (skill awesome-design-md), **mantendo as cores do UniFlow** (azul `--brand` + verde).
-  Tema escuro em **grafite** (`--bg #111318`; o quase-preto ele achou escuro demais), bordas brancas a 9%, brilho azul no `body` (`.main`,
+  **Paleta = a do Início/telão em todas as abas** (29/10/2026, pedido do Luiz): azul da logo `#0f6aa8`, verde `#1bb266`, noite `#061826`,
+  névoa `#e9f1f6`/`#8fa7bb`. Escuro: `--bg #061826`, superfícies `#0B2133`/`#122A3F`. O azul da logo é FUNDO de botão (`--brand-dark`);
+  no escuro `--brand` é `#3F9BE0` (o `#0f6aa8` como texto no escuro dá 2,9:1). Botão verde usa texto noite (branco no verde dá 2,8:1).
+  Antes era grafite (`--bg #111318`): bordas a 9%, brilho azul no `body` (`.main`,
   Topbar e menu transparentes/no mesmo fundo), item ativo do menu = degrau de cinza (sem azul), títulos h1/h2 peso 600 com tracking negativo,
   botões `.btn` em pílula (todos os temas), login no estilo Gcore (`Auth.module.css`).
 - **Cases de Sucesso é a página-modelo**: ícones de linha (SVG) no lugar de emoji, KPIs num painel só dividido por linhas, cartões neutros

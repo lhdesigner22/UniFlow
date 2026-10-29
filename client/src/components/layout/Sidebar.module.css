@@ -20,7 +20,7 @@
 }
 .logoMark {
   width: 34px; height: 34px; flex-shrink: 0;
-  background: var(--blue); border-radius: 9px;
+  background: var(--brand-dark); /* azul da logo, como no telão */ border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
 }
 .logoText {

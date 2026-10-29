@@ -1,17 +1,19 @@
 /* ── Brand tokens (Fase 6 — identidade "SaaS empresarial", alinhada
    à paleta do UniFECAF Jukebox: azul + verde sobre navy escuro) ──── */
 :root {
-  --brand: #3B82F6;        /* azul — ação primária, alinhado ao ecossistema UniFECAF */
-  --brand-dark: #2563EB;
-  --accent: #22C55E;        /* verde — marca/destaque secundário */
-  --accent-dark: #16A34A;
-  --bg: #F5F7FB;             /* canvas claro, neutro e sóbrio */
+  /* Paleta do Início (telão PARISFE, out/2026 — pedido do Luiz: a mesma em todas as abas):
+     azul da logo #0f6aa8, verde #1bb266, noite #061826, névoa #e9f1f6 / #8fa7bb. */
+  --brand: #0f6aa8;        /* azul da logo — ação primária, links, foco */
+  --brand-dark: #0b5689;   /* fundo de botão (branco 7,8:1) */
+  --accent: #1bb266;        /* verde da logo */
+  --accent-dark: #127a44;   /* verde como TEXTO no claro (5,4:1) */
+  --bg: #F3F7FA;
   --surface: #FFFFFF;
-  --surface-2: #EEF2FA;
-  --text: #101A2E;
-  --text-muted: #5B6B8C;
-  --border: #DFE4F0;
-  --success: #22C55E; --warning: #F59E0B; --danger: #EF4444;
+  --surface-2: #E9F1F6;
+  --text: #061826;
+  --text-muted: #4F667A;
+  --border: #D6E2EC;
+  --success: #1BB266; --warning: #F59E0B; --danger: #EF4444;
   --radius: 10px; --radius-sm: 8px;
   --shadow-sm: 0 1px 2px rgba(16,24,40,.05);
   --shadow-md: 0 4px 12px rgba(16,24,40,.07);
@@ -36,9 +38,13 @@
    cinza-carvão, bordas finíssimas brancas a 8%, texto quase branco e um
    cinza só pro secundário. Cor (azul/verde da marca) só em ação e dado.
    Brilho azul discreto no topo da tela (body, mais abaixo). */
+/* Escuro = a noite azul do telão: as superfícies sobem em azul-petróleo; o azul da
+   logo fica no fundo dos botões (--brand-dark) e um tom mais claro vira texto/foco
+   (--brand), porque #0f6aa8 como texto no escuro dá só 2,9:1. */
 [data-theme="dark"] {
-  --bg: #111318; --surface: #181B22; --surface-2: #20242D;
-  --text: #F5F7FA; --text-muted: #9BA3B0; --border: #2A2F3A;
+  --brand: #3F9BE0; --brand-dark: #0F6AA8;
+  --bg: #061826; --surface: #0B2133; --surface-2: #122A3F;
+  --text: #E9F1F6; --text-muted: #8FA7BB; --border: #1D3850;
   --shadow-sm: 0 1px 4px rgba(0,0,0,.4);
   --shadow-md: 0 4px 20px rgba(0,0,0,.5);
   --shadow-lg: 0 20px 64px rgba(0,0,0,.65);
@@ -62,32 +68,32 @@
   --light: var(--text);
   --muted: var(--text-muted);
   --border2: var(--border);
-  --border: rgba(59,130,246,.22);
+  --border: rgba(15,106,168,.2);
   --blue: var(--brand);
   --blue2: var(--brand-dark);
   --blue3: var(--brand-dark);
   --green: var(--success);
-  --green2: #16a34a;
+  --green2: var(--accent-dark);
   --red: var(--danger);
   --red2: #b91c1c;
   --amber: var(--warning);
   --purple: #8B5CF6;
   --teal: var(--accent);
-  --glow: rgba(59,130,246,.08);
+  --glow: rgba(15,106,168,.08);
   --scrollbar: rgba(31,36,48,.16);
   --sidebar-bg: var(--surface);
   /* Texto colorido de situação (etiquetas, status): um tom no claro, outro no
      escuro — o tema troca sozinho, ninguém precisa repetir [data-theme="dark"]. */
-  --info-text: #1d4ed8; --success-text: var(--accent-dark); --danger-text: #dc2626;
+  --info-text: #0b5689; --success-text: var(--accent-dark); --danger-text: #dc2626;
   --warning-text: #b45309; --purple-text: #6d3fe0;
   --font-mono: ui-monospace, 'SFMono-Regular', Consolas, monospace;
 }
 [data-theme="dark"] {
-  --border: rgba(255,255,255,.09);
-  --border2: rgba(255,255,255,.09);
-  --glow: rgba(59,130,246,.14);
-  --scrollbar: rgba(255,255,255,.1);
-  --info-text: #93c5fd; --success-text: #4ade80; --danger-text: #f87171;
+  --border: rgba(190,214,236,.12);
+  --border2: rgba(190,214,236,.12);
+  --glow: rgba(63,155,224,.14);
+  --scrollbar: rgba(190,214,236,.14);
+  --info-text: #8ec5f0; --success-text: #4fd18f; --danger-text: #f87171;
   --warning-text: #fbbf24; --purple-text: #c4b5fd;
 }
 
@@ -119,8 +125,8 @@ body {
 /* Brilho azul discreto saindo do canto superior direito (só no escuro) */
 [data-theme="dark"] body {
   background:
-    radial-gradient(1100px 620px at 92% -18%, color-mix(in srgb, var(--brand) 22%, transparent), transparent 60%),
-    radial-gradient(700px 420px at 8% 110%, color-mix(in srgb, var(--success) 5%, transparent), transparent 60%),
+    radial-gradient(1100px 620px at 92% -18%, color-mix(in srgb, var(--brand-dark) 34%, transparent), transparent 60%),
+    radial-gradient(800px 480px at 8% 110%, color-mix(in srgb, var(--success) 9%, transparent), transparent 60%),
     var(--bg);
   background-attachment: fixed;
 }
@@ -171,17 +177,17 @@ textarea { resize: vertical; }
   white-space: nowrap; line-height: 1.4; letter-spacing: .01em;
 }
 .btn-sm { padding: 5px 12px; font-size: 12px; }
-/* Contraste (auditoria de acessibilidade, out/2026): branco sobre --brand dava
-   3,68:1; sobre --brand-dark dá 5,17:1 (mínimo 4,5:1). Hover/clique um tom abaixo (#1D4ED8, 6,7:1). */
+/* Contraste: branco sobre --brand-dark dá 7,8:1 no claro e 5,8:1 no escuro (mínimo 4,5:1).
+   Hover/clique um tom abaixo. Verde com texto noite (6,5:1): branco no verde dava 2,8:1. */
 .btn-primary {
   background: var(--brand-dark); color: #fff;
 }
-.btn-primary:hover { background: #1D4ED8; box-shadow: 0 4px 14px color-mix(in srgb, var(--brand) 35%, transparent); }
-.btn-primary:active { background: #1D4ED8; }
-.btn-accent { background: var(--accent); color: #fff; }
-.btn-accent:hover { background: var(--accent-dark); box-shadow: 0 4px 14px color-mix(in srgb, var(--success) 35%, transparent); }
-.btn-green  { background: var(--success); color: #fff; }
-.btn-green:hover { background: var(--accent-dark); box-shadow: 0 4px 14px color-mix(in srgb, var(--success) 35%, transparent); }
+.btn-primary:hover { background: color-mix(in srgb, var(--brand-dark) 80%, #000); box-shadow: 0 4px 14px color-mix(in srgb, var(--brand) 35%, transparent); }
+.btn-primary:active { background: color-mix(in srgb, var(--brand-dark) 80%, #000); }
+.btn-accent { background: var(--accent); color: #061826; }
+.btn-accent:hover { background: var(--accent-dark); color: #fff; box-shadow: 0 4px 14px color-mix(in srgb, var(--success) 35%, transparent); }
+.btn-green  { background: var(--success); color: #061826; }
+.btn-green:hover { background: var(--accent-dark); color: #fff; box-shadow: 0 4px 14px color-mix(in srgb, var(--success) 35%, transparent); }
 .btn-ghost {
   background: transparent; color: var(--text-muted);
   border: 1px solid var(--border2);
