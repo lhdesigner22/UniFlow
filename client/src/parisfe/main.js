@@ -31,7 +31,7 @@ VALUES.forEach((v, i) => {
   // cada letra anima sozinha, mas agrupada por palavra (senão a linha quebra no meio da palavra)
   let n = 0
   const title = v.name.split(' ').map(word => `<span class="wd">${word.split('').map(c =>
-    `<span class="ch${n === 0 ? ' initial' : ''}" style="--i:${n++}">${c}</span>`).join('')}</span>`).join(' ')
+    `<span class="ch" style="--i:${n++}">${c}</span>`).join('')}</span>`).join(' ')
   sec.innerHTML = `
     <span class="ghost" aria-hidden="true">${v.name[0]}</span>
     <div class="copy">
@@ -40,7 +40,7 @@ VALUES.forEach((v, i) => {
       <blockquote class="quote"></blockquote>
     </div>`
   sec.querySelector('.desc').textContent = v.desc
-  sec.querySelector('.quote').textContent = `“${v.quote}”`
+  sec.querySelector('.quote').textContent = v.quote // no balão, sem aspas
   outro.before(sec)
 
   const a = document.createElement('a')
@@ -49,6 +49,14 @@ VALUES.forEach((v, i) => {
   a.title = v.name
   a.setAttribute('aria-label', v.name)
   $('letters').appendChild(a)
+
+  const ac = document.createElement('a')
+  ac.href = `#${sec.id}`
+  ac.style.setProperty('--i', i)
+  ac.innerHTML = '<span class="ac-letter" aria-hidden="true"></span><span class="ac-word"></span>'
+  ac.querySelector('.ac-letter').textContent = v.name[0]
+  ac.querySelector('.ac-word').textContent = v.name
+  $('acrostic').appendChild(ac)
 })
 const sections = [...document.querySelectorAll('main > section')]
 const LAST = sections.length - 1
@@ -74,7 +82,8 @@ function poseFor(k) {
   const portrait = innerWidth / innerHeight < 1
   // em pé, o anel (diâmetro ≈ 5,1 × escala) tem que caber na largura
   const fit = Math.min(0.62, view.w * 0.17)
-  if (k === 0 || k === LAST) return { x: 0, y: portrait ? view.h * 0.12 : view.h * 0.09, scale: portrait ? fit * 1.1 : 0.74 }
+  if (k === 0) return { x: 0, y: portrait ? view.h * 0.16 : view.h * 0.17, scale: portrait ? fit : 0.6 }
+  if (k === LAST) return { x: 0, y: portrait ? view.h * 0.12 : view.h * 0.1, scale: portrait ? fit * 1.1 : 0.66 }
   if (portrait) return { x: 0, y: view.h * 0.2, scale: fit }
   const textRight = sections[k].dataset.side === 'right'
   return { x: (textRight ? -1 : 1) * view.w * 0.23, y: 0, scale: 0.8 }

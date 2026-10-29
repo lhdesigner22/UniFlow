@@ -63,10 +63,10 @@ export function createLogoScene(canvas) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 0.85
-  renderer.setClearColor(0x010306, 1) // mais escuro que o --night: o tone mapping clareia
+  renderer.setClearColor(0x01070d, 1) // azul fundo da marca, um tom abaixo do --night: o tone mapping clareia
 
   const scene = new THREE.Scene()
-  scene.fog = new THREE.FogExp2(0x010306, 0.045)
+  scene.fog = new THREE.FogExp2(0x01070d, 0.045)
   const pmrem = new THREE.PMREMGenerator(renderer)
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
   scene.environmentIntensity = 0.09 // só reflexo discreto; mais que isso estoura no bloom

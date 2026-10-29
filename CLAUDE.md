@@ -154,6 +154,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   React e do pré-cache do PWA (Three.js ~580 KB). Logo UniFECAF em 3D (`logo3d.js`, Three.js + bloom, desenhada do mesmo caminho SVG)
   gira e troca de lado com a rolagem; abertura + 7 valores + encerramento, uma tela cada. Modo TV: sem ninguém mexer, 9 s por seção e
   volta ao início; espaço pausa, F tela cheia. Textos dos valores só em `VALUES` do `main.js`.
+  Visual (out/2026, skill frontend-design): fundo azul profundo `#061826` (cena 3D `0x01070d` — o tone mapping clareia, cor mais clara
+  deixa a logo marinho parecendo preta), uma família só **Bricolage Grotesque** (o Bodoni de fio fino sumia/serrilhava na TV), abertura =
+  acróstico (letra grande + valor embaixo, clicável), frase de atendimento num **balão de conversa**, letra de fundo cheia e suave.
   **O Início do app É o telão** (out/2026, pedido do Luiz): `DashboardPage.jsx` = iframe de `/parisfe?embed=1` (por isso o `_headers`
   tem `frame-src 'self'`, `frame-ancestors 'self'` e `X-Frame-Options: SAMEORIGIN`) + faixa do cronômetro rodando; "Meus cartões" e
   a grade de princípios saíram. Nitidez: o EffectComposer usa alvo com MSAA (`samples: 4`) — sem isso o pós-processamento perde o

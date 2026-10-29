@@ -1,25 +1,31 @@
 /* Telão PARISFE. Layout: a logo 3D fica num canvas fixo atrás de tudo; a página
    rola por cima em seções de uma tela cada (abertura, 7 valores, encerramento).
-   Em cada valor, a letra gigante vazada e o texto ficam do lado oposto à logo. */
+   Abertura = o acróstico (cada letra com o seu valor). Em cada valor, o texto fica
+   do lado oposto à logo e a frase de atendimento vem num balão de conversa.
+   Tipo: uma família só (Bricolage Grotesque), de traço firme — o Bodoni de antes
+   tinha fios finos que sumiam e serrilhavam na TV. */
 :root {
-  --night: #04080d;      /* fundo, com viés do azul da marca (igual ao fundo da cena 3D) */
+  --night: #061826;      /* fundo: azul profundo da marca (não preto) */
   --navy: #0f6aa8;       /* azul da logo, aceso para o escuro */
   --green: #1bb266;      /* verde da logo */
-  --ink: #eef3f7;        /* texto principal */
-  --mist: #93a6b9;       /* texto de apoio */
-  --outline: rgba(190, 214, 236, .22); /* letra gigante vazada */
-  --display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
-  --body: "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --ink: #e9f1f6;        /* texto principal */
+  --mist: #8fa7bb;       /* texto de apoio */
+  --bubble: color-mix(in srgb, var(--green) 16%, #071d2c); /* balão da frase */
+  --type: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --gutter: max(clamp(18px, 4vw, 72px), env(safe-area-inset-left, 0px));
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { scroll-snap-type: y proximity; background: var(--night); }
-body { margin: 0; background: var(--night); color: var(--ink); font-family: var(--body); -webkit-font-smoothing: antialiased; }
+body {
+  margin: 0; background: var(--night); color: var(--ink);
+  font-family: var(--type); font-optical-sizing: auto; -webkit-font-smoothing: antialiased;
+}
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 a { color: inherit; }
-:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; border-radius: 2px; }
+:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; border-radius: 4px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
 .fallback-logo { position: fixed; left: 50%; top: 50%; width: min(36vh, 40vw); transform: translate(-50%, -50%); z-index: 0; opacity: .9; }
@@ -33,17 +39,17 @@ a { color: inherit; }
 }
 .bar { top: 0; padding-top: max(clamp(16px, 3vh, 36px), env(safe-area-inset-top, 0px)); }
 .foot { bottom: 0; padding-bottom: max(clamp(16px, 3vh, 36px), env(safe-area-inset-bottom, 0px)); pointer-events: none; }
-.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; font-family: var(--display); font-size: clamp(16px, 1.3vw, 24px); letter-spacing: .02em; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 600; font-size: clamp(16px, 1.25vw, 23px); letter-spacing: -.01em; }
 .brand svg { width: clamp(22px, 1.8vw, 32px); height: auto; }
-.letters { display: flex; gap: clamp(8px, 2vw, 36px); }
+.letters { display: flex; gap: clamp(6px, 1.4vw, 26px); }
 .letters a {
   position: relative; text-decoration: none;
-  font-family: var(--display); font-size: clamp(15px, 1.25vw, 24px);
-  color: var(--mist); padding: 6px 4px;
+  font-weight: 600; font-size: clamp(15px, 1.2vw, 23px);
+  color: var(--mist); padding: 6px 8px;
   transition: color .3s ease;
 }
 .letters a::after {
-  content: ""; position: absolute; left: 4px; right: 4px; bottom: 0; height: 2px;
+  content: ""; position: absolute; left: 8px; right: 8px; bottom: 0; height: 2px; border-radius: 2px;
   background: var(--green); transform: scaleX(0); transition: transform .5s cubic-bezier(.2, .7, .2, 1);
 }
 .letters a[aria-current="true"] { color: var(--ink); }
@@ -51,19 +57,19 @@ a { color: inherit; }
 .letters a:hover { color: var(--ink); }
 .tools { display: flex; gap: 6px; }
 .tools button { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; color: var(--mist); transition: color .2s, background .2s; }
-.tools button:hover { color: var(--ink); background: rgba(255, 255, 255, .06); }
+.tools button:hover { color: var(--ink); background: rgba(255, 255, 255, .07); }
 .tools svg { width: 18px; height: 18px; }
 .count { font-variant-numeric: tabular-nums; font-size: clamp(13px, 1.05vw, 20px); color: var(--mist); min-width: 6ch; }
 .count b { color: var(--ink); font-weight: 600; }
-.rail { flex: 1; max-width: 360px; height: 2px; background: rgba(255, 255, 255, .1); border-radius: 2px; overflow: hidden; }
+.rail { flex: 1; max-width: 360px; height: 3px; background: rgba(255, 255, 255, .1); border-radius: 3px; overflow: hidden; }
 .rail span { display: block; height: 100%; width: 100%; background: var(--green); transform-origin: left; transform: scaleX(0); }
 .hint {
   position: fixed; left: 50%; bottom: calc(max(clamp(16px, 3vh, 36px), env(safe-area-inset-bottom, 0px)) + 40px); z-index: 3;
   transform: translateX(-50%); margin: 0; width: max-content; max-width: calc(100vw - 32px);
-  font-size: 13px; color: var(--mist); text-align: center;
+  font-size: 14px; color: var(--mist); text-align: center;
   opacity: 0; transition: opacity .6s ease; pointer-events: none;
 }
-.hint.on { opacity: .85; }
+.hint.on { opacity: .9; }
 
 /* ── seções ── */
 main { position: relative; z-index: 2; }
@@ -77,63 +83,87 @@ main > section {
   overflow: hidden;
 }
 
+/* abertura: o acróstico é o herói — a sigla decifrada, letra por letra */
 .intro { display: grid; align-content: end; justify-items: center; text-align: center; }
-.intro-copy { display: grid; gap: 14px; justify-items: center; }
-.word-mark {
-  margin: 0; font-family: var(--display); font-weight: 400;
-  font-size: clamp(64px, 11vw, 210px); line-height: .9; letter-spacing: .08em;
-  padding-left: .08em; /* compensa o espaçamento da última letra */
-  text-shadow: 0 10px 60px rgba(4, 8, 13, .95);
+.intro-copy { display: grid; gap: clamp(18px, 3vh, 34px); justify-items: center; width: 100%; }
+.acrostic {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  width: min(100%, 1640px); column-gap: clamp(8px, 1.4vw, 28px);
 }
-.lede { margin: 0; font-size: clamp(16px, 1.45vw, 28px); color: var(--mist); max-width: 40ch; }
+.acrostic a {
+  display: grid; justify-items: center; align-content: start; gap: clamp(6px, 1.2vh, 14px);
+  text-decoration: none; padding: 4px 2px 8px; border-radius: 10px;
+  animation: acIn .9s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(.15s + var(--i) * 90ms);
+}
+.ac-letter {
+  font-weight: 800; font-variation-settings: "wdth" 100;
+  font-size: clamp(64px, 9.4vw, 184px); line-height: .82; letter-spacing: -.03em;
+  color: var(--ink); transition: color .3s ease;
+}
+.ac-word {
+  font-size: clamp(12px, 1.05vw, 20px); font-weight: 500; line-height: 1.25; color: var(--mist);
+  max-width: 13ch; text-wrap: balance; transition: color .3s ease;
+}
+.acrostic a:hover .ac-letter { color: var(--green); }
+.acrostic a:hover .ac-word { color: var(--ink); }
+@keyframes acIn { from { opacity: 0; transform: translateY(.35em); } to { opacity: 1; transform: none; } }
+.lede { margin: 0; font-size: clamp(16px, 1.35vw, 26px); color: var(--mist); }
 .scroll-cue {
   position: absolute; left: 50%; bottom: clamp(70px, 10vh, 110px); transform: translateX(-50%);
   margin: 0; font-size: clamp(13px, .95vw, 17px); color: var(--mist);
   animation: cue 2.6s ease-in-out infinite;
 }
+.intro .scroll-cue { display: none; } /* o acróstico já convida a navegar */
 @keyframes cue { 0%, 100% { transform: translate(-50%, 0); opacity: .55; } 50% { transform: translate(-50%, 8px); opacity: 1; } }
 
 /* valor: texto do lado oposto ao da logo */
 .value { display: grid; align-items: center; grid-template-columns: 1fr 1fr; }
-.value .copy { grid-column: 2; position: relative; z-index: 1; max-width: 46rem; display: grid; gap: clamp(14px, 2vh, 26px); }
+.value .copy { grid-column: 2; position: relative; z-index: 1; max-width: 46rem; display: grid; gap: clamp(16px, 2.4vh, 30px); justify-items: start; }
 .value[data-side="left"] .copy { grid-column: 1; grid-row: 1; }
+/* a letra da sigla, cheia e quase no tom do fundo (sem o fio fino que serrilhava) */
 .ghost {
   position: absolute; z-index: 0; top: 50%;
-  font-family: var(--display); font-weight: 400; line-height: .8;
-  font-size: clamp(260px, 62vh, 760px);
-  color: transparent; -webkit-text-stroke: 1px var(--outline);
+  font-weight: 800; line-height: .8;
+  font-size: clamp(260px, 64vh, 780px);
+  color: color-mix(in srgb, var(--navy) 16%, transparent);
   transform: translateY(calc(-50% + var(--p, 0) * -22vh));
   pointer-events: none; user-select: none;
 }
-.value[data-side="right"] .ghost { right: 4vw; }
-.value[data-side="left"] .ghost { left: 4vw; }
+.value[data-side="right"] .ghost { right: 3vw; }
+.value[data-side="left"] .ghost { left: 3vw; }
 .title {
-  margin: 0; font-family: var(--display); font-weight: 400;
-  font-size: clamp(48px, 7vw, 138px); line-height: .95; letter-spacing: -.02em;
-  text-wrap: balance; text-shadow: 0 8px 50px rgba(4, 8, 13, .9);
+  margin: 0; font-weight: 700; font-variation-settings: "wdth" 100;
+  font-size: clamp(48px, 6.6vw, 132px); line-height: .92; letter-spacing: -.018em;
+  text-wrap: balance;
 }
-.title.long { font-size: clamp(40px, 5vw, 98px); }
-.title .initial { color: var(--green); }
-.title .ch { display: inline-block; opacity: 0; transform: translateY(.45em) rotate(4deg); transition: opacity .7s ease, transform .9s cubic-bezier(.2, .7, .2, 1); transition-delay: calc(var(--i) * 28ms); }
+.title.long { font-size: clamp(40px, 4.6vw, 92px); font-variation-settings: "wdth" 88; }
+.title .ch { display: inline-block; opacity: 0; transform: translateY(.4em); transition: opacity .6s ease, transform .8s cubic-bezier(.2, .7, .2, 1); transition-delay: calc(var(--i) * 24ms); }
 .title .wd { display: inline-block; white-space: nowrap; }
-.desc { margin: 0; font-size: clamp(16px, 1.35vw, 27px); line-height: 1.5; color: var(--mist); max-width: 34ch; }
+.desc { margin: 0; font-size: clamp(17px, 1.4vw, 28px); line-height: 1.45; color: var(--mist); max-width: 34ch; }
+/* a frase dita no atendimento, no formato em que ela acontece: um balão de conversa */
 .quote {
-  margin: 0; max-width: 30ch;
-  font-family: var(--display); font-style: italic; font-size: clamp(20px, 1.9vw, 38px); line-height: 1.28;
-  border-left: 2px solid var(--green); padding-left: 18px;
+  position: relative; margin: clamp(4px, 1vh, 12px) 0 0; max-width: 28ch;
+  background: var(--bubble); border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  border-radius: 28px 28px 28px 6px;
+  padding: clamp(14px, 2vh, 24px) clamp(18px, 1.7vw, 32px);
+  font-size: clamp(20px, 1.85vw, 37px); font-weight: 500; line-height: 1.28; letter-spacing: -.012em;
+  quotes: none;
 }
 .desc, .quote { opacity: 0; transform: translateY(14px); transition: opacity .8s ease .35s, transform .9s cubic-bezier(.2, .7, .2, 1) .35s; }
+.quote { transform-origin: 0 100%; transform: scale(.94) translateY(10px); }
 .value.in .title .ch { opacity: 1; transform: none; }
 .value.in .desc, .value.in .quote { opacity: 1; transform: none; }
-.value.in .quote { transition-delay: .5s; }
+.value.in .quote { transition-delay: .55s; }
 
 .outro { display: grid; align-content: end; justify-items: center; text-align: center; gap: 18px; }
-.outro-line { margin: 0; font-family: var(--display); font-style: italic; font-size: clamp(40px, 6vw, 120px); line-height: 1; text-shadow: 0 10px 60px rgba(4, 8, 13, .95); }
-.outro-word { margin: 0; font-family: var(--display); font-size: clamp(16px, 1.4vw, 26px); color: var(--mist); letter-spacing: .4em; }
+.outro-line { margin: 0; font-weight: 700; font-size: clamp(42px, 6vw, 120px); line-height: 1; letter-spacing: -.02em; }
+.outro-word { margin: 0; font-size: clamp(16px, 1.4vw, 26px); font-weight: 600; color: var(--mist); letter-spacing: .5em; padding-left: .5em; }
 
 /* tela em pé (celular, TV na vertical): logo em cima, texto embaixo */
 @media (max-aspect-ratio: 1/1) {
   .letters { display: none; }
+  .ac-word { display: none; }
+  .ac-letter { font-size: clamp(40px, 12vw, 120px); }
   .value { grid-template-columns: 1fr; align-items: end; }
   .value .copy, .value[data-side="left"] .copy { grid-column: 1; }
   .ghost { font-size: clamp(200px, 40vh, 480px); top: 62%; }
@@ -144,7 +174,7 @@ main > section {
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-snap-type: y mandatory; }
-  .scroll-cue { animation: none; }
+  .scroll-cue, .acrostic a { animation: none; }
   .title .ch, .desc, .quote { transition: opacity .3s ease; transform: none !important; }
   .ghost { transform: translateY(-50%); }
 }

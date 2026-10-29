@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#04080d">
+<meta name="theme-color" content="#061826">
 <title>PARISFE UniFECAF</title>
 <link rel="icon" href="/favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Hanken+Grotesk:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&display=swap">
 </head>
 <body>
 <!--
@@ -41,8 +41,10 @@
 <main id="story">
   <section class="intro" id="abertura" data-pose="center">
     <div class="intro-copy">
-      <h1 class="word-mark">PARISFE</h1>
-      <p class="lede">Os sete valores que guiam o atendimento na UniFECAF.</p>
+      <h1 class="sr-only">PARISFE</h1>
+      <!-- acróstico: cada letra de PARISFE com o valor que ela representa (montado pelo main.js) -->
+      <nav class="acrostic" id="acrostic" aria-label="Os sete valores"></nav>
+      <p class="lede">Os sete valores do nosso atendimento</p>
     </div>
     <p class="scroll-cue" id="cue">Role para conhecer cada um</p>
   </section>
