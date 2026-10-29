@@ -2,6 +2,7 @@ import { useState } from 'react'
 import api from '../../services/api'
 import { confirmDialog, alertDialog } from '../../store/dialogStore'
 import Modal from '../common/Modal'
+import LineIcon from '../common/LineIcon'
 import s from './MachineStandards.module.css'
 
 // Base de Conhecimento → Padronização de máquinas: configuração mínima de
@@ -12,7 +13,6 @@ const KINDS = [
   { key: 'cargo', label: 'Por cargo', hint: 'Configuração mínima conforme o cargo da pessoa.' },
   { key: 'setor', label: 'Por setor', hint: 'Estes setores seguem a própria regra, para qualquer cargo.' },
 ]
-const ICONS = ['🎓', '👥', '👔', '💻', '🎬', '🖥️', '🎨', '📊', '🧑‍💻', '⚙️']
 const COLORS = ['#7ED957', '#F5C518', '#2D4FC4', '#00B0D4', '#FF2D5E', '#8B5CF6', '#F97316', '#64748B']
 
 function Editor({ item, onClose, onSaved }) {
@@ -78,15 +78,10 @@ function Editor({ item, onClose, onSaved }) {
         <input id="machine-standards-requisito-extra-opcional" value={form.extra} maxLength={200} onChange={e => set('extra', e.target.value)} placeholder="Ex: Placa de vídeo dedicada" />
       </div>
       <div className="form-group">
-        <label className="label">Ícone e cor</label>
-        <div className={s.pickers}>
-          {ICONS.map(i => (
-            <button key={i} type="button" className={`${s.pick} ${form.icon === i ? s.pickOn : ''}`} onClick={() => set('icon', i)}>{i}</button>
-          ))}
-        </div>
-        <div className={s.pickers} style={{ marginTop: 6 }}>
+        <span className="label" id="machine-standards-cor">Cor</span>
+        <div className={s.pickers} role="radiogroup" aria-labelledby="machine-standards-cor">
           {COLORS.map(c => (
-            <button key={c} type="button" aria-label={`Cor ${c}`} className={`${s.swatch} ${form.color === c ? s.pickOn : ''}`} style={{ background: c }} onClick={() => set('color', c)} />
+            <button key={c} type="button" role="radio" aria-checked={form.color === c} aria-label={`Cor ${c}`} className={`${s.swatch} ${form.color === c ? s.pickOn : ''}`} style={{ background: c }} onClick={() => set('color', c)} />
           ))}
         </div>
       </div>
@@ -119,49 +114,64 @@ export default function MachineStandards({ items, setItems, writable }) {
   return (
     <div className={s.wrap}>
       <div className={s.intro}>
-        <p><strong>Padronização de máquinas</strong> — configuração mínima do computador de cada colaborador. Vale o cargo da pessoa, exceto nos setores listados em “Por setor”, que seguem a própria regra.</p>
-        {writable && <button className="btn btn-ghost btn-sm" onClick={() => setEditing({})}>+ Novo perfil</button>}
+        <p>
+          Configuração mínima do computador de cada pessoa. Vale o cargo, exceto nos setores da segunda tabela,
+          que seguem a própria regra para qualquer cargo.
+        </p>
+        {writable && <button className="btn btn-ghost btn-sm" onClick={() => setEditing({})}><LineIcon name="plus" size={14} /> Novo perfil</button>}
       </div>
 
       {KINDS.map(k => {
         const list = items.filter(x => x.kind === k.key)
         if (!list.length) return null
         return (
-          <section key={k.key} className={s.section}>
-            <div className={s.sectionHead}>
-              <h3>{k.label}</h3>
-              <span>{k.hint}</span>
-            </div>
-            <div className={s.grid}>
-              {list.map(m => (
-                <div key={m.id} className={s.card}>
-                  <div className={s.cardHead}>
-                    <span className={s.icon} style={{ background: `${m.color || '#2D4FC4'}33`, boxShadow: `inset 0 0 0 2px ${m.color || '#2D4FC4'}` }}>{m.icon || '🖥️'}</span>
-                    <div className={s.cardTitle}>
-                      <h4>{m.name}</h4>
-                      {m.audience && <span>{m.audience}</span>}
-                    </div>
+          <section key={k.key} className={s.card} aria-labelledby={`ms-${k.key}`}>
+            <table className={s.table}>
+              <caption id={`ms-${k.key}`} className={s.caption}>
+                <strong>{k.label}</strong> <span>{k.hint}</span>
+              </caption>
+              <thead>
+                <tr>
+                  <th>{k.key === 'setor' ? 'Setor' : 'Cargo'}</th>
+                  <th>Processador</th>
+                  <th>Memória RAM</th>
+                  <th>Requisito extra</th>
+                  {writable && <th className={s.actionsCol}><span className="sr-only">Ações</span></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {list.map(m => (
+                  <tr key={m.id}>
+                    <td>
+                      <span className={s.profile}>
+                        <span className={s.dot} style={{ background: m.color || '#2D4FC4' }} aria-hidden="true" />
+                        <span>
+                          <span className={s.name}>{m.name}</span>
+                          {m.audience && <span className={s.audience}>{m.audience}</span>}
+                        </span>
+                      </span>
+                    </td>
+                    <td className={s.spec}>{m.cpu || <span className={s.none}>—</span>}</td>
+                    <td className={s.spec}>{m.ram || <span className={s.none}>—</span>}</td>
+                    <td className={s.spec}>{m.extra || <span className={s.none}>Nenhum</span>}</td>
                     {writable && (
-                      <div className={s.actions}>
-                        <button title="Editar" onClick={() => setEditing(m)}>✏️</button>
-                        <button title="Excluir" onClick={() => remove(m)}>🗑️</button>
-                      </div>
+                      <td className={s.actionsCol}>
+                        <span className={s.actions}>
+                          <button type="button" onClick={() => setEditing(m)} aria-label={`Editar ${m.name}`} title="Editar"><LineIcon name="edit" size={15} /></button>
+                          <button type="button" className={s.danger} onClick={() => remove(m)} aria-label={`Excluir ${m.name}`} title="Excluir"><LineIcon name="trash" size={15} /></button>
+                        </span>
+                      </td>
                     )}
-                  </div>
-                  <dl className={s.specs}>
-                    {m.cpu && <><dt>Processador</dt><dd>{m.cpu}</dd></>}
-                    {m.ram && <><dt>Memória RAM</dt><dd>{m.ram}</dd></>}
-                    {m.extra && <><dt>Extra</dt><dd>{m.extra}</dd></>}
-                  </dl>
-                </div>
-              ))}
-            </div>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </section>
         )
       })}
 
       {items.length === 0 && (
-        <div className={s.empty}>Nenhum perfil cadastrado ainda.</div>
+        <div className={s.empty}>Nenhum perfil ainda. {writable ? 'Crie o primeiro com "Novo perfil".' : ''}</div>
       )}
 
       {editing && <Editor item={editing.id ? editing : null} onClose={() => setEditing(null)} onSaved={onSaved} />}

@@ -1,56 +1,72 @@
-.wrap { display: flex; flex-direction: column; gap: 22px; }
-.intro {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 14px 18px;
-}
-.intro p { font-size: 13.5px; color: var(--text-muted); line-height: 1.55; margin: 0; flex: 1; min-width: 260px; }
-.intro strong { color: var(--text); }
+/* Padronização de máquinas: uma tabela por tipo (cargo, setor) pra comparar
+   de relance o mínimo de cada perfil — mesmo cartão neutro das tabelas do Admin. */
+.wrap { display: flex; flex-direction: column; gap: 16px; }
+.intro { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.intro p { margin: 0; flex: 1; min-width: 260px; max-width: 80ch; font-size: 13.5px; line-height: 1.6; color: var(--text-muted); }
 
-.section { display: flex; flex-direction: column; gap: 12px; }
-.sectionHead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.sectionHead h3 { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; }
-.sectionHead span { font-size: 12.5px; color: var(--text-muted); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow-x: auto; }
+/* largura fixa por coluna: as tabelas de cargo e de setor ficam alinhadas entre si */
+.table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 640px; table-layout: fixed; }
+.table th:nth-child(2) { width: 22%; }
+.table th:nth-child(3) { width: 16%; }
+.table th:nth-child(4) { width: 22%; }
+.table th.actionsCol { width: 92px; }
+.caption {
+  caption-side: top; text-align: left; padding: 14px 16px;
+  font-size: 13px; color: var(--text-muted); border-bottom: 1px solid var(--border);
+}
+.caption strong { color: var(--text); font-weight: 600; font-size: 14px; margin-right: 6px; }
+.table th {
+  text-align: left; font-size: 12px; font-weight: 500; color: var(--text-muted);
+  padding: 10px 16px; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table tbody tr:last-child td { border-bottom: none; }
+.table th:first-child { width: 32%; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-.card {
-  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-lg, 14px);
-  box-shadow: var(--shadow-sm); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px;
-}
-.cardHead { display: flex; align-items: center; gap: 12px; }
-.icon {
-  width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; font-size: 22px;
-}
-.cardTitle { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.cardTitle h4 { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; line-height: 1.3; }
-.cardTitle span { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
-.actions { display: flex; gap: 2px; align-self: flex-start; }
+.profile { display: flex; align-items: flex-start; gap: 10px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; margin-top: 5px; }
+.name { display: block; font-weight: 500; color: var(--text); }
+.audience { display: block; font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.spec { font-weight: 500; color: var(--text); }
+.none { color: var(--text-muted); font-weight: 400; }
+
+.actionsCol { width: 1%; text-align: right; white-space: nowrap; }
+.actions { display: inline-flex; gap: 2px; }
 .actions button {
-  width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent; cursor: pointer; font-size: 13px;
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer;
 }
-.actions button:hover { background: var(--surface-2); }
+.actions button:hover { border-color: var(--border); color: var(--text); }
+.actions .danger:hover { color: var(--danger-text); }
 
-.specs {
-  margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px;
-  background: var(--surface-2); border-radius: var(--radius-sm, 8px); padding: 10px 12px;
+.empty {
+  text-align: center; padding: 48px 16px; color: var(--text-muted); font-size: 13.5px;
+  background: var(--surface); border: 1px dashed var(--border); border-radius: 14px;
 }
-.specs dt { font-size: 12px; color: var(--text-muted); }
-.specs dd { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--text); }
 
-.empty { text-align: center; padding: 48px 16px; color: var(--text-muted); font-size: 13px; }
-
+/* editor */
 .formRow { display: flex; gap: 12px; }
 .formRow > * { flex: 1; min-width: 0; }
-.pickers { display: flex; gap: 6px; flex-wrap: wrap; }
-.pick {
-  width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface);
-  cursor: pointer; font-size: 17px;
-}
-.swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
-.pickOn { outline: 2px solid var(--brand); outline-offset: 1px; }
-.error { font-size: 12px; color: var(--danger, var(--danger)); margin-bottom: 10px; }
+.pickers { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.pickOn { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--brand); }
+.error { font-size: 12px; color: var(--danger-text); margin-bottom: 10px; }
 
-@media (max-width: 768px) {
-  .grid { grid-template-columns: 1fr; }
+/* celular: cada perfil vira um bloco, sem rolar de lado */
+@media (max-width: 720px) {
+  .table { min-width: 0; }
+  .caption { display: block; }
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { position: relative; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .table tbody tr:last-child { border-bottom: none; }
+  .table td { border: none; padding: 3px 0; }
+  .table th:first-child { width: auto; }
+  .spec::before { color: var(--text-muted); font-weight: 400; margin-right: 6px; }
+  .spec:nth-child(2)::before { content: 'Processador'; }
+  .spec:nth-child(3)::before { content: 'Memória RAM'; }
+  .spec:nth-child(4)::before { content: 'Extra'; }
+  .actionsCol { position: absolute; top: 8px; right: 8px; width: auto; }
   .formRow { flex-direction: column; gap: 0; }
 }

@@ -1,63 +1,102 @@
+/* Base de Conhecimento: estante de leitura. Lista com busca à esquerda, o artigo
+   inteiro à direita. Texto pronto aparece como a resposta que vai ser colada no
+   chamado, com o botão de copiar em destaque (o uso nº 1 da tela). */
 .page { padding: 36px 32px; display: flex; flex-direction: column; gap: 20px; }
 .loading { display: flex; align-items: center; justify-content: center; height: 60vh; color: var(--text-muted); }
 
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
-.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.title { font-size: 2rem; font-weight: 600; letter-spacing: -.032em; line-height: 1.1; }
+.sub { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
 
-/* ── Toolbar (abas de categoria + busca) ── */
-.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+/* ── Abas de categoria: sublinhadas, como no Admin ── */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
 .tab {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border2);
-  background: var(--surface); color: var(--text-muted); font-size: 12.5px; font-weight: 600;
-  cursor: pointer; transition: all .12s; white-space: nowrap;
+  position: relative; display: flex; align-items: center; gap: 6px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 14px; font-weight: 500; padding: 10px 12px 12px; cursor: pointer; white-space: nowrap;
+  transition: color .15s;
 }
-.tab:hover { border-color: var(--brand); color: var(--text); }
-.tabActive { background: var(--brand); border-color: var(--brand); color: white; }
-.tabCount { font-size: 11px; opacity: .75; }
-.search { width: 260px; max-width: 100%; }
+.tab:hover { color: var(--text); }
+.tabActive { color: var(--text); }
+.tabActive::after {
+  content: ''; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px;
+  border-radius: 2px; background: var(--text);
+}
+.tabCount {
+  color: var(--text-muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
+  background: var(--surface-2); padding: 0 6px; border-radius: 999px; line-height: 18px;
+}
 
-/* ── Empty state ── */
-.empty { text-align: center; padding: 72px 24px; }
-.empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
-.empty p { color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 13px; }
+/* ── Estante: lista + leitura ── */
+.layout {
+  display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  min-height: 520px; overflow: hidden;
+}
+.listPane { display: flex; flex-direction: column; border-right: 1px solid var(--border); min-width: 0; }
+.search {
+  display: flex; align-items: center; gap: 8px; margin: 12px 12px 4px;
+  height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9px;
+  background: var(--surface-2); color: var(--text-muted);
+}
+.search:focus-within { border-color: var(--brand); }
+.search input { border: none; background: transparent; padding: 0; height: 34px; font-size: 13.5px; flex: 1; min-width: 0; box-shadow: none; }
+.search input:focus { box-shadow: none; }
+.listCount { margin: 4px 16px 8px; font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.noMatch { margin: 16px; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
 
-/* ── Grid de artigos ── */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-.card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm);
-  display: flex; flex-direction: column; gap: 8px;
+.list { list-style: none; margin: 0; padding: 0 6px 8px; overflow-y: auto; max-height: 640px; }
+.item {
+  display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left;
+  padding: 10px 10px; border: none; border-radius: 9px; background: transparent; cursor: pointer; color: var(--text);
 }
-.cardHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
-  background: color-mix(in srgb, var(--brand) 10%, transparent); color: var(--brand);
+.item:hover { background: var(--surface-2); }
+.itemActive, .itemActive:hover { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--brand); }
+.itemTitle { font-size: 13.5px; font-weight: 500; line-height: 1.35; }
+.itemExcerpt {
+  font-size: 12.5px; color: var(--text-muted); line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.cardActions { display: flex; gap: 2px; }
+.itemMeta { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-muted); }
+.item mark, .text mark {
+  background: color-mix(in srgb, var(--warning) 30%, transparent); color: inherit; border-radius: 3px; padding: 0 1px;
+}
+
+/* ── Leitura ── */
+.reader { display: flex; flex-direction: column; gap: 18px; padding: 24px 28px; min-width: 0; }
+.back { display: none; }
+.readerHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.readerTitleBox { min-width: 0; }
+.readerCategory { font-size: 12.5px; color: var(--text-muted); }
+.readerTitle { margin: 4px 0 0; font-size: 1.35rem; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; }
+.readerMeta { margin: 6px 0 0; font-size: 12.5px; color: var(--text-muted); }
+.readerActions { display: flex; gap: 4px; flex: none; }
 .iconBtn {
-  width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent;
-  cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
-  transition: background .12s;
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer;
 }
-.iconBtn:hover { background: var(--surface-2); }
-.cardTitle { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
-.cardContent {
-  font-size: 12.5px; color: var(--text-muted); line-height: 1.5; white-space: pre-line;
-  display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;
-}
-.cardLink {
-  font: inherit; font-size: 12.5px; color: var(--brand); font-weight: 600; text-decoration: none;
-  border: none; background: none; padding: 0; margin: 0; cursor: pointer; text-align: left; width: fit-content;
-}
-.cardLink:hover { text-decoration: underline; }
-.cardFooter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 6px; }
-.cardMeta { font-size: 11.5px; color: var(--text-muted); }
+.iconBtn:hover { border-color: var(--border); color: var(--text); }
+.iconDanger:hover { color: var(--danger-text); }
 
-.contentArea { font-family: var(--font-mono, ui-monospace, monospace); font-size: 13px; line-height: 1.5; }
+.text { margin: 0; white-space: pre-line; font-size: 14.5px; line-height: 1.65; color: var(--text); max-width: 72ch; overflow-wrap: anywhere; }
+.body .text { color: var(--text); }
+/* texto pronto = a mensagem que vai pro chamado: um bloco de resposta, com a régua da marca */
+.reply {
+  background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--brand);
+  border-radius: 4px 12px 12px 4px; padding: 18px 20px;
+}
+.noContent { margin: 0; font-size: 13.5px; color: var(--text-muted); }
+.readerFoot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ── Vazio ── */
+.empty {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+  padding: 64px 24px; background: var(--surface); border: 1px dashed var(--border); border-radius: 14px;
+}
+.empty h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.empty p { margin: 0 0 6px; color: var(--text-muted); max-width: 46ch; line-height: 1.6; font-size: 13.5px; }
+
+.contentArea { font-size: 13.5px; line-height: 1.55; }
 
 /* ── Anexo (editor) ── */
 .attachmentRow {
@@ -65,11 +104,24 @@
   padding: 8px 12px; border: 1px solid var(--border2); border-radius: 8px;
   background: var(--surface-2); font-size: 13px;
 }
-.fileError { font-size: 12px; color: var(--danger, var(--danger)); margin-top: 6px; }
+.attachmentRow span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.fileError { font-size: 12px; color: var(--danger-text); margin-top: 6px; }
 
+/* Celular / tela estreita: uma coisa por vez — a lista, e o artigo ao tocar */
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; min-height: 0; }
+  .listPane { border-right: none; }
+  .list { max-height: none; }
+  .reader { display: none; padding: 18px; }
+  .layout[data-reading] .listPane { display: none; }
+  .layout[data-reading] .reader { display: flex; }
+  .back {
+    display: inline-flex; align-items: center; gap: 4px; align-self: flex-start;
+    border: none; background: none; padding: 4px 0; font: inherit; font-size: 13px; color: var(--info-text); cursor: pointer;
+  }
+}
 @media (max-width: 768px) {
   .page { padding: 20px 16px; gap: 16px; }
   .header { flex-direction: column; }
-  .search { width: 100%; }
-  .toolbar { flex-direction: column; align-items: stretch; }
+  .title { font-size: 1.6rem; }
 }

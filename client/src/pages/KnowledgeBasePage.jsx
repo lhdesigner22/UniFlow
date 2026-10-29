@@ -6,7 +6,7 @@ import { canEdit as canEditModule } from '../utils/permissions'
 import { confirmDialog, alertDialog } from '../store/dialogStore'
 import { downloadFile } from '../utils/download'
 import Modal from '../components/common/Modal'
-import Reveal from '../components/common/Reveal'
+import LineIcon from '../components/common/LineIcon'
 import s from './KnowledgeBasePage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
@@ -23,10 +23,10 @@ const MACHINES_TAB = 'maquinas'
 const MAX_FILE_BYTES = 95 * 1024 * 1024
 
 const CATEGORIES = [
-  { key: 'texto_pronto', label: 'Textos prontos', icon: '📋' },
-  { key: 'politica', label: 'Políticas', icon: '📜' },
-  { key: 'documento', label: 'Documentos', icon: '📄' },
-  { key: 'outro', label: 'Outros', icon: '🔖' },
+  { key: 'texto_pronto', label: 'Textos prontos' },
+  { key: 'politica', label: 'Políticas' },
+  { key: 'documento', label: 'Documentos' },
+  { key: 'outro', label: 'Outros' },
 ]
 const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map(c => [c.key, c]))
 
@@ -116,7 +116,7 @@ function Editor({ article, onClose, onSaved }) {
       <div className="form-group">
         <label htmlFor="knowledge-base-categoria" className="label">Categoria</label>
         <select id="knowledge-base-categoria" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-          {CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}
+          {CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
         </select>
       </div>
       <div className="form-group">
@@ -130,19 +130,19 @@ function Editor({ article, onClose, onSaved }) {
         />
       </div>
       <div className="form-group">
-        <label className="label">Anexo (opcional, até 95 MB)</label>
+        <label htmlFor="knowledge-base-anexo" className="label">Anexo (opcional, até 95 MB)</label>
         {newAttachmentFile ? (
           <div className={s.attachmentRow}>
-            <span>📎 {newAttachmentFile.name}</span>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setNewAttachmentFile(null)}>✕ Cancelar</button>
+            <span><LineIcon name="download" size={14} /> {newAttachmentFile.name}</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setNewAttachmentFile(null)}>Cancelar</button>
           </div>
         ) : existingAttachment ? (
           <div className={s.attachmentRow}>
-            <span>📎 {existingAttachment.name}</span>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={removeExisting}>✕ Remover</button>
+            <span><LineIcon name="download" size={14} /> {existingAttachment.name}</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={removeExisting}>Remover anexo</button>
           </div>
         ) : (
-          <input type="file" onChange={onFileChange} />
+          <input id="knowledge-base-anexo" type="file" onChange={onFileChange} />
         )}
         {fileError && <p role="alert" className={s.fileError}>{fileError}</p>}
       </div>
@@ -156,10 +156,26 @@ function Editor({ article, onClose, onSaved }) {
       </div>
       <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.title.trim() || saving || uploadingFile} onClick={save}>
-        {uploadingFile ? 'Enviando anexo...' : saving ? 'Salvando...' : 'Salvar'}
+        {uploadingFile ? 'Enviando anexo...' : saving ? 'Salvando...' : article ? 'Salvar alterações' : 'Criar artigo'}
       </button>
     </Modal>
   )
+}
+
+// Destaca o termo buscado dentro de um texto (sem HTML: só divide e envolve em <mark>)
+function Highlight({ text, query }) {
+  const q = query.trim()
+  if (!q || !text) return text || null
+  const lower = text.toLowerCase(), needle = q.toLowerCase()
+  const parts = []
+  let i = 0
+  for (let at = lower.indexOf(needle); at !== -1; at = lower.indexOf(needle, i)) {
+    if (at > i) parts.push(text.slice(i, at))
+    parts.push(<mark key={at}>{text.slice(at, at + q.length)}</mark>)
+    i = at + q.length
+  }
+  parts.push(text.slice(i))
+  return parts
 }
 
 export default function KnowledgeBasePage() {
@@ -170,6 +186,8 @@ export default function KnowledgeBasePage() {
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState(null) // null = fechado, {} = novo, artigo = editar
   const [copiedId, setCopiedId] = useState(null)
+  const [selectedId, setSelectedId] = useState(null)
+  const [reading, setReading] = useState(false) // celular: true = mostra o artigo no lugar da lista
 
   const [machines, setMachines] = useState([])
 
@@ -200,12 +218,20 @@ export default function KnowledgeBasePage() {
     return counts
   }, [articles])
 
+  // artigo aberto: o escolhido, se ainda está no filtro; senão o primeiro da lista
+  const selected = filtered.find(a => a.id === selectedId) || filtered[0] || null
+
   const onSaved = article => {
     setArticles(prev => {
       const exists = (prev || []).some(a => a.id === article.id)
       const next = exists ? prev.map(a => a.id === article.id ? article : a) : [article, ...(prev || [])]
       return next
     })
+    // o artigo salvo abre na leitura — sai do filtro/busca que o esconderia
+    if (categoryFilter && categoryFilter !== article.category) setCategoryFilter('')
+    setSearch('')
+    setSelectedId(article.id)
+    setReading(true)
     setEditing(null)
   }
 
@@ -223,6 +249,7 @@ export default function KnowledgeBasePage() {
     try {
       await api.delete(`/kb/${a.id}`)
       setArticles(prev => (prev || []).filter(x => x.id !== a.id))
+      setReading(false)
     } catch (e) {
       await alertDialog(e.response?.data?.error || 'Erro ao excluir o artigo.', { title: 'Erro', danger: true })
     }
@@ -233,84 +260,128 @@ export default function KnowledgeBasePage() {
   const writable = canEditModule(user, 'kb')
   const canEdit = a => writable && (a.created_by === user?.id || user?.system_role === 'super_admin' || user?.system_role === 'auditor')
 
+  const open = a => { setSelectedId(a.id); setReading(true) }
+
   if (loading) return <div className={s.loading}>Carregando base de conhecimento...</div>
+
+  const total = (articles || []).length
+  const isReply = selected?.category === 'texto_pronto'
 
   return (
     <div className={s.page}>
       <div className={s.header}>
         <div>
           <h1 className={s.title}>Base de Conhecimento</h1>
-          <p className={s.sub}>Textos prontos de chamado, políticas, padronização de máquinas e outros materiais de referência da equipe.</p>
+          <p className={s.sub}>Textos prontos de chamado, políticas e materiais de referência da equipe.</p>
         </div>
-        {writable && <button className="btn btn-primary" onClick={() => setEditing({})}>+ Novo artigo</button>}
-      </div>
-
-      <div className={s.toolbar}>
-        <div className={s.tabs}>
-          <button className={`${s.tab} ${!categoryFilter ? s.tabActive : ''}`} onClick={() => setCategoryFilter('')}>
-            Todos <span className={s.tabCount}>{(articles || []).length}</span>
-          </button>
-          {CATEGORIES.map(c => (
-            <button key={c.key} className={`${s.tab} ${categoryFilter === c.key ? s.tabActive : ''}`} onClick={() => setCategoryFilter(c.key)}>
-              {c.icon} {c.label} <span className={s.tabCount}>{countByCategory[c.key] || 0}</span>
-            </button>
-          ))}
-          <button className={`${s.tab} ${categoryFilter === MACHINES_TAB ? s.tabActive : ''}`} onClick={() => setCategoryFilter(MACHINES_TAB)}>
-            🖥️ Padronização de máquinas <span className={s.tabCount}>{machines.length}</span>
-          </button>
-        </div>
-        {categoryFilter !== MACHINES_TAB && (
-          <input className={s.search} value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por título ou conteúdo..." />
+        {writable && categoryFilter !== MACHINES_TAB && (
+          <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Novo artigo</button>
         )}
       </div>
 
+      <nav className={s.tabs} aria-label="Categorias">
+        {[['', 'Todos', total], ...CATEGORIES.map(c => [c.key, c.label, countByCategory[c.key] || 0]), [MACHINES_TAB, 'Padronização de máquinas', machines.length]].map(([key, label, count]) => (
+          <button key={key || 'todos'} type="button" aria-current={categoryFilter === key ? 'true' : undefined}
+            className={`${s.tab} ${categoryFilter === key ? s.tabActive : ''}`} onClick={() => { setCategoryFilter(key); setReading(false) }}>
+            {label}<span className={s.tabCount}>{count}</span>
+          </button>
+        ))}
+      </nav>
+
       {categoryFilter === MACHINES_TAB ? (
         <MachineStandards items={machines} setItems={setMachines} writable={writable} />
-      ) : filtered.length === 0 ? (
+      ) : total === 0 ? (
         <div className={s.empty}>
-          <h3>Nenhum artigo ainda</h3>
-          <p>
-            {(articles || []).length > 0
-              ? 'Nenhum artigo bate com esse filtro.'
-              : 'Comece adicionando um texto pronto de chamado, uma política ou outro material de referência.'}
-          </p>
+          <h2>A base está vazia</h2>
+          <p>Comece por um texto pronto de chamado: escreva do jeito que ele vai ser colado na resposta.</p>
+          {writable && <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Novo artigo</button>}
         </div>
       ) : (
-        <div className={s.grid}>
-          {filtered.map((a, i) => {
-            const cat = CATEGORY_MAP[a.category] || CATEGORY_MAP.outro
-            return (
-              <Reveal key={a.id} delay={Math.min(i, 10) * 50} className={s.card}>
-                <div className={s.cardHeader}>
-                  <span className={s.badge}>{cat.icon} {cat.label}</span>
-                  {canEdit(a) && (
-                    <div className={s.cardActions}>
-                      <button className={s.iconBtn} title="Editar" onClick={() => setEditing(a)}>✏️</button>
-                      <button className={s.iconBtn} title="Excluir" onClick={() => deleteArticle(a)}>🗑️</button>
-                    </div>
-                  )}
+        <div className={s.layout} data-reading={reading || undefined}>
+          <div className={s.listPane}>
+            <label className={s.search}>
+              <LineIcon name="search" size={15} />
+              <span className="sr-only">Buscar artigos</span>
+              <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por título ou conteúdo" />
+            </label>
+            <p className={s.listCount} role="status">
+              {search.trim() ? `${filtered.length} de ${categoryFilter ? countByCategory[categoryFilter] || 0 : total} ${filtered.length === 1 ? 'artigo' : 'artigos'}` : `${filtered.length} ${filtered.length === 1 ? 'artigo' : 'artigos'}`}
+            </p>
+            {filtered.length === 0 ? (
+              <p className={s.noMatch}>Nada com "{search.trim()}" {categoryFilter ? 'nesta categoria' : 'na base'}. Tente outra palavra.</p>
+            ) : (
+              <ul className={s.list}>
+                {filtered.map(a => (
+                  <li key={a.id}>
+                    <button type="button" className={`${s.item} ${selected?.id === a.id ? s.itemActive : ''}`}
+                      aria-current={selected?.id === a.id ? 'true' : undefined} onClick={() => open(a)}>
+                      <span className={s.itemTitle}><Highlight text={a.title} query={search} /></span>
+                      {a.content && <span className={s.itemExcerpt}>{a.content.replace(/\s+/g, ' ')}</span>}
+                      <span className={s.itemMeta}>
+                        {!categoryFilter && <>{(CATEGORY_MAP[a.category] || CATEGORY_MAP.outro).label}, </>}
+                        {timeAgo(a.updated_at)}
+                        {!!a.has_attachment && <LineIcon name="download" size={12} title="Tem anexo" />}
+                        {a.link_url && <LineIcon name="link" size={12} title="Tem link" />}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {selected && (
+            <article className={s.reader} aria-labelledby="kb-article-title">
+              <button type="button" className={s.back} onClick={() => setReading(false)}>
+                <LineIcon name="chevronLeft" size={15} /> Voltar para a lista
+              </button>
+              <header className={s.readerHead}>
+                <div className={s.readerTitleBox}>
+                  <span className={s.readerCategory}>{(CATEGORY_MAP[selected.category] || CATEGORY_MAP.outro).label}</span>
+                  <h2 id="kb-article-title" className={s.readerTitle}>{selected.title}</h2>
+                  <p className={s.readerMeta}>{selected.author_name || 'Alguém'}, atualizado {timeAgo(selected.updated_at)}</p>
                 </div>
-                <h3 className={s.cardTitle}>{a.title}</h3>
-                {a.content && <p className={s.cardContent}>{a.content}</p>}
-                {!!a.has_attachment && ( /* vem 0/1 do banco — sem o !! o React desenha o "0" */
-                  <button type="button" className={s.cardLink} onClick={() => downloadFile(`/kb/${a.id}/attachment`, a.attachment_name || 'anexo')}>
-                    📎 Baixar {a.attachment_name}
+                {canEdit(selected) && (
+                  <div className={s.readerActions}>
+                    <button type="button" className={s.iconBtn} onClick={() => setEditing(selected)} aria-label="Editar artigo" title="Editar">
+                      <LineIcon name="edit" size={16} />
+                    </button>
+                    <button type="button" className={`${s.iconBtn} ${s.iconDanger}`} onClick={() => deleteArticle(selected)} aria-label="Excluir artigo" title="Excluir">
+                      <LineIcon name="trash" size={16} />
+                    </button>
+                  </div>
+                )}
+              </header>
+
+              {selected.content ? (
+                <div className={isReply ? s.reply : s.body}>
+                  <p className={s.text}><Highlight text={selected.content} query={search} /></p>
+                </div>
+              ) : (
+                <p className={s.noContent}>Este artigo não tem texto, só {selected.has_attachment ? 'o anexo' : 'o link'} abaixo.</p>
+              )}
+
+              <div className={s.readerFoot}>
+                {selected.content && (
+                  <button type="button" className={`btn ${isReply ? 'btn-primary' : 'btn-ghost'}`} onClick={() => copyContent(selected)}>
+                    <LineIcon name={copiedId === selected.id ? 'check' : 'list'} size={15} />
+                    {copiedId === selected.id ? 'Copiado' : isReply ? 'Copiar texto' : 'Copiar'}
                   </button>
                 )}
-                {a.link_url && (
-                  <a className={s.cardLink} href={safeHref(a.link_url)} target="_blank" rel="noreferrer">🔗 Abrir documento</a>
+                {!!selected.has_attachment && ( /* vem 0/1 do banco — sem o !! o React desenha o "0" */
+                  <button type="button" className="btn btn-ghost" onClick={() => downloadFile(`/kb/${selected.id}/attachment`, selected.attachment_name || 'anexo')}>
+                    <LineIcon name="download" size={15} /> Baixar {selected.attachment_name}
+                  </button>
                 )}
-                <div className={s.cardFooter}>
-                  <span className={s.cardMeta}>{a.author_name || 'Alguém'} · {timeAgo(a.updated_at)}</span>
-                  {a.content && (
-                    <button className="btn btn-ghost btn-sm" onClick={() => copyContent(a)}>
-                      {copiedId === a.id ? '✓ Copiado' : '📋 Copiar'}
-                    </button>
-                  )}
-                </div>
-              </Reveal>
-            )
-          })}
+                {selected.link_url && (
+                  <a className="btn btn-ghost" href={safeHref(selected.link_url)} target="_blank" rel="noreferrer">
+                    <LineIcon name="link" size={15} /> Abrir documento
+                  </a>
+                )}
+                <span className="sr-only" role="status">{copiedId === selected.id ? 'Texto copiado' : ''}</span>
+              </div>
+            </article>
+          )}
         </div>
       )}
 
