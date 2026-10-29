@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Fragment } from 'react'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { canEdit as canEditModule } from '../utils/permissions'
 import { useLiveRefresh } from '../hooks/useLiveRefresh'
 import Modal from '../components/common/Modal'
-import Reveal from '../components/common/Reveal'
+import LineIcon from '../components/common/LineIcon'
 import { confirmDialog } from '../store/dialogStore'
 import s from './AgendaPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
@@ -18,7 +18,8 @@ const RECURRENCE_LABEL = { weekly: 'Semanal', monthly: 'Mensal' }
 
 const EMPTY_FORM = { title: '', description: '', board_id: '', event_date: '', event_time: '', recurrence_type: 'none', recurrence_until: '', department_id: null }
 
-function isoDate(d) { return d.toISOString().slice(0, 10) }
+// data LOCAL (não UTC: com toISOString, depois das 21h de Brasília "hoje" virava amanhã)
+function isoDate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 function startOfWeek(d) {
   const date = new Date(d)
@@ -167,86 +168,60 @@ export default function AgendaPage() {
     loadEvents()
   }
 
+  const todayInView = view === 'calendar'
+    ? monthAnchor.getMonth() === new Date().getMonth() && monthAnchor.getFullYear() === new Date().getFullYear()
+    : isoDate(startOfWeek(new Date())) === isoDate(weekStart)
+
   return (
     <div className={s.page}>
       <div className={s.header}>
         <div>
           <h1 className={s.title}>Agenda</h1>
-          <p className={s.sub}>Eventos da equipe, com recorrência semanal ou mensal.</p>
+          <p className={s.sub}>{events.length
+            ? `${events.length} ${events.length === 1 ? 'evento' : 'eventos'} ${view === 'calendar' ? 'neste mês' : 'nesta semana'}, incluindo os que vêm do GLPI.`
+            : 'Eventos da equipe e reservas que chegam do GLPI.'}</p>
         </div>
-        {writable && <button className="btn btn-primary" onClick={() => openCreate()}>+ Novo evento</button>}
+        {writable && <button className="btn btn-primary" onClick={() => openCreate()}><LineIcon name="plus" size={15} /> Novo evento</button>}
       </div>
 
       <div className={s.periodBar}>
-        <button className="btn btn-ghost btn-sm" onClick={goPrev} title={view === 'calendar' ? 'Mês anterior' : 'Semana anterior'}>←</button>
-        <span className={s.periodLabel}>{periodLabel}</span>
-        <button className="btn btn-ghost btn-sm" onClick={goNext} title={view === 'calendar' ? 'Próximo mês' : 'Próxima semana'}>→</button>
-        <button className="btn btn-ghost btn-sm" onClick={goToday}>Hoje</button>
+        <div className={s.periodNav}>
+          <button type="button" className={s.navBtn} onClick={goPrev} aria-label={view === 'calendar' ? 'Mês anterior' : 'Semana anterior'} title={view === 'calendar' ? 'Mês anterior' : 'Semana anterior'}>
+            <LineIcon name="chevronLeft" size={16} />
+          </button>
+          <button type="button" className={s.navBtn} onClick={goNext} aria-label={view === 'calendar' ? 'Próximo mês' : 'Próxima semana'} title={view === 'calendar' ? 'Próximo mês' : 'Próxima semana'}>
+            <LineIcon name="chevronRight" size={16} />
+          </button>
+          <h2 className={s.periodLabel} aria-live="polite">{periodLabel}</h2>
+          {!todayInView && <button type="button" className="btn btn-ghost btn-sm" onClick={goToday}>Voltar para hoje</button>}
+        </div>
 
-        <div className={s.viewToggle}>
-          <button className={`${s.viewToggleBtn} ${view === 'list' ? s.active : ''}`} onClick={() => setView('list')}>📋 Lista</button>
-          <button className={`${s.viewToggleBtn} ${view === 'calendar' ? s.active : ''}`} onClick={() => setView('calendar')}>📅 Calendário</button>
+        <div className={s.viewToggle} role="group" aria-label="Como ver a agenda">
+          <button type="button" aria-pressed={view === 'list'} className={`${s.viewToggleBtn} ${view === 'list' ? s.active : ''}`} onClick={() => setView('list')}>
+            <LineIcon name="list" size={14} /> Semana
+          </button>
+          <button type="button" aria-pressed={view === 'calendar'} className={`${s.viewToggleBtn} ${view === 'calendar' ? s.active : ''}`} onClick={() => setView('calendar')}>
+            <LineIcon name="calendar" size={14} /> Mês
+          </button>
         </div>
       </div>
 
       {loading ? (
         <div className={s.skeleton} />
       ) : view === 'calendar' ? (
-        <CalendarView
-          gridStart={gridStart}
-          gridEnd={gridEnd}
-          monthAnchor={monthAnchor}
-          byDay={byDay}
-          onOpenEvent={openEdit}
-          onDayClick={setDayPopup}
-        />
-      ) : days.length === 0 ? (
-        <div className={s.empty}>
-          <div className={s.emptyIcon}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="4" width="18" height="17" rx="2"/>
-              <line x1="3" y1="9" x2="21" y2="9"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-            </svg>
-          </div>
-          <h3>Nenhum evento nesta semana</h3>
-          <p>Crie um evento para começar a organizar a agenda da equipe.</p>
-          {writable && <button className="btn btn-primary" onClick={() => openCreate()}>+ Novo evento</button>}
-        </div>
+        <>
+          <CalendarView
+            gridStart={gridStart}
+            gridEnd={gridEnd}
+            monthAnchor={monthAnchor}
+            byDay={byDay}
+            onOpenEvent={openEdit}
+            onDayClick={setDayPopup}
+          />
+          <p className={s.hint}>Clique num dia para ver todos os eventos dele; clique num evento para editar.</p>
+        </>
       ) : (
-        <div className={s.dayList}>
-          {days.map((day, i) => (
-            <Reveal key={day} delay={Math.min(i, 8) * 50} className={s.dayGroup}>
-              <div className={s.dayHeader}>{formatDayHeader(day)}</div>
-              <div className={s.eventList}>
-                {byDay[day].map(ev => {
-                  const board = boardById(ev.board_id)
-                  return (
-                    <div key={`${ev.id}-${ev.occurrence_date}`} className={s.eventRow} {...pressable(() => openEdit(ev))}>
-                      <span className={s.eventTime}>{ev.event_time || 'Dia todo'}</span>
-                      <span className={s.eventTitle}>{ev.title}</span>
-                      <div className={s.eventBadges}>
-                        {board && (
-                          <span className={s.boardBadge} style={{ background: (board.color || '#3B82F6') + '22', color: board.color || '#3B82F6' }}>
-                            {board.name}
-                          </span>
-                        )}
-                        {ev.recurrence_type !== 'none' && (
-                          <span className="badge badge-purple">{RECURRENCE_LABEL[ev.recurrence_type] || ev.recurrence_type}</span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      )}
-
-      {view === 'calendar' && !loading && (
-        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Clique num dia pra ver os eventos dele; clique num evento pra editar direto.</p>
+        <WeekView weekStart={weekStart} byDay={byDay} boardById={boardById} onOpenEvent={openEdit} onCreate={openCreate} writable={writable} />
       )}
 
       {showModal && (
@@ -304,11 +279,11 @@ export default function AgendaPage() {
           </div>
 
           <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
-          {formMsg && <p role="alert" style={{ fontSize: 12, color: 'var(--danger)', marginBottom: 10 }}>{formMsg}</p>}
+          {formMsg && <p role="alert" className={s.formError}>{formMsg}</p>}
 
           <div className={s.modalActions}>
             {editing && (
-              <button className="btn btn-danger" onClick={deleteEvent}>Excluir</button>
+              <button className="btn btn-danger" onClick={deleteEvent}>Excluir evento</button>
             )}
             <button
               className="btn btn-primary"
@@ -316,7 +291,7 @@ export default function AgendaPage() {
               disabled={!form.title.trim() || !form.event_date || saving}
               onClick={saveEvent}
             >
-              {saving ? 'Salvando...' : 'Salvar'}
+              {saving ? 'Salvando...' : editing ? 'Salvar alterações' : 'Criar evento'}
             </button>
           </div>
         </Modal>
@@ -324,38 +299,20 @@ export default function AgendaPage() {
 
       {dayPopup && (
         <Modal title={formatDayHeader(dayPopup)} onClose={() => setDayPopup(null)} width={420}>
-          <div className={s.eventList} style={{ marginBottom: 14 }}>
-            {(byDay[dayPopup] || []).length === 0 && (
-              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nenhum evento neste dia.</p>
-            )}
-            {(byDay[dayPopup] || []).map(ev => {
-              const board = boardById(ev.board_id)
-              return (
-                <div
-                  key={`${ev.id}-${ev.occurrence_date}`}
-                  className={s.eventRow}
-                  {...pressable(() => { setDayPopup(null); openEdit(ev) })}
-                >
-                  <span className={s.eventTime}>{ev.event_time || 'Dia todo'}</span>
-                  <span className={s.eventTitle}>{ev.title}</span>
-                  <div className={s.eventBadges}>
-                    {board && (
-                      <span className={s.boardBadge} style={{ background: (board.color || '#3B82F6') + '22', color: board.color || '#3B82F6' }}>
-                        {board.name}
-                      </span>
-                    )}
-                    {ev.recurrence_type !== 'none' && (
-                      <span className="badge badge-purple">{RECURRENCE_LABEL[ev.recurrence_type] || ev.recurrence_type}</span>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          {(byDay[dayPopup] || []).length === 0 ? (
+            <p className={s.popupEmpty}>Nada marcado neste dia.</p>
+          ) : (
+            <ul className={`${s.events} ${s.popupEvents}`}>
+              {(byDay[dayPopup] || []).map(ev => (
+                <EventRow key={`${ev.id}-${ev.occurrence_date}`} ev={ev} board={boardById(ev.board_id)}
+                  onOpen={() => { setDayPopup(null); openEdit(ev) }} />
+              ))}
+            </ul>
+          )}
           {writable && (
-          <button className="btn btn-primary" onClick={() => { const d = dayPopup; setDayPopup(null); openCreate(d) }}>
-            + Novo evento neste dia
-          </button>
+            <button className="btn btn-primary" onClick={() => { const d = dayPopup; setDayPopup(null); openCreate(d) }}>
+              <LineIcon name="plus" size={15} /> Novo evento neste dia
+            </button>
           )}
         </Modal>
       )}
@@ -363,28 +320,104 @@ export default function AgendaPage() {
   )
 }
 
-// Quantos eventos mostrar por dia antes de resumir em "+N mais" — em telas
-// estreitas, o texto do chip fica ilegível, então mostramos só 1 e deixamos o
-// resto pro popup do dia (já existe, e funciona bem como "ver tudo" no mobile).
-function useMaxVisibleEvents() {
-  const [max, setMax] = useState(() => (typeof window !== 'undefined' && window.innerWidth <= 640 ? 1 : 3))
-  useEffect(() => {
-    const onResize = () => setMax(window.innerWidth <= 640 ? 1 : 3)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-  return max
+// Hora atual "HH:MM" que anda sozinha (a linha "Agora" da lista acompanha o relógio)
+function useNowHM() {
+  const fmt = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
+  const [now, setNow] = useState(fmt)
+  useEffect(() => { const t = setInterval(() => setNow(fmt()), 30_000); return () => clearInterval(t) }, [])
+  return now
 }
 
+// Uma linha de evento (lista da semana e janela do dia)
+function EventRow({ ev, board, past, onOpen }) {
+  return (
+    <li>
+      <div className={`${s.event} ${past ? s.past : ''}`} {...pressable(onOpen)}>
+        <span className={s.eventTime}>{ev.event_time || 'Dia todo'}</span>
+        <span className={s.eventMain}>
+          <span className={s.eventTitle}>{ev.title}</span>
+          {ev.description && <span className={s.eventDesc}>{ev.description}</span>}
+        </span>
+        <span className={s.eventTags}>
+          {board && <span className={s.tag}><span className={s.tagDot} style={{ background: board.color || 'var(--brand)' }} />{board.name}</span>}
+          {ev.recurrence_type !== 'none' && <span className={s.tag}><LineIcon name="refresh" size={11} />{RECURRENCE_LABEL[ev.recurrence_type] || ev.recurrence_type}</span>}
+          {ev.glpi_ticket_id && <span className={s.tag}>Chamado #{ev.glpi_ticket_id}</span>}
+        </span>
+      </div>
+    </li>
+  )
+}
+
+// Semana em linha do tempo: os 7 dias, hoje com a linha "Agora" entre o que
+// já passou (esmaecido) e o que vem.
+function WeekView({ weekStart, byDay, boardById, onOpenEvent, onCreate, writable }) {
+  const now = useNowHM()
+  const todayStr = isoDate(new Date())
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  return (
+    <ol className={s.week}>
+      {days.map(day => {
+        const dateStr = isoDate(day)
+        const list = byDay[dateStr] || []
+        const isToday = dateStr === todayStr
+        const isPast = dateStr < todayStr
+        // posição da linha "Agora": antes do 1º evento com horário depois de agora
+        let nowAt = -1
+        if (isToday) {
+          nowAt = list.findIndex(ev => ev.event_time && ev.event_time > now)
+          if (nowAt === -1) nowAt = list.length
+        }
+        return (
+          <li key={dateStr} className={`${s.day} ${isToday ? s.dayToday : ''} ${isPast ? s.dayPast : ''}`} aria-current={isToday ? 'date' : undefined}>
+            <div className={s.dateCol}>
+              <span className={s.dateNum}>{day.getDate()}</span>
+              <span className={s.dateWeek}>{isToday ? 'Hoje' : WEEKDAY_LONG[day.getDay()]}</span>
+              <span className={s.dateMonth}>{MONTH_LONG[day.getMonth()]}</span>
+            </div>
+            <div className={s.dayBody}>
+              {list.length === 0 ? (
+                <div className={s.dayEmpty}>
+                  <span>Nada marcado</span>
+                  {writable && !isPast && (
+                    <button type="button" className={s.addHere} onClick={() => onCreate(dateStr)}>
+                      <LineIcon name="plus" size={13} /> Adicionar
+                    </button>
+                  )}
+                  {isToday && <span className={s.nowLine}><span>Agora, {now}</span></span>}
+                </div>
+              ) : (
+                <ul className={s.events}>
+                  {list.map((ev, i) => (
+                    <Fragment key={`${ev.id}-${ev.occurrence_date}`}>
+                      {i === nowAt && <li className={s.nowLine} aria-label={`Agora, ${now}`}><span>Agora, {now}</span></li>}
+                      <EventRow ev={ev} board={boardById(ev.board_id)} onOpen={() => onOpenEvent(ev)}
+                        past={isPast || (isToday && (i < nowAt))} />
+                    </Fragment>
+                  ))}
+                  {nowAt === list.length && <li className={s.nowLine} aria-label={`Agora, ${now}`}><span>Agora, {now}</span></li>}
+                </ul>
+              )}
+            </div>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+// Quantos eventos mostrar por dia antes de resumir em "mais N" (o resto fica
+// na janela do dia). No celular eles viram pontos pelo CSS.
+const MAX_VISIBLE = 3
+
 function CalendarView({ gridStart, gridEnd, monthAnchor, byDay, onOpenEvent, onDayClick }) {
-  const maxVisible = useMaxVisibleEvents()
+  const maxVisible = MAX_VISIBLE
   const days = []
   for (let d = new Date(gridStart); d <= gridEnd; d.setDate(d.getDate() + 1)) days.push(new Date(d))
   const today = new Date()
 
   return (
-    <div>
-      <div className={s.calendarWeekHead}>
+    <div className={s.calendar}>
+      <div className={s.calendarWeekHead} aria-hidden="true">
         {WEEKDAY_SHORT.map(w => <span key={w}>{w}</span>)}
       </div>
       <div className={s.calendarGrid}>
@@ -401,7 +434,7 @@ function CalendarView({ gridStart, gridEnd, monthAnchor, byDay, onOpenEvent, onD
               key={dateStr}
               className={`${s.calendarCell} ${outside ? s.outside : ''} ${isToday ? s.today : ''}`}
               {...pressable(() => onDayClick(dateStr))}
-              aria-label={`${day.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}: ${dayEvents.length ? `${dayEvents.length} evento(s)` : 'sem eventos'}`}
+              aria-label={`${day.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}: ${dayEvents.length ? `${dayEvents.length} ${dayEvents.length === 1 ? 'evento' : 'eventos'}` : 'sem eventos'}`}
             >
               <span className={s.calendarDayNum}>{day.getDate()}</span>
               <div className={s.calendarEvents}>
@@ -410,12 +443,12 @@ function CalendarView({ gridStart, gridEnd, monthAnchor, byDay, onOpenEvent, onD
                     key={`${ev.id}-${ev.occurrence_date}`}
                     className={s.calendarEventChip}
                     onClick={e => { e.stopPropagation(); onOpenEvent(ev) }}
-                    title={`${ev.event_time || 'Dia todo'} — ${ev.title}`}
+                    title={`${ev.event_time || 'Dia todo'}: ${ev.title}`}
                   >
-                    {ev.event_time ? `${ev.event_time} ` : ''}{ev.title}
+                    {ev.event_time && <span className={s.chipTime}>{ev.event_time}</span>}{ev.title}
                   </span>
                 ))}
-                {extra > 0 && <span className={s.calendarEventMore}>+{extra} mais</span>}
+                {extra > 0 && <span className={s.calendarEventMore}>mais {extra}</span>}
               </div>
             </div>
           )

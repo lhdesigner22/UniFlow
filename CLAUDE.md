@@ -198,7 +198,11 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   **Impressoras** refeita (out/2026): inventário em tabela com abas por prédio na própria tela, IP = botão de copiar, driver/link/histórico
   na linha, ordem com alça + ↑ ↓, editar/excluir no menu "⋯" (`components/common/RowMenu.jsx`, menu reutilizável). **Estoque de insumos**:
   abas sublinhadas, KPIs num painel só (o "No mínimo" filtra), linha com só "Trocar" e "Entrada" + o resto no "⋯", saldo baixo = ponto
-  vermelho (sem pintar a linha). Próximas telas pela crítica: Agenda < Aprovações.
+  vermelho (sem pintar a linha).
+  **Agenda** refeita (out/2026): "Semana" = linha do tempo dos 7 dias (dia em número grande, hoje com a linha "Agora, HH:MM" entre o que
+  passou — esmaecido — e o que vem; dia vazio = "Nada marcado"); "Mês" = painel único dividido por linhas, hoje num círculo azul, no
+  celular os eventos viram pontos. `isoDate` passou a usar a data LOCAL (com `toISOString`, depois das 21h de Brasília "hoje" virava
+  amanhã). Próxima tela pela crítica: Aprovações.
 - **Auditoria /design-system (out/2026, nota 58/100)**: foco do teclado feito (`:focus-visible` com tag em `index.css`, vence
   `all: unset` dos módulos). Cores (1ª etapa feita): hex/rgba com o MESMO valor de um token viraram `var(--x)` / `color-mix(in srgb, var(--x) N%, transparent)`
   (146 trocas, telas idênticas); texto de situação por tema em `--info-text/--success-text/--danger-text/--warning-text/--purple-text`
