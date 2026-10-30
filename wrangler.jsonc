@@ -73,7 +73,7 @@
 	// guarda 100% das invocações (tráfego baixo o suficiente pra não pesar).
 	"observability": {
 		"enabled": true,
-		"head_sampling_rate": 1
+		"head_sampling_rate": 0.2 // 20%: com 100% quase estourou a cota grátis de logs (200 mil eventos/dia) em out/2026
 	},
 	// Importação automática GLPI → Agenda (fila "Eventos"). Só a URL base fica
 	// aqui (não é sensível); GLPI_APP_TOKEN e GLPI_USER_TOKEN são secrets

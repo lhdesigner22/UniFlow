@@ -61,6 +61,9 @@ function IconSearch() {
   )
 }
 
+// Recursos da API (1º pedaço do caminho) cujas rotas criam notificação no servidor
+const NOTIFYING_RESOURCES = ['boards', 'approvals', 'purchase-requests']
+
 export default function Topbar({ onMenuClick }) {
   const [showNotifs, setShowNotifs] = useState(false)
   const [search, setSearch] = useState('')
@@ -78,10 +81,12 @@ export default function Topbar({ onMenuClick }) {
   // (essa é a única coisa que roda em TODA página, sempre). Agora só faz
   // polling com a aba visível, e o intervalo dobrou (30s → 60s).
   useVisiblePolling(fetch, 60_000)
-  // Tempo real: qualquer alteração feita em outro aparelho pode ter gerado uma
-  // notificação pra mim (cartão atribuído, aprovação pedida...) — busca na hora
-  // em vez de esperar o próximo ciclo de 60s.
-  useLiveRefresh(null, fetch)
+  // Tempo real: só os recursos cujas escritas criam notificação (cartão atribuído,
+  // aprovação pedida, compra...) — busca na hora em vez de esperar os 60s. Antes
+  // reagia a QUALQUER alteração: cada escrita de alguém fazia todas as abas
+  // abertas buscarem o sininho (out/2026, quase estourou a cota de logs do dia).
+  // Os avisos criados pelos crons e pelo Cofre chegam no ciclo de 60s.
+  useLiveRefresh(NOTIFYING_RESOURCES, fetch)
 
   useEffect(() => {
     const handler = e => { if (ref.current && !ref.current.contains(e.target)) setShowNotifs(false) }
