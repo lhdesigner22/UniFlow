@@ -39,7 +39,7 @@ export default defineConfig({
         // é aberto numa TV, não precisa estar no celular de todo mundo.
         globIgnores: ['**/exceljs*', '**/pptxgen*', '**/pdf-lib*', '**/casesDeck*', '**/three*', '**/parisfe*'],
         // /parisfe: telão dos valores (parisfe.html), página própria fora do app
-        navigateFallbackDenylist: [/^\/api\//, /^\/parisfe/],
+        navigateFallbackDenylist: [/^\/api\//, /^\/parisfe/, /^\/privacidade/], // privacidade: página estática (exigida pelo Google OAuth)
       },
     }),
   ],
