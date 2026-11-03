@@ -21,6 +21,9 @@ importante mudar. Documentação técnica longa: `docs/` (comece por
 - App: https://uniflow.serfecaf.workers.dev (Cloudflare Workers + D1 + assets do Vite). Repo: `lhdesigner22/UniFlow`, branch `main`.
 - **Plano Workers FREE**: 50 subrequests por execução (cada consulta ao D1 conta!), ~10 ms de CPU,
   5 crons por conta (todos usados), Browser Rendering 10 min/dia. Isso moldou o código (lotes, `db.batch`, filas por cron).
+- **Limite de 100 mil chamadas/dia estourou** em 1–3/nov/2026 (app fora do ar até 21h de Brasília). Suspeita: laço de reconexão do
+  tempo real (`services/live.js`, já travado: espera só zera após 1 min conectado, mínimo 5 s, recarga geral no máx. a cada 5 min).
+  Também em out/2026: sininho só reage a boards/approvals/purchase-requests; logs (observability) em 20%. Medir: `wrangler tail --format json`.
 - Banco D1 chama `uniflow`. Conta Cloudflare correta: **luiz.sanchez@colegioser.com** (account `8c6d…`).
 
 ### Deploy (sempre nesta ordem)
