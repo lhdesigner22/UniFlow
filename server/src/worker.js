@@ -57,6 +57,7 @@ import { runRoomScheduleSync } from './lib/roomScheduleSync.js'
 import { refreshGlpiTechCache } from './lib/glpiTechCache.js'
 import { isGlpiPaused } from './lib/glpiPause.js'
 import { syncLoanReplies, gmailInboxConfigured, gmailInboxOverdue } from './lib/gmailInbox.js'
+import { runVaultRekey } from './lib/vaultRekey.js'
 
 const app = new Hono()
 
@@ -289,6 +290,8 @@ export default {
     // separação existe porque rodar a resolução de técnico (a parte cara)
     // a cada 1 min foi o que disparou o consumo de CPU do Worker.
     if (event.cron === '* * * * *') {
+      // Migração de conta (nov/2026): recifra o Cofre com a chave nova. Sem o secret, não faz nada.
+      if (env.VAULT_ENCRYPTION_KEY_NEW) await runVaultRekey(env, db)
       // Respostas por e-mail dos avisos de empréstimo → chat (lib/gmailInbox.js).
       // Roda nos minutos terminados em 3 ou 8 e, se a última leitura tiver mais
       // de 7 min (uma rodada falhou), no minuto seguinte. Vai ANTES do Backlog:
