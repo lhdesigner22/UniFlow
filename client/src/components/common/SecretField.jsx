@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import LineIcon from './LineIcon'
 import s from './SecretField.module.css'
 
@@ -13,21 +13,27 @@ export default function SecretField({ fetchSecret, label = 'senha' }) {
   const [value, setValue] = useState(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [error, setError] = useState(null)
+  const copiedTimer = useRef(null)
 
   useEffect(() => {
     if (value === null) return
     const t = setTimeout(() => setValue(null), SHOW_MS)
     return () => clearTimeout(t)
   }, [value])
+  useEffect(() => () => clearTimeout(copiedTimer.current), [])
 
   const get = async purpose => {
-    setLoading(true); setFailed(false)
+    setLoading(true); setError(null)
     try {
       const v = await fetchSecret(purpose)
-      if (v == null) setFailed(true)
+      if (v == null) setError(`Não deu para buscar a ${label}. Tente de novo.`)
       return v
-    } catch { setFailed(true); return null } finally { setLoading(false) }
+    } catch (e) {
+      // o motivo do servidor (ex.: 429 "espere um minuto") vale mais que o genérico
+      setError(e?.response?.data?.error || `Não deu para buscar a ${label}. Tente de novo.`)
+      return null
+    } finally { setLoading(false) }
   }
 
   const toggle = async () => {
@@ -42,14 +48,18 @@ export default function SecretField({ fetchSecret, label = 'senha' }) {
     try {
       await navigator.clipboard.writeText(v)
       setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
-    } catch { /* área de transferência indisponível */ }
+      clearTimeout(copiedTimer.current)
+      copiedTimer.current = setTimeout(() => setCopied(false), 1800)
+    } catch {
+      // Safari/iOS recusa a cópia quando a resposta do servidor demora (o clique "expira")
+      setError('O navegador não deixou copiar. Use "Mostrar" e copie à mão.')
+    }
   }
 
   const shown = value !== null
   return (
     <span className={s.wrap}>
-      <span className={`${s.value} ${shown ? s.shown : ''}`} aria-live="polite">
+      <span className={`${s.value} ${shown ? s.shown : ''}`}>
         {loading ? <span className={s.dots}>…</span> : shown ? value : <span className={s.dots} aria-label={`${label} escondida`}>••••••••</span>}
         {shown && <span className={s.timer} aria-hidden="true" style={{ animationDuration: `${SHOW_MS}ms` }} />}
       </span>
@@ -61,7 +71,7 @@ export default function SecretField({ fetchSecret, label = 'senha' }) {
         aria-label={copied ? `${label} copiada` : `Copiar ${label}`} title="Copiar">
         <LineIcon name={copied ? 'check' : 'copy'} size={15} />
       </button>
-      {failed && <span role="alert" className={s.error}>Não deu para buscar a {label}. Tente de novo.</span>}
+      {error && <span role="alert" className={s.error}>{error}</span>}
     </span>
   )
 }

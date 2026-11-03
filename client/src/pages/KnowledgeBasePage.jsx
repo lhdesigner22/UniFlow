@@ -308,7 +308,9 @@ export default function KnowledgeBasePage() {
               {search.trim() ? `${filtered.length} de ${categoryFilter ? countByCategory[categoryFilter] || 0 : total} ${filtered.length === 1 ? 'artigo' : 'artigos'}` : `${filtered.length} ${filtered.length === 1 ? 'artigo' : 'artigos'}`}
             </p>
             {filtered.length === 0 ? (
-              <p className={s.noMatch}>Nada com "{search.trim()}" {categoryFilter ? 'nesta categoria' : 'na base'}. Tente outra palavra.</p>
+              <p className={s.noMatch}>{search.trim()
+                ? <>Nada com "{search.trim()}" {categoryFilter ? 'nesta categoria' : 'na base'}. Tente outra palavra.</>
+                : <>Nenhum artigo {categoryFilter ? 'nesta categoria' : 'na base'} ainda.</>}</p>
             ) : (
               <ul className={s.list}>
                 {filtered.map(a => (

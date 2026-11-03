@@ -444,7 +444,7 @@ export default function LabIncidentsPage() {
       <nav className={s.tabs} aria-label="Situação">
         {tabs.map(([k, label, n]) => (
           <button key={k} type="button" aria-current={statusFilter === k ? 'true' : undefined}
-            className={`${s.tab} ${statusFilter === k ? s.tabActive : ''}`} onClick={() => setStatusFilter(k)}>
+            className={`${s.tab} ${statusFilter === k ? s.tabActive : ''}`} onClick={() => { setStatusFilter(k); setOnlyUrgent(false) }}>
             {label}<span className={s.tabCount}>{n}</span>
           </button>
         ))}

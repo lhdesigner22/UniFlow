@@ -1,9 +1,10 @@
+import { todayLocalISO } from './formatDuration'
 // Helpers de "mês de referência" (formato YYYY-MM) — usados tanto na
 // Sidebar (cascata de meses de Solicitação de Compra) quanto na própria
 // PurchaseRequestsPage (título, criação de item, filtro por mês).
 
 export function currentMonth() {
-  return new Date().toISOString().slice(0, 7)
+  return todayLocalISO().slice(0, 7) // data local (toISOString é UTC)
 }
 
 // "2026-09" -> "Setembro de 2026"

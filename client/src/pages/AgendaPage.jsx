@@ -391,7 +391,7 @@ function WeekView({ weekStart, byDay, boardById, onOpenEvent, onCreate, writable
                     <Fragment key={`${ev.id}-${ev.occurrence_date}`}>
                       {i === nowAt && <li className={s.nowLine} aria-label={`Agora, ${now}`}><span>Agora, {now}</span></li>}
                       <EventRow ev={ev} board={boardById(ev.board_id)} onOpen={() => onOpenEvent(ev)}
-                        past={isPast || (isToday && (i < nowAt))} />
+                        past={isPast || (isToday && !!ev.event_time && i < nowAt)} />
                     </Fragment>
                   ))}
                   {nowAt === list.length && <li className={s.nowLine} aria-label={`Agora, ${now}`}><span>Agora, {now}</span></li>}

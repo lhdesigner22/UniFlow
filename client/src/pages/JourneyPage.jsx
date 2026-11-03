@@ -9,6 +9,7 @@ import MemberPicker from '../components/common/MemberPicker'
 import LineIcon from '../components/common/LineIcon'
 import RowMenu from '../components/common/RowMenu'
 import s from './JourneyPage.module.css'
+import { todayLocalISO } from '../utils/formatDuration'
 
 // "jan", "fev"... (sem ponto) e "fevereiro de 2022" — meses em minúscula, como no português
 function monthShort(iso) {
@@ -23,7 +24,7 @@ function fullDate(iso) {
 
 function MilestoneModal({ userId, milestone, onClose, onSaved }) {
   const [form, setForm] = useState({
-    event_date: milestone?.event_date || new Date().toISOString().slice(0, 10),
+    event_date: milestone?.event_date || todayLocalISO(),
     title: milestone?.title || '',
     description: milestone?.description || '',
   })

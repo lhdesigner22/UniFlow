@@ -15,6 +15,7 @@ import s from './EquipmentLoansPage.module.css'
 import LineIcon from '../components/common/LineIcon'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
+import { todayLocalISO } from '../utils/formatDuration'
 
 const STATUSES = [
   { key: 'aguardando_devolucao', label: 'Aguardando devolução' },
@@ -39,7 +40,7 @@ const EQUIPMENT_SUGGESTIONS = [
 ]
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10)
+  return todayLocalISO()
 }
 
 function fmtDate(v) {
