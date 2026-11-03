@@ -14,6 +14,13 @@ import { clientId } from './clientId'
 const DEBOUNCE_MS = 400            // vários avisos seguidos viram uma única recarga
 const HEARTBEAT_MS = 25_000
 const HIDDEN_CATCHUP_MS = 20_000   // escondida por mais que isso → recarrega ao voltar
+// Trava contra laço de reconexão (nov/2026: o app estourou as 100 mil chamadas/dia
+// do plano grátis num fim de semana). Se a conexão abre e cai logo em seguida, a
+// espera NÃO volta a zero — só depois de ficar de pé 1 min. E a recarga geral da
+// reconexão acontece no máximo a cada 5 min (cada uma são várias chamadas).
+const STABLE_MS = 60_000
+const MIN_RECONNECT_MS = 5_000
+const RECONNECT_CATCHUP_MS = 5 * 60_000
 
 const listeners = new Set() // { resources: Set | null, fn, timer }
 let socket = null
@@ -23,6 +30,8 @@ let reconnectTimer = null
 let heartbeat = null
 let everConnected = false
 let hiddenAt = null
+let openedAt = null
+let lastCatchup = 0
 
 function dispatch(msg) {
   for (const l of listeners) {
@@ -53,11 +62,11 @@ async function connect() {
   socket = ws
 
   ws.onopen = () => {
-    attempt = 0
+    openedAt = Date.now()
     clearInterval(heartbeat)
     heartbeat = setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.send('ping') }, HEARTBEAT_MS)
     // Reconexão: pode ter perdido avisos enquanto estava fora → recarrega tudo.
-    if (everConnected) dispatch({ r: '*' })
+    if (everConnected && Date.now() - lastCatchup > RECONNECT_CATCHUP_MS) { lastCatchup = Date.now(); dispatch({ r: '*' }) }
     everConnected = true
   }
   ws.onmessage = e => {
@@ -70,6 +79,8 @@ async function connect() {
   ws.onclose = () => {
     if (socket === ws) socket = null
     clearInterval(heartbeat); heartbeat = null
+    if (openedAt && Date.now() - openedAt >= STABLE_MS) attempt = 0 // ficou de pé: queda normal
+    openedAt = null
     scheduleReconnect()
   }
   ws.onerror = () => { try { ws.close() } catch { /* já fechado */ } }
@@ -77,7 +88,7 @@ async function connect() {
 
 function scheduleReconnect() {
   if (!started || reconnectTimer) return
-  const wait = Math.min(30_000, 1000 * 2 ** attempt) + Math.random() * 500
+  const wait = Math.max(MIN_RECONNECT_MS, Math.min(30_000, 1000 * 2 ** attempt)) + Math.random() * 500
   attempt++
   reconnectTimer = setTimeout(() => { reconnectTimer = null; connect() }, wait)
 }
