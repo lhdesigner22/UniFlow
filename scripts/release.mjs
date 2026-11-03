@@ -12,7 +12,7 @@ import { backup } from './backup.mjs'
 
 step('Conferindo a conta do Cloudflare')
 const who = run('npx wrangler whoami', { capture: true })
-if (!who.out.includes(ACCOUNT_ID)) fail('wrangler não está na conta certa (luiz.sanchez@colegioser.com). Rode: npx wrangler logout && npx wrangler login')
+if (!who.out.includes(ACCOUNT_ID)) fail('wrangler não está na conta certa (helpdesk.ti@fecaf.com.br). Rode: npx wrangler logout && npx wrangler login')
 console.log('✔ conta certa')
 
 step('Conferindo alterações não commitadas')

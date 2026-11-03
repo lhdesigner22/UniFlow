@@ -5,10 +5,10 @@ import path from 'node:path'
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 export const DB_NAME = 'uniflow'
-// Conta certa do Cloudflare (luiz.sanchez@colegioser.com). O wrangler já trocou
+// Conta certa do Cloudflare (helpdesk.ti@fecaf.com.br; até nov/2026 era a luiz.sanchez@colegioser.com). O wrangler já trocou
 // sozinho de conta 2x — publicar na errada dá erro 7403 ou, pior, sobe noutro lugar.
-export const ACCOUNT_ID = '8c6d91019b900e6ed5c4274cd5c18aa8'
-export const PROD_URL = 'https://uniflow.serfecaf.workers.dev'
+export const ACCOUNT_ID = 'fc23b9ee683ef4d2659b7dc05525274e'
+export const PROD_URL = 'https://uniflow.helpdesk-ti.workers.dev'
 
 // Roda um comando na raiz. `capture` devolve a saída; senão ela aparece na tela.
 export function run(cmd, { capture = false } = {}) {

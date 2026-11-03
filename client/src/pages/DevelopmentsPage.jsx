@@ -117,7 +117,7 @@ function Editor({ dev, onClose, onSaved }) {
       </div>
       <div className="form-group">
         <label htmlFor="developments-link-opcional" className="label">Link (opcional)</label>
-        <input id="developments-link-opcional" value={form.url} onChange={e => set('url', e.target.value)} placeholder="Ex: https://uniflow.serfecaf.workers.dev" />
+        <input id="developments-link-opcional" value={form.url} onChange={e => set('url', e.target.value)} placeholder="Ex: https://uniflow.helpdesk-ti.workers.dev" />
       </div>
       <div className="form-group">
         <label htmlFor="developments-situacao" className="label">Situação</label>

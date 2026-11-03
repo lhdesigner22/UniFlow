@@ -17,7 +17,7 @@
 		{
 			"binding": "DB",
 			"database_name": "uniflow",
-			"database_id": "5e7598bf-d493-43e9-b593-29b014330d94"
+			"database_id": "b87e55dd-74b0-47c0-adc4-f2560624c908"
 		}
 	],
 	// R2 (nativo da Cloudflare) ficou de fora — exige habilitar billing na

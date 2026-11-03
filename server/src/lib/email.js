@@ -13,7 +13,7 @@
 // código precisa mudar quando um provedor for configurado/trocado.
 import { v4 as uuid } from 'uuid'
 
-const APP_URL = 'https://uniflow.serfecaf.workers.dev'
+const APP_URL = 'https://uniflow.helpdesk-ti.workers.dev'
 
 // Envelope visual dos e-mails do sistema — tabelas (compatível com Outlook,
 // que ignora flexbox/grid) + cores da marca. O "logo" é montado com CSS puro

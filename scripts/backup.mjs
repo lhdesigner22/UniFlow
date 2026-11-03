@@ -19,7 +19,7 @@ const DIR = process.env.UNIFLOW_BACKUP_DIR || path.join(os.homedir(), 'Documents
 export function backup() {
   step('Conferindo a conta do Cloudflare')
   const who = run('npx wrangler whoami', { capture: true })
-  if (!who.out.includes(ACCOUNT_ID)) fail('wrangler não está na conta certa (luiz.sanchez@colegioser.com). Rode: npx wrangler logout && npx wrangler login')
+  if (!who.out.includes(ACCOUNT_ID)) fail('wrangler não está na conta certa (helpdesk.ti@fecaf.com.br). Rode: npx wrangler logout && npx wrangler login')
 
   fs.mkdirSync(DIR, { recursive: true })
   const d = new Date(), p = n => String(n).padStart(2, '0') // horário local, como no relógio
