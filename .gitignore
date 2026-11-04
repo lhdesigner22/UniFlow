@@ -32,6 +32,7 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code
-.claude/
+# Claude Code (as skills do projeto entram no git; o resto, como settings.local.json, não)
+.claude/*
+!.claude/skills/
 .wrangler/
