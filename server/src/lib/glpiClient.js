@@ -394,10 +394,9 @@ export async function glpiCreateTicket(env, { title, content, entityId, requeste
       const data = await search.json().catch(() => null)
       requesterId = Number(data?.data?.[0]?.[2]) || 0
     }
-    const input = { name: title, content, entities_id: entityId, type: 1, urgency: 3 }
-    if (requesterId) input._users_id_requester = requesterId
-    else input._users_id_requester_notif = { use_notification: [1], alternative_email: [requesterEmail] }
-    const res = await fetch(`${env.GLPI_BASE_URL}/apirest.php/Ticket`, { method: 'POST', headers, body: JSON.stringify({ input }) })
+    const res = await fetch(`${env.GLPI_BASE_URL}/apirest.php/Ticket`, {
+      method: 'POST', headers, body: JSON.stringify({ input: { name: title, content, entities_id: entityId, type: 1, urgency: 3 } }),
+    })
     if (!res.ok) {
       const body = await res.text().catch(() => '')
       throw new Error(`GLPI respondeu ${res.status}: ${body.slice(0, 200)}`)
@@ -405,7 +404,23 @@ export async function glpiCreateTicket(env, { title, content, entityId, requeste
     const created = await res.json()
     const id = Number(created?.id)
     if (!id) throw new Error('GLPI não devolveu o número do chamado')
-    return { id, requesterFound: !!requesterId }
+
+    // Requerente em passo separado (tabela dos "atores", type 1 = requerente). O
+    // GLPI 10 ignora os campos antigos (_users_id_requester…) na criação — o 1º
+    // chamado de teste (#18975) chegou sem ator nenhum. Sem usuário no GLPI: vínculo
+    // com users_id 0 e o e-mail do professor, para ele receber as respostas.
+    let requesterLinked = false
+    try {
+      const link = await fetch(`${env.GLPI_BASE_URL}/apirest.php/Ticket_User`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ input: { tickets_id: id, users_id: requesterId, type: 1, use_notification: 1, alternative_email: requesterId ? '' : requesterEmail } }),
+      })
+      requesterLinked = link.ok
+      if (!link.ok) console.error(`[glpi] requerente do chamado ${id} não entrou: ${link.status} ${(await link.text().catch(() => '')).slice(0, 200)}`)
+    } catch (e) {
+      console.error(`[glpi] requerente do chamado ${id} não entrou: ${e.message}`)
+    }
+    return { id, requesterFound: !!requesterId, requesterLinked }
   } finally {
     await glpiKillSession(env, sessionToken)
   }

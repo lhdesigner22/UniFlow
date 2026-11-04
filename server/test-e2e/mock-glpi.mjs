@@ -20,7 +20,7 @@ function add(name, content, { status = 17, entity = SD, created = '2026-10-15 09
 }
 
 function seed() {
-  tickets.clear(); nextId = 20000; stats.gets = 0; stats.searches = 0; stats.solutions = []; stats.created = []
+  tickets.clear(); nextId = 20000; stats.gets = 0; stats.searches = 0; stats.solutions = []; stats.created = []; stats.actors = []
   // 60 chamados do MESMO feriado, um por sala (o caso real: 201)
   for (let i = 1; i <= 60; i++) add('Ano Novo - Feriado', reservation({ name: 'Ano Novo - Feriado', room: `00 - Prédio Principal - 01 - SEDE - SALA ${String(i).padStart(3, '0')}`, start: '06:00', end: '23:15' }))
   // 2ª leva do mesmo feriado: outro horário (07:00–22:40, antes 06:00–23:15), salas de outro prédio
@@ -61,6 +61,16 @@ http.createServer((req, res) => {
   // Técnicos atribuídos (type 2) e usuários — pros gráficos "por técnico".
   // Paginação: tudo na 1ª página, vazio depois.
   const firstPage = () => !(Number((url.searchParams.get('range') || '0-0').split('-')[0]) > 0)
+  if (p.endsWith('/apirest.php/Ticket_User') && req.method === 'POST') {
+    let body = ''
+    req.on('data', c => body += c)
+    req.on('end', () => {
+      const { input } = JSON.parse(body)
+      stats.actors = [...(stats.actors || []), input]
+      json(res, 201, { id: stats.actors.length })
+    })
+    return
+  }
   if (p.endsWith('/apirest.php/Ticket_User')) {
     const techs = [101, 102, 103]
     return json(res, 200, firstPage() ? [...tickets.values()].map((t, i) => ({ tickets_id: t.id, users_id: techs[i % 3], type: 2 })) : [])
