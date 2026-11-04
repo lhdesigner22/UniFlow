@@ -13,3 +13,12 @@ export function levelOf(user, module) {
 
 export const canView = (user, module) => levelOf(user, module) !== 'none'
 export const canEdit = (user, module) => levelOf(user, module) === 'edit'
+
+// Cargo "só o Portal do Professor": vê o módulo teacher e nenhum outro. Esse
+// usuário não usa o layout com menu (nem tempo real/sininho) — vai direto para
+// /professor. Super Admin nunca cai aqui (ele vê tudo).
+export function isTeacherOnly(user) {
+  if (!user?.permissions || user.system_role !== 'user') return false
+  const p = user.permissions
+  return p.teacher && p.teacher !== 'none' && Object.entries(p).every(([k, v]) => k === 'teacher' || v === 'none')
+}

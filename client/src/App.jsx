@@ -31,12 +31,22 @@ import OrgChartPage from './pages/OrgChartPage'
 import JourneyPage from './pages/JourneyPage'
 import GoogleCallback from './pages/GoogleCallback'
 import RequireModule from './components/common/RequireModule'
+import TeacherPortalPage from './pages/TeacherPortalPage'
+import ChromebookRequestsPage from './pages/ChromebookRequestsPage'
+import { isTeacherOnly } from './utils/permissions'
 
 function PrivateRoute({ children }) {
   const { user, token, loading } = useAuthStore()
   if (loading) return <div style={{ display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',color:'var(--muted)' }}>Carregando...</div>
   if (!token || !user) return <Navigate to="/login" replace />
   return children
+}
+
+// Professor (cargo só do portal) não entra no app com menu: vai para /professor.
+function MainLayout() {
+  const { user } = useAuthStore()
+  if (isTeacherOnly(user)) return <Navigate to="/professor" replace />
+  return <AppLayout />
 }
 
 export default function App() {
@@ -58,7 +68,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<Navigate to="/login" replace />} />
         <Route path="/auth/google/callback" element={<GoogleCallback />} />
-        <Route path="/" element={<PrivateRoute><AppLayout /></PrivateRoute>}>
+        <Route path="/professor" element={<PrivateRoute><TeacherPortalPage /></PrivateRoute>} />
+        <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
           <Route index element={<DashboardPage />} />
           <Route path="boards/:boardId" element={<RequireModule module="boards"><BoardPage /></RequireModule>} />
           <Route path="tempo" element={<RequireModule module="metrics"><TeamTimePage /></RequireModule>} />
@@ -85,6 +96,7 @@ export default function App() {
           <Route path="estoque-insumos" element={<Navigate to="/estoque-insumos/sede" replace />} />
           <Route path="estoque-insumos/:location" element={<RequireModule module="printers"><PrinterSuppliesPage /></RequireModule>} />
           <Route path="emprestimo-equipamentos" element={<Navigate to="/emprestimo-equipamentos/sede" replace />} />
+          <Route path="pedidos-chromebook" element={<RequireModule module="loans"><ChromebookRequestsPage /></RequireModule>} />
           <Route path="emprestimo-equipamentos/:building" element={<RequireModule module="loans"><EquipmentLoansPage /></RequireModule>} />
           <Route path="empresas" element={<Navigate to="/empresas/colegio-ser" replace />} />
           <Route path="empresas/:company" element={<RequireModule module="companies"><CompaniesPage /></RequireModule>} />

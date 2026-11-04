@@ -1,0 +1,95 @@
+/* Portal do Professor: uma coluna estreita, pensada primeiro para o celular.
+   O que se destaca são as duas ações grandes; o resto é lista calma. */
+.shell { min-height: 100vh; display: flex; flex-direction: column; }
+.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+}
+.brand { display: inline-flex; align-items: center; gap: 9px; font-size: 1.15rem; font-weight: 700; letter-spacing: -.02em; color: var(--text); }
+.brand em { font-style: normal; color: var(--brand); }
+.mark { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--brand-dark); color: #fff; }
+.topActions { display: inline-flex; align-items: center; gap: 6px; }
+.textBtn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px;
+  border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text-muted); font: inherit; font-size: 13px;
+}
+.textBtn:hover { color: var(--text); }
+
+.page { width: 100%; max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; display: flex; flex-direction: column; gap: 18px; }
+.page:focus { outline: none; }
+.hello { font-size: 2rem; font-weight: 600; letter-spacing: -.032em; line-height: 1.1; margin: 0; }
+.sub { margin: -8px 0 4px; color: var(--text-muted); font-size: 15px; }
+
+/* ── As duas ações ── */
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.action {
+  display: flex; align-items: center; gap: 14px; min-height: 84px; padding: 16px 18px; text-align: left;
+  border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--brand); font: inherit;
+  transition: border-color .15s, box-shadow .15s;
+}
+.action:hover { border-color: color-mix(in srgb, var(--brand) 45%, transparent); }
+.action strong { display: block; color: var(--text); font-size: 15.5px; font-weight: 600; }
+.action small { display: block; color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+.actionOn { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+
+.notice { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 14px; border-radius: 12px;
+  background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success-text); font-size: 14px; }
+.error { margin: 0; color: var(--danger-text); font-size: 13.5px; }
+.errorSmall { color: var(--danger-text); font-size: 12.5px; }
+
+/* ── Formulários ── */
+.form { display: flex; flex-direction: column; gap: 14px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+.formTitle { margin: 0; font-size: 1.05rem; font-weight: 600; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.formBtns { display: flex; gap: 8px; flex-wrap: wrap; }
+.kinds { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.kinds legend { margin-bottom: 8px; }
+.kind {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); font-size: 14px;
+}
+.kind input { position: absolute; opacity: 0; pointer-events: none; }
+.kind:has(input:focus-visible) { outline: 2px solid var(--brand); outline-offset: 2px; }
+.kindOn { border-color: var(--brand); color: var(--text); box-shadow: inset 0 0 0 1px var(--brand); }
+
+/* ── Listas ── */
+.section { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.sectionTitle { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.empty { margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.list:empty { display: none; }
+.row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; }
+.row + .row { border-top: 1px solid var(--border); }
+.when { display: flex; flex-direction: column; width: 92px; flex: none; font-variant-numeric: tabular-nums; }
+.when strong { font-size: 14px; font-weight: 600; text-transform: capitalize; }
+.when span { font-size: 12.5px; color: var(--text-muted); }
+.rowIcon { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 10px; background: var(--surface-2); color: var(--brand); }
+.rowMain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rowTitle { font-size: 14.5px; font-weight: 500; color: var(--text); }
+.rowMeta { font-size: 13px; color: var(--text-muted); }
+.note { font-size: 12.5px; color: var(--text-muted); font-style: italic; }
+.rowEnd { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+.pill { font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.warn { background: color-mix(in srgb, var(--warning) 16%, transparent); color: var(--warning-text); }
+.ok { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success-text); }
+.bad { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger-text); }
+.info { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--info-text); }
+.muted { background: var(--surface-2); color: var(--text-muted); }
+.linkBtn { border: 0; background: none; padding: 4px 0; min-height: 24px; color: var(--text-muted); font: inherit; font-size: 12.5px; text-decoration: underline; }
+.linkBtn:hover { color: var(--danger-text); }
+.past { margin-top: 4px; }
+.past summary { cursor: pointer; color: var(--text-muted); font-size: 13.5px; padding: 6px 0; }
+.past .list { margin-top: 8px; opacity: .85; }
+
+@media (max-width: 640px) {
+  .page { padding: 22px 16px 48px; }
+  .hello { font-size: 1.65rem; }
+  .actions { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: 1fr 1fr; }
+  /* reserva no celular: quando em cima, o que/onde embaixo, situação à direita */
+  .reqRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: start; }
+  .reqRow .when { width: auto; flex-direction: row; gap: 8px; align-items: baseline; grid-column: 1; }
+  .reqRow .rowMain { grid-column: 1; }
+  .reqRow .rowEnd { grid-column: 2; grid-row: 1 / span 2; }
+}

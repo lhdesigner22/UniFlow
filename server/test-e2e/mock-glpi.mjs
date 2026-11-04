@@ -20,7 +20,7 @@ function add(name, content, { status = 17, entity = SD, created = '2026-10-15 09
 }
 
 function seed() {
-  tickets.clear(); nextId = 20000; stats.gets = 0; stats.searches = 0; stats.solutions = []
+  tickets.clear(); nextId = 20000; stats.gets = 0; stats.searches = 0; stats.solutions = []; stats.created = []
   // 60 chamados do MESMO feriado, um por sala (o caso real: 201)
   for (let i = 1; i <= 60; i++) add('Ano Novo - Feriado', reservation({ name: 'Ano Novo - Feriado', room: `00 - Prédio Principal - 01 - SEDE - SALA ${String(i).padStart(3, '0')}`, start: '06:00', end: '23:15' }))
   // 2ª leva do mesmo feriado: outro horário (07:00–22:40, antes 06:00–23:15), salas de outro prédio
@@ -96,6 +96,23 @@ http.createServer((req, res) => {
     stats.gets++
     const t = tickets.get(Number(m[1]))
     return t ? json(res, 200, t) : json(res, 404, ['ERROR_ITEM_NOT_FOUND', 'Item não encontrado'])
+  }
+  // Portal do Professor: busca de usuário por e-mail (campo 5) e criação de chamado.
+  if (p.includes('/search/User')) {
+    const email = url.searchParams.get('criteria[0][value]') || ''
+    const known = { 'prof@pro.fecaf.com.br': 777 }
+    return json(res, 200, known[email] ? { data: [{ 2: known[email] }], totalcount: 1 } : { data: [], totalcount: 0 })
+  }
+  if (p.endsWith('/apirest.php/Ticket') && req.method === 'POST') {
+    let body = ''
+    req.on('data', c => body += c)
+    req.on('end', () => {
+      const { input } = JSON.parse(body)
+      const id = add(input.name, input.content, { status: 1, created: '2026-11-04 10:00:00' })
+      stats.created = [...(stats.created || []), { id, ...input }]
+      json(res, 201, { id, message: '' })
+    })
+    return
   }
   if (p.endsWith('/ITILSolution') && req.method === 'POST') {
     let body = ''

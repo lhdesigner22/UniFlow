@@ -22,6 +22,7 @@ const PATHS = {
   key: <><circle cx="7.5" cy="15.5" r="4.5" /><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2" /></>,
   shield: <><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10Z" /></>,
   monitor: <><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></>,
+  laptop: <><rect x="4" y="4" width="16" height="11" rx="1.5" /><path d="M2 19h20M10 19l.5-1h3l.5 1" /></>,
   alert: <><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4M12 17h.01" /></>,
   tv: <><rect x="2" y="7" width="20" height="13" rx="2" /><path d="m17 2-5 5-5-5" /></>,
   broom: <><path d="m13 11 8-8" /><path d="M9.5 9.5 4 15l5 5 5.5-5.5" /><path d="m7.5 12.5 4 4M10 9l5 5" /></>,

@@ -376,3 +376,53 @@ export function resolveAssignees(tickets, techCache) {
   }
   return assigneeNamesByTicket
 }
+
+// ── Portal do Professor: abrir chamado e ler a situação ────────────────────
+// Primeira escrita do UniFlow que CRIA chamado (até aqui só lia e solucionava).
+// O requerente é o professor: procura o usuário do GLPI pelo e-mail (campo 5 da
+// busca de User); se não existir, registra o e-mail como "e-mail alternativo"
+// do requerente, para o GLPI mandar as respostas para ele mesmo assim.
+export async function glpiCreateTicket(env, { title, content, entityId, requesterEmail }) {
+  const sessionToken = await glpiInitSession(env)
+  const headers = { 'App-Token': env.GLPI_APP_TOKEN, 'Session-Token': sessionToken, 'Content-Type': 'application/json' }
+  try {
+    let requesterId = 0
+    const search = await fetch(`${env.GLPI_BASE_URL}/apirest.php/search/User`
+      + `?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${encodeURIComponent(requesterEmail)}`
+      + '&forcedisplay[0]=2&range=0-1', { headers })
+    if (search.ok) {
+      const data = await search.json().catch(() => null)
+      requesterId = Number(data?.data?.[0]?.[2]) || 0
+    }
+    const input = { name: title, content, entities_id: entityId, type: 1, urgency: 3 }
+    if (requesterId) input._users_id_requester = requesterId
+    else input._users_id_requester_notif = { use_notification: [1], alternative_email: [requesterEmail] }
+    const res = await fetch(`${env.GLPI_BASE_URL}/apirest.php/Ticket`, { method: 'POST', headers, body: JSON.stringify({ input }) })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      throw new Error(`GLPI respondeu ${res.status}: ${body.slice(0, 200)}`)
+    }
+    const created = await res.json()
+    const id = Number(created?.id)
+    if (!id) throw new Error('GLPI não devolveu o número do chamado')
+    return { id, requesterFound: !!requesterId }
+  } finally {
+    await glpiKillSession(env, sessionToken)
+  }
+}
+
+// Situação atual (campo status) de alguns chamados — uma sessão, um GET por chamado.
+// Quem chama limita a quantidade (cada GET conta no limite de 50 subrequests).
+export async function glpiTicketStatuses(env, ids) {
+  const sessionToken = await glpiInitSession(env)
+  const out = {}
+  try {
+    for (const id of ids) {
+      try { out[id] = Number((await glpiGetTicket(env, sessionToken, id)).status) || null }
+      catch { out[id] = null }
+    }
+  } finally {
+    await glpiKillSession(env, sessionToken)
+  }
+  return out
+}

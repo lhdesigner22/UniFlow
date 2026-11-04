@@ -30,6 +30,8 @@ import teamKudosRoutes from './routes/teamKudos.js'
 import vaultRoutes from './routes/vault.js'
 import vlansRoutes from './routes/vlans.js'
 import equipmentLoansRoutes from './routes/equipmentLoans.js'
+import teacherRoutes from './routes/teacher.js'
+import chromebookRequestsRoutes from './routes/chromebookRequests.js'
 import equipmentInventoryRoutes from './routes/equipmentInventory.js'
 import roomScheduleRoutes from './routes/roomSchedule.js'
 import directoryRoutes from './routes/directory.js'
@@ -234,6 +236,8 @@ app.route('/api/team-kudos', teamKudosRoutes)
 app.route('/api/vault', vaultRoutes)
 app.route('/api/vlans', vlansRoutes)
 app.route('/api/equipment-loans', equipmentLoansRoutes)
+app.route('/api/chromebook-requests', chromebookRequestsRoutes)
+app.route('/api/teacher', teacherRoutes)
 app.route('/api/equipment-inventory', equipmentInventoryRoutes)
 app.route('/api/room-schedule', roomScheduleRoutes)
 app.route('/api/directory', directoryRoutes)

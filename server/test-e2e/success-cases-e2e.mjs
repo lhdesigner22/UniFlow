@@ -25,7 +25,7 @@ expect('...catracas: servidor local', r.j?.cases?.find(c => c.id === 'case-2026-
 
 r = await call('admin', 'GET', '/api/success-cases/stats?year=2026')
 expect('stats: números ao vivo', r.s, 200)
-expect('...módulos do UniFlow', r.j?.uniflow_modules, 13)
+expect('...módulos do UniFlow', r.j?.uniflow_modules, 14)
 expect('...empréstimos é número', typeof r.j?.loans_year, 'number')
 
 r = await call('ana', 'POST', '/api/success-cases', { title: 'Novo laboratório', pillar: 'operacao', result_value: '40', result_label: 'computadores novos', completed_on: '2026-08', year: 2026 })

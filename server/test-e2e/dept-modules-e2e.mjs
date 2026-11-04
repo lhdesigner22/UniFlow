@@ -42,7 +42,7 @@ expect('quem já existia não muda de cargo', g.me?.role_id, 'role-colaborador')
 let r = await call('admin', 'POST', '/api/admin/roles', { name: 'Recepção', permissions: { agenda: 'view' } })
 const recepcao = r.j?.id
 await call('admin', 'PUT', '/api/admin/roles-default', { role_id: recepcao })
-g = await googleLogin('novo2@pro.fecaf.com.br')
+g = await googleLogin('novo2@fecaf.com.br') // @pro.fecaf.com.br vira Professor (Portal do Professor)
 expect('cargo criado como padrão vale no 1º acesso', g.me?.role_name, 'Recepção')
 expect('...permissões do cargo', g.me?.permissions?.agenda, 'view')
 await call('admin', 'DELETE', `/api/admin/roles/${recepcao}`)

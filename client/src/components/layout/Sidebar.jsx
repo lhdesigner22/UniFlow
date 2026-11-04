@@ -199,7 +199,7 @@ function IconChevron({ collapsed }) {
 
 const CHAMADOS_PATHS = ['/backlog', '/chamados-total']
 const PRINTERS_PATHS = ['/impressoras/sede', '/impressoras/adm', '/impressoras/centro', '/impressoras/g5', '/impressoras/clinicas']
-const EQUIPMENT_LOANS_PATHS = ['/emprestimo-equipamentos/sede', '/emprestimo-equipamentos/centro', '/emprestimo-equipamentos/g5']
+const EQUIPMENT_LOANS_PATHS = ['/emprestimo-equipamentos/sede', '/emprestimo-equipamentos/centro', '/emprestimo-equipamentos/g5', '/pedidos-chromebook']
 const COMPANIES_PATHS = ['/empresas/colegio-ser', '/empresas/unifecaf', '/link-internet', '/parceiros']
 const TEAM_PATHS = ['/time/desempenho', '/time/organograma', '/time/jornada']
 const FLOWS_PATHS = ['/aprovacoes']
@@ -651,6 +651,9 @@ export default function Sidebar({ mobileOpen, onClose }) {
               </NavLink>
               <NavLink to="/emprestimo-equipamentos/g5" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
                 <span>G5</span>
+              </NavLink>
+              <NavLink to="/pedidos-chromebook" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
+                <span>Pedidos de Chromebook</span>
               </NavLink>
             </div>
           )}

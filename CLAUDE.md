@@ -43,7 +43,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0065). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0066). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -182,6 +182,15 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   **Baixar PPTX/PDF** (botões no topo): `utils/casesDeck.js` monta no navegador (pptxgenjs + pdf-lib, import dinâmico, fora do
   pré-cache — `manualChunks` dá nome ao `pdf-lib` pro `globIgnores` pegar). Um layout só em polegadas (16:9) desenhado pelos dois
   formatos; Arial/Helvetica, texto longo cortado com "…", mesmos cases/filtro do modo apresentação, fotos = miniaturas.
+- **Portal do Professor** (nov/2026, migração 0066): cargo **Professor** (`role-professor`, só o módulo `teacher`) dado no 1º login de
+  quem tem o domínio de `app_settings.teacher_email_domain` (`pro.fecaf.com.br`, regra em `auth.js`). Quem só tem `teacher` (`isTeacherOnly`
+  em `utils/permissions.js`) cai em `/professor` (`TeacherPortalPage.jsx`), FORA do AppLayout: sem menu, sem tempo real, sem sininho
+  (limite de 100 mil chamadas/dia). Pede Chromebooks (`chromebook_requests`: pendente → aprovada/recusada pela TI, cancelada por ele) e
+  abre chamado no GLPI (`teacher_tickets`; `glpiCreateTicket` — 1ª escrita que CRIA chamado; requerente achado pelo e-mail ou e-mail
+  alternativo; entidade em `app_settings.teacher_glpi_entity_id` = 4 SERVICE DESK; tipo vai no título; situação relida ≤ 1×/5 min, máx. 8).
+  Rotas `routes/teacher.js` + `lib/teacherPortal.js`. TI: **Empréstimos → Pedidos de Chromebook** (`/pedidos-chromebook`,
+  `routes/chromebookRequests.js`, módulo `loans`): confirma/recusa (motivo obrigatório), professor recebe e-mail; pedido novo = sininho
+  de quem tem Empréstimos "editar". Teste: `teacher-portal-e2e.mjs` (sobe o `mock-glpi.mjs` sozinho).
 - **Base de Conhecimento → Padronização de máquinas** (`routes/machineStandards.js`, `components/kb/MachineStandards.jsx`, aba própria
   dentro de `KnowledgeBasePage`, recurso `/api/machine-standards` no módulo `kb`, sem departamento): processador/RAM/extra mínimos por
   **cargo** e exceções por **setor** (o setor vale para qualquer cargo dele). Os 5 perfis da apresentação vieram na migração 0060.

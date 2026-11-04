@@ -113,6 +113,16 @@ app.post('/google', rateLimit('LOGIN_LIMITER', byIp, 'Muitas tentativas de login
         await db.prepare('UPDATE users SET role_id = ? WHERE id = ?').run(role.id, user.id)
         user.role_id = role.id
       }
+      // Professores (domínio em app_settings.teacher_email_domain) vão direto para o
+      // cargo Professor, que só vê o Portal do Professor — vale mais que o cargo padrão.
+      const teacher = await db.prepare(`
+        SELECT r.id FROM app_settings s JOIN roles r ON r.id = 'role-professor'
+        WHERE s.key = 'teacher_email_domain' AND lower(?) LIKE '%@' || lower(s.value)
+      `).get(user.email)
+      if (teacher) {
+        await db.prepare('UPDATE users SET role_id = ? WHERE id = ?').run(teacher.id, user.id)
+        user.role_id = teacher.id
+      }
     }
 
     // 5. Emitir JWT igual ao login normal

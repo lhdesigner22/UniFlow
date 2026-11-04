@@ -26,6 +26,7 @@ export const MODULES = [
   { key: 'loans', label: 'Empréstimo de Equipamentos', hint: 'Empréstimos, inventário e grade de salas' },
   { key: 'companies', label: 'Empresas, Parceiros e Links', hint: 'Filiais, parceiros e links de internet' },
   { key: 'incidents', label: 'Incidentes Laboratórios', hint: 'Defeitos, sinistros e ocorrências nos laboratórios' },
+  { key: 'teacher', label: 'Portal do Professor', hint: 'Pedir Chromebooks e abrir chamados (cargo Professor)' },
 ]
 export const MODULE_KEYS = MODULES.map(m => m.key)
 export const LEVELS = ['none', 'view', 'edit']
@@ -56,6 +57,8 @@ const RESOURCE_MODULE = {
   'equipment-loans': 'loans',
   'equipment-inventory': 'loans',
   'room-schedule': 'loans',
+  'chromebook-requests': 'loans', // Empréstimos → Pedidos de Chromebook (a TI confirma)
+  teacher: 'teacher', // Portal do Professor
   directory: 'loans',
   companies: 'companies',
   partners: 'companies',

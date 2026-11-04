@@ -62,7 +62,7 @@ function IconSearch() {
 }
 
 // Recursos da API (1º pedaço do caminho) cujas rotas criam notificação no servidor
-const NOTIFYING_RESOURCES = ['boards', 'approvals', 'purchase-requests']
+const NOTIFYING_RESOURCES = ['boards', 'approvals', 'purchase-requests', 'teacher']
 
 export default function Topbar({ onMenuClick }) {
   const [showNotifs, setShowNotifs] = useState(false)
