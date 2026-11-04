@@ -24,6 +24,10 @@ importante mudar. Documentação técnica longa: `docs/` (comece por
 - **Limite de 100 mil chamadas/dia estourou** em 1–3/nov/2026 (app fora do ar até 21h de Brasília). Suspeita: laço de reconexão do
   tempo real (`services/live.js`, já travado: espera só zera após 1 min conectado, mínimo 5 s, recarga geral no máx. a cada 5 min).
   Também em out/2026: sininho só reage a boards/approvals/purchase-requests; logs (observability) em 20%. Medir: `wrangler tail --format json`.
+  **Estourou de novo em 04/11/2026 (conta nova)** — causa CONFIRMADA: laço de "sair". Token inválido (JWT_SECRET trocado na migração) → 401 →
+  app faz logout → `POST /api/audit/logout` → 401 → logout de novo (~3/s por aba). Corrigido no servidor (`worker.js`: "sair" sem sessão
+  válida responde 200, sem auditoria) e no app (`authStore.logout`/`api.js`). Regra: **nenhuma rota chamada pelo próprio logout/401 pode
+  responder 401**; e trocar JWT_SECRET derruba todo mundo de uma vez — publique a correção ANTES de uma troca dessas.
 - Banco D1 chama `uniflow` (id `b87e55dd…`). Conta Cloudflare correta: **helpdesk.ti@fecaf.com.br** (account `fc23b9ee…`), desde 04/11/2026.
   **Migração de conta (nov/2026)**: saiu da luiz.sanchez (account `8c6d…`, hoje `serfecaf-antigo.workers.dev`, sem crons — apagar o Worker e o D1
   antigos depois de uns dias). O subdomínio `serfecaf` passou para a conta nova, então o endereço continua o mesmo. Google (login OAuth `…4ur5v531…`,
