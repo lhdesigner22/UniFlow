@@ -118,4 +118,16 @@ r = await call('aud', 'GET', '/api/audit?export=1&category=vault')
 expect('exportação devolve as linhas', r.j?.rows?.length > 10, true)
 expect('...e a exportação vira log', (await last('audit.export'))?.user_id, 'u-aud')
 
+// "Sair" sem sessão válida NÃO pode responder 401: no app o 401 dispara outro
+// "sair" e vira laço (estourou as 100 mil chamadas/dia em 04/11/2026).
+const countLogs = async () => (await logs()).length
+const before = await countLogs()
+const raw = async headers => (await fetch(BASE + '/api/audit/logout', { method: 'POST', headers })).status
+expect('"sair" sem token responde 200', await raw({}), 200)
+expect('"sair" com token inválido responde 200', await raw({ Authorization: 'Bearer lixo.lixo.lixo' }), 200)
+expect('"sair" com token de outra chave responde 200', await raw({ Authorization: `Bearer ${await new SignJWT({ id: 'u-col', tv: 0 }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(new TextEncoder().encode('outra-chave'))}` }), 200)
+expect('...e nada disso vira linha de auditoria', await countLogs(), before)
+expect('"sair" válido continua registrado', (await call('colab', 'POST', '/api/audit/logout')).s, 200)
+expect('...como auth.logout', (await last('auth.logout'))?.user_id, 'u-col')
+
 console.log(ok ? '\nTUDO OK' : '\nHOUVE FALHAS')

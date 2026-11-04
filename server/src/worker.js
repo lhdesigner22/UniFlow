@@ -70,6 +70,21 @@ app.use('*', async (c, next) => {
   await next()
 })
 
+// "Sair" sem sessão válida responde 200 (e não grava auditoria). Antes respondia 401,
+// e no app o 401 dispara "sair" de novo, que chama esta rota de novo: em 04/11/2026,
+// abas abertas desde antes da troca de conta (JWT_SECRET novo) ficaram nesse laço,
+// ~3 chamadas/s, e estouraram as 100 mil chamadas/dia. Só a resposta do servidor
+// para as abas que ainda rodam o código antigo.
+app.post('/api/audit/logout', async (c, next) => {
+  let payload = null
+  try { payload = await tokenPayload(c) } catch { /* token inválido */ }
+  if (!payload) return c.json({ ok: true })
+  // Sessão derrubada ("Forçar novo login") ou usuário excluído: mesmo caso.
+  const access = await loadAccess(c.get('db'), payload.id)
+  if (!access || (payload.tv || 0) !== access.tokenVersion) return c.json({ ok: true })
+  await next()
+})
+
 // Cabeçalhos de segurança das respostas da API (os arquivos estáticos recebem
 // os seus por client/public/_headers). `no-store`: dado de API nunca fica em
 // cache do navegador/proxy — a não ser que a rota já tenha definido o seu.

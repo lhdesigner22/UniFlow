@@ -14,7 +14,9 @@ export const useAuthStore = create((set) => ({
 
   logout: () => {
     // Log de auditoria "saiu" — o pedido sai com o token antes de ele ser apagado.
-    api.post('/audit/logout').catch(() => {})
+    // Sem token (a sessão já caiu) não há o que registrar: sem este cuidado o 401
+    // do próprio "sair" disparava outro "sair", em laço (nov/2026).
+    if (localStorage.getItem('token')) api.post('/audit/logout').catch(() => {})
     localStorage.removeItem('token')
     set({ user: null, token: null })
     window.google?.accounts?.id?.disableAutoSelect()

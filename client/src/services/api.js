@@ -32,7 +32,8 @@ api.interceptors.response.use(
       const isAuthEndpoint =
         url.includes('/auth/login') ||
         url.includes('/auth/google') ||
-        url.includes('/auth/register')
+        url.includes('/auth/register') ||
+        url.includes('/audit/logout') // 401 do próprio "sair" não pode disparar outro "sair" (laço)
       if (!isAuthEndpoint) {
         localStorage.removeItem('token')
         // Dispatch event instead of hard-reloading — lets React Router
