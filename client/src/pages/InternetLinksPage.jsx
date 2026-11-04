@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { DndContext, closestCenter } from '@dnd-kit/core'
-import { SortableContext, rectSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable'
+import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import api from '../services/api'
 import { useLiveRefresh } from '../hooks/useLiveRefresh'
+import { useCopy } from '../hooks/useCopy'
 import { useAuthStore } from '../store/authStore'
 import { confirmDialog, alertDialog } from '../store/dialogStore'
 import Modal from '../components/common/Modal'
@@ -11,26 +12,15 @@ import s from './InternetLinksPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
 import LineIcon from '../components/common/LineIcon'
+import RowMenu from '../components/common/RowMenu'
 import { useSortableSensors, sortableAccessibility, useSerialSave, refocusMoveButton } from '../utils/sortableA11y'
 
 const LOCATIONS = [
-  { key: 'sede', label: 'SEDE' },
-  { key: 'campus-conceito', label: 'CAMPUS CONCEITO' },
-  { key: 'administrativo', label: 'ADMINISTRATIVO' },
-  { key: 'clinicas', label: 'CLÍNICAS' },
+  { key: 'sede', label: 'Sede' },
+  { key: 'campus-conceito', label: 'Campus Conceito' },
+  { key: 'administrativo', label: 'Administrativo' },
+  { key: 'clinicas', label: 'Clínicas' },
 ]
-
-function timeAgo(iso) {
-  if (!iso) return null
-  const mins = Math.round((Date.now() - new Date(iso.replace(' ', 'T') + 'Z').getTime()) / 60000)
-  if (mins < 1) return 'agora mesmo'
-  if (mins < 60) return `há ${mins} min`
-  const hours = Math.round(mins / 60)
-  if (hours < 24) return `há ${hours}h`
-  const days = Math.round(hours / 24)
-  if (days < 30) return `há ${days}d`
-  return new Date(iso.replace(' ', 'T') + 'Z').toLocaleDateString('pt-BR')
-}
 
 // Só os dígitos, no máximo 8, formatado como 00000-000
 function formatCep(value) {
@@ -81,7 +71,7 @@ function Editor({ link, defaultLocation, onClose, onSaved }) {
       const full = `${linha}${linha ? ', ' : ''}CEP ${formatCep(digits)}`
       setForm(f => ({ ...f, address: full }))
     } catch {
-      setCepError('Erro ao buscar o CEP. Tenta de novo?')
+      setCepError('Não deu para buscar o CEP. Tente de novo ou preencha o endereço à mão.')
     } finally {
       setCepLoading(false)
     }
@@ -97,7 +87,7 @@ function Editor({ link, defaultLocation, onClose, onSaved }) {
         : (await api.post('/internet-links', form)).data
       onSaved(saved)
     } catch (e) {
-      setError(e.response?.data?.error || 'Erro ao salvar. Tenta de novo?')
+      setError(e.response?.data?.error || 'Não deu para salvar o link. Tente de novo.')
     } finally {
       setSaving(false)
     }
@@ -150,66 +140,83 @@ function Editor({ link, defaultLocation, onClose, onSaved }) {
       {error && <p role="alert" className={s.fileError}>{error}</p>}
       <DepartmentSelect value={form.department_id} onChange={v => setForm(f => ({ ...f, department_id: v }))} label="Visível para" />
       <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={!form.provider.trim() || saving} onClick={save}>
-        {saving ? 'Salvando...' : 'Salvar'}
+        {saving ? 'Salvando…' : link ? 'Salvar alterações' : 'Cadastrar link'}
       </button>
     </Modal>
   )
 }
 
-// Um card de link — arrastável só pela alça (⠿), pra não atrapalhar cliques
-// nos botões de editar/excluir ou no link "Abrir no Google Maps".
-function LinkCard({ link: l, index, total, draggable, canEdit, onEdit, onDelete, onMove }) {
+// Contato do gerente: e-mail vira mailto:, telefone vira tel:.
+const contactHref = c => (c.includes('@') ? `mailto:${c.trim()}` : /\d{4}/.test(c) ? `tel:${c.replace(/[^\d+]/g, '')}` : null)
+
+// Uma linha por link — arrastável só pela alça, para não atrapalhar os botões.
+function LinkRow({ link: l, index, total, draggable, canEdit, onEdit, onDelete, onMove, copied, copy }) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: l.id, disabled: !draggable, attributes: { roleDescription: 'item reordenável' } })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
+  const copyBtn = (k, text, what) => (
+    <button type="button" className={s.copyBtn} onClick={() => copy(k, text)} aria-label={copied === k ? `${what} copiado` : `Copiar ${what}`}>
+      <LineIcon name={copied === k ? 'check' : 'copy'} size={13} />{copied === k ? 'Copiado' : 'Copiar'}
+    </button>
+  )
+  const href = l.contact ? contactHref(l.contact) : null
 
   return (
-    <div ref={setNodeRef} style={style} className={s.card}>
-      <div className={s.cardHeader}>
+    <li ref={setNodeRef} style={style} className={s.row}>
+      <div className={s.speedCol}>
         {draggable && (
-          <button type="button" className={s.dragHandle} title="Arrastar para reordenar" {...attributes} aria-label={`Reordenar ${l.provider}`} {...listeners}>⠿</button>
+          <button type="button" className={s.dragHandle} {...attributes} {...listeners} aria-label={`Reordenar ${l.provider}`} title="Arrastar para reordenar">
+            <LineIcon name="grip" size={16} />
+          </button>
         )}
-        <h3 className={s.cardTitle}>{l.provider}</h3>
+        <span className={s.speed}>{l.speed || '—'}</span>
+      </div>
+      <div className={s.main}>
+        <div className={s.titleLine}>
+          <h2 className={s.provider}>{l.provider}</h2>
+          <span className={`${s.pill} ${l.dual_approach ? s.pillOn : ''}`} title="Dupla abordagem: o cabo chega por dois caminhos diferentes">
+            {l.dual_approach ? 'Dupla abordagem' : 'Sem dupla abordagem'}
+          </span>
+        </div>
+        <dl className={s.facts}>
+          {(l.account_manager || l.contact) && (<>
+            <dt>Gerente</dt>
+            <dd>
+              {l.account_manager && <span>{l.account_manager}</span>}
+              {l.contact && (href ? <a className={s.contactLink} href={href}>{l.contact}</a> : <span>{l.contact}</span>)}
+              {l.contact && copyBtn(`${l.id}:contato`, l.contact, 'contato')}
+            </dd>
+          </>)}
+          {l.cnpj && (<>
+            <dt>CNPJ</dt>
+            <dd><span className={s.num}>{l.cnpj}</span>{copyBtn(`${l.id}:cnpj`, l.cnpj, 'CNPJ')}</dd>
+          </>)}
+          {l.address && (<>
+            <dt>Endereço</dt>
+            <dd>
+              <span>{l.address}</span>
+              {copyBtn(`${l.id}:end`, l.address, 'endereço')}
+              <a className={s.copyBtn} href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}`} target="_blank" rel="noreferrer">
+                <LineIcon name="pin" size={13} />Abrir no mapa
+              </a>
+            </dd>
+          </>)}
+        </dl>
+      </div>
+      <div className={s.actions}>
+        {draggable && (
+          <span className={s.moveBtns}>
+            <button type="button" className={s.iconBtn} aria-label={`Mover ${l.provider} para cima`} title="Mover para cima" data-move={`${l.id}:-1`} disabled={index === 0} onClick={() => { onMove(index, index - 1); refocusMoveButton(l.id, -1) }}><LineIcon name="chevronUp" size={15} /></button>
+            <button type="button" className={s.iconBtn} aria-label={`Mover ${l.provider} para baixo`} title="Mover para baixo" data-move={`${l.id}:1`} disabled={index === total - 1} onClick={() => { onMove(index, index + 1); refocusMoveButton(l.id, 1) }}><LineIcon name="chevronDown" size={15} /></button>
+          </span>
+        )}
         {canEdit(l) && (
-          <div className={s.cardActions}>
-            {draggable && <>
-              <button type="button" className={s.iconBtn} title="Mover para antes" aria-label={`Mover ${l.provider} para antes`} data-move={`${l.id}:-1`} disabled={index === 0} onClick={() => { onMove(index, index - 1); refocusMoveButton(l.id, -1) }}><LineIcon name="chevronLeft" /></button>
-              <button type="button" className={s.iconBtn} title="Mover para depois" aria-label={`Mover ${l.provider} para depois`} data-move={`${l.id}:1`} disabled={index === total - 1} onClick={() => { onMove(index, index + 1); refocusMoveButton(l.id, 1) }}><LineIcon name="chevronRight" /></button>
-            </>}
-            <button className={s.iconBtn} title="Editar" onClick={() => onEdit(l)}>✏️</button>
-            <button className={s.iconBtn} title="Excluir" onClick={() => onDelete(l)}>🗑️</button>
-          </div>
+          <RowMenu name={`Ações do link ${l.provider}`} items={[
+            { label: 'Editar link', icon: 'edit', onClick: () => onEdit(l) },
+            { label: 'Excluir link', icon: 'trash', danger: true, onClick: () => onDelete(l) },
+          ]} />
         )}
       </div>
-      {l.speed && <p className={s.cardLine}>⚡ {l.speed}</p>}
-      <p className={s.cardLine}>
-        🔀 Dupla abordagem: <span className={l.dual_approach ? s.yes : s.no}>{l.dual_approach ? 'Sim' : 'Não'}</span>
-      </p>
-      {l.account_manager && <p className={s.cardLine}>👤 {l.account_manager}</p>}
-      {l.contact && <p className={s.cardLine}>📞 {l.contact}</p>}
-      {l.cnpj && <p className={s.cardLine}>CNPJ: <span className={s.mono}>{l.cnpj}</span></p>}
-      {l.address && (
-        <>
-          <p className={s.cardLine}>📍 {l.address}</p>
-          <iframe
-            className={s.mapEmbed}
-            title={`Mapa — ${l.provider}`}
-            src={`https://www.google.com/maps?q=${encodeURIComponent(l.address)}&output=embed`}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
-          <a
-            className={s.cardLink}
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}`}
-            target="_blank" rel="noreferrer"
-          >
-            🗺️ Abrir no Google Maps
-          </a>
-        </>
-      )}
-      <div className={s.cardFooter}>
-        <span className={s.cardMeta}>{l.author_name || 'Alguém'} · {timeAgo(l.updated_at)}</span>
-      </div>
-    </div>
+    </li>
   )
 }
 
@@ -219,6 +226,7 @@ export default function InternetLinksPage() {
   const [links, setLinks] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null) // null = fechado, {} = novo, link = editar
+  const { copied, copy } = useCopy()
 
   useLiveRefresh(['internet-links'], () => load())
   const load = () => {
@@ -230,6 +238,7 @@ export default function InternetLinksPage() {
   useEffect(() => { load() }, [])
 
   const filtered = useMemo(() => (links || []).filter(l => l.location === locationTab), [links, locationTab])
+  const counts = useMemo(() => Object.fromEntries(LOCATIONS.map(l => [l.key, (links || []).filter(x => x.location === l.key).length])), [links])
 
   const onSaved = link => {
     setLinks(prev => {
@@ -246,12 +255,12 @@ export default function InternetLinksPage() {
       await api.delete(`/internet-links/${l.id}`)
       setLinks(prev => (prev || []).filter(x => x.id !== l.id))
     } catch (e) {
-      await alertDialog(e.response?.data?.error || 'Erro ao excluir o link.', { title: 'Erro', danger: true })
+      await alertDialog(e.response?.data?.error || 'Não deu para excluir o link.', { title: 'Erro', danger: true })
     }
   }
 
   const canEdit = l => l.created_by === user?.id || user?.system_role === 'super_admin'
-  const canReorder = user?.system_role === 'super_admin'
+  const canReorder = user?.system_role === 'super_admin' && filtered.length > 1
   const sensors = useSortableSensors()
   const saveOrder = useSerialSave(ids => api.put('/internet-links/reorder', { ids }))
 
@@ -263,7 +272,7 @@ export default function InternetLinksPage() {
     moveTo(filtered.findIndex(l => l.id === active.id), filtered.findIndex(l => l.id === over.id))
   }
 
-  // Também usado pelos botões ‹ › (quem não consegue arrastar).
+  // Também usado pelos botões ↑ ↓ (quem não consegue arrastar).
   const moveTo = async (oldIndex, newIndex) => {
     if (oldIndex === -1 || newIndex < 0 || newIndex >= filtered.length) return
     const reordered = arrayMove(filtered, oldIndex, newIndex)
@@ -275,42 +284,44 @@ export default function InternetLinksPage() {
     }
   }
 
-  if (loading) return <div className={s.loading}>Carregando links de internet...</div>
+  if (loading) return <div className={s.loading}>Carregando links de internet…</div>
+  const place = LOCATIONS.find(l => l.key === locationTab)?.label
 
   return (
     <div className={s.page}>
-      <div className={s.header}>
+      <header className={s.header}>
         <div>
-          <h1 className={s.title}>Link de Internet</h1>
-          <p className={s.sub}>Operadora, velocidade, dupla abordagem e contato do gerente de negócios, por local.</p>
+          <h1 className={s.title}>Links de internet</h1>
+          <p className={s.sub}>Operadora, velocidade e com quem falar em cada local. O primeiro da lista é o link principal.</p>
         </div>
         {user?.system_role === 'super_admin' && (
-          <button className="btn btn-primary" onClick={() => setEditing({})}>+ Novo link</button>
+          <button type="button" className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Novo link</button>
         )}
-      </div>
+      </header>
 
-      <div className={s.tabs}>
+      <nav className={s.tabs} aria-label="Local">
         {LOCATIONS.map(l => (
-          <button key={l.key} className={`${s.tab} ${locationTab === l.key ? s.tabActive : ''}`} onClick={() => setLocationTab(l.key)}>
-            {l.label}
+          <button key={l.key} type="button" aria-pressed={locationTab === l.key} className={`${s.tab} ${locationTab === l.key ? s.tabActive : ''}`} onClick={() => setLocationTab(l.key)}>
+            {l.label} <span className={s.tabCount}>{counts[l.key] || 0}</span>
           </button>
         ))}
-      </div>
+      </nav>
 
       {filtered.length === 0 ? (
         <div className={s.empty}>
-          <h3>Nenhum link em {LOCATIONS.find(l => l.key === locationTab)?.label}</h3>
-          <p>{user?.system_role === 'super_admin' ? 'Cadastre o primeiro link desse local.' : 'Peça pra um Super Admin cadastrar.'}</p>
+          <h2>Nenhum link cadastrado em {place}</h2>
+          <p>{user?.system_role === 'super_admin' ? 'Use "Novo link" para cadastrar a operadora deste local.' : 'Peça a um Super Admin para cadastrar os links.'}</p>
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}
           accessibility={sortableAccessibility(filtered, l => l.provider)}>
-          <SortableContext items={filtered.map(l => l.id)} strategy={rectSortingStrategy}>
-            <div className={s.grid}>
+          <SortableContext items={filtered.map(l => l.id)} strategy={verticalListSortingStrategy}>
+            <ul className={s.list}>
               {filtered.map((l, i) => (
-                <LinkCard key={l.id} link={l} index={i} total={filtered.length} draggable={canReorder} canEdit={canEdit} onEdit={setEditing} onDelete={deleteLink} onMove={moveTo} />
+                <LinkRow key={l.id} link={l} index={i} total={filtered.length} draggable={canReorder} canEdit={canEdit}
+                  onEdit={setEditing} onDelete={deleteLink} onMove={moveTo} copied={copied} copy={copy} />
               ))}
-            </div>
+            </ul>
           </SortableContext>
         </DndContext>
       )}

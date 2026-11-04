@@ -1,78 +1,69 @@
-.page { padding: 36px 32px; display: flex; flex-direction: column; gap: 20px; }
+/* Links de internet: uma linha por link, com a VELOCIDADE grande à esquerda (o
+   número que importa), operadora e contato ao lado. A ordem é a do contrato
+   principal → reserva, por isso dá para reordenar. */
+.page { padding: 36px 32px; display: flex; flex-direction: column; gap: 18px; max-width: 1080px; }
 .loading { display: flex; align-items: center; justify-content: center; height: 60vh; color: var(--text-muted); }
+.header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title { margin: 0; font-size: 2rem; font-weight: 600; letter-spacing: -.032em; line-height: 1.1; }
+.sub { margin: 6px 0 0; font-size: 14px; color: var(--text-muted); }
 
-.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
-.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.tabs { display: flex; flex-wrap: wrap; column-gap: 22px; border-bottom: 1px solid var(--border); } /* quebra de linha: com overflow, as abas do fim ficavam fora do alcance no celular */
+.tab { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 10px 2px; margin-bottom: -1px; white-space: nowrap;
+  border-bottom: 2px solid transparent; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+.tab:hover { color: var(--text); }
+.tabActive { color: var(--text); border-bottom-color: var(--brand); }
+.tabCount { font-size: 12px; padding: 0 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
-/* ── Abas de local ── */
-.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-.tab {
-  padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border2);
-  background: var(--surface); color: var(--text-muted); font-size: 12.5px; font-weight: 600;
-  cursor: pointer; transition: all .12s; white-space: nowrap;
-}
-.tab:hover { border-color: var(--brand); color: var(--text); }
-.tabActive { background: var(--brand); border-color: var(--brand); color: white; }
+.list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.row { display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; gap: 22px; align-items: start; padding: 18px 20px; background: var(--surface); border-radius: 14px; }
+.row + .row { border-top: 1px solid var(--border); border-radius: 0; }
 
-/* ── Empty state ── */
-.empty { text-align: center; padding: 72px 24px; }
-.empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
-.empty p { color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 13px; }
-
-/* ── Grid de links ── */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-.card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm);
-  display: flex; flex-direction: column; gap: 8px;
-  transition: box-shadow .18s var(--ease), transform .18s var(--ease);
-  animation: fadeIn .3s var(--ease) both;
-}
-.card:hover { box-shadow: var(--shadow-md); }
-.cardHeader { display: flex; align-items: center; gap: 8px; }
-.cardActions { display: flex; gap: 2px; margin-left: auto; }
-.dragHandle {
-  width: 22px; height: 22px; flex-shrink: 0; border: none; background: transparent;
-  color: var(--text-muted); cursor: grab; font-size: 15px; line-height: 1;
-  display: flex; align-items: center; justify-content: center; border-radius: 6px;
-  touch-action: none;
-}
+.speedCol { display: flex; align-items: center; gap: 6px; }
+.speed { white-space: nowrap; font-size: 1.6rem; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; color: var(--text); font-variant-numeric: tabular-nums; }
+.dragHandle { width: 26px; height: 32px; flex: none; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--text-muted); cursor: grab; touch-action: none; }
 .dragHandle:hover { background: var(--surface-2); color: var(--text); }
-.dragHandle:active { cursor: grabbing; }
-.iconBtn {
-  width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent;
-  cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
-  transition: background .12s;
-}
-.iconBtn:hover { background: var(--surface-2); }
-.iconBtn:disabled { opacity: .35; cursor: default; background: transparent; }
-.cardTitle { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
-.cardLine { font-size: 12.5px; color: var(--text-muted); line-height: 1.4; }
-.mono { font-family: var(--font-mono, ui-monospace, monospace); color: var(--text); }
-.yes { color: var(--success, var(--success)); font-weight: 700; }
-.no { color: var(--text-muted); font-weight: 700; }
-.cardFooter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 6px; }
-.cardMeta { font-size: 11.5px; color: var(--text-muted); }
 
-/* ── Mapa (embed do Google Maps, sem precisar de API key) ── */
-.mapEmbed {
-  width: 100%; height: 140px; border: 1px solid var(--border2); border-radius: var(--radius-sm);
-}
-[data-theme="dark"] .mapEmbed { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9); }
-.cardLink {
-  font: inherit; font-size: 12.5px; color: var(--brand); font-weight: 600; text-decoration: none;
-  border: none; background: none; padding: 0; margin: 0; cursor: pointer; text-align: left; width: fit-content;
-}
-.cardLink:hover { text-decoration: underline; }
+.main { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.titleLine { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.provider { margin: 0; font-size: 1.05rem; font-weight: 600; letter-spacing: -.012em; color: var(--text); }
+.pill { font-size: 12px; padding: 2px 10px; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); white-space: nowrap; }
+.pillOn { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success-text); }
 
-/* ── Form ── */
-.checkboxLabel { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
+.facts { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px 12px; margin: 0; }
+.facts dt { font-size: 13px; color: var(--text-muted); padding-top: 3px; }
+.facts dd { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-width: 0; font-size: 14px; color: var(--text); }
+.num { font-variant-numeric: tabular-nums; }
+.contactLink { color: var(--text); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--text) 30%, transparent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+.copyBtn {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 0 9px; border-radius: 999px;
+  border: 1px solid var(--border); background: transparent; color: var(--text-muted); font: inherit; font-size: 12px; text-decoration: none; cursor: pointer;
+}
+.copyBtn:hover { color: var(--text); border-color: color-mix(in srgb, var(--brand) 45%, transparent); }
+
+.actions { display: flex; align-items: center; gap: 4px; }
+.moveBtns { display: inline-flex; gap: 2px; }
+.iconBtn { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--text-muted); cursor: pointer; }
+.iconBtn:hover:not(:disabled) { border-color: var(--border); color: var(--text); }
+.iconBtn:disabled { opacity: .35; cursor: default; }
+
+.empty { text-align: center; padding: 64px 24px; background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; }
+.empty h2 { margin: 0 0 8px; font-size: 1.1rem; font-weight: 600; }
+.empty p { color: var(--text-muted); max-width: 46ch; margin: 0 auto; line-height: 1.6; font-size: 13.5px; }
+
+/* Formulário (modal) */
+.checkboxLabel { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
 .checkboxLabel input { width: auto; }
-.fileError { font-size: 12px; color: var(--danger, var(--danger)); margin-top: 6px; }
+.fileError { font-size: 12px; color: var(--danger-text); margin-top: 6px; }
 .cepHint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 
-@media (max-width: 768px) {
-  .page { padding: 20px 16px; gap: 16px; }
-  .header { flex-direction: column; }
+@media (max-width: 760px) {
+  .page { padding: 20px 16px; gap: 14px; }
+  .title { font-size: 1.6rem; }
+  .header { align-items: flex-start; }
+  .row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; padding: 16px; }
+  .speedCol { grid-column: 1; }
+  .actions { grid-column: 2; grid-row: 1; }
+  .main { grid-column: 1 / -1; }
+  .facts { grid-template-columns: 1fr; gap: 2px; }
+  .facts dt { padding-top: 6px; }
 }
