@@ -1,189 +1,201 @@
-import { useState, useEffect, useMemo } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, ResponsiveContainer, Cell, Legend } from 'recharts'
+import { useState, useEffect, useMemo, useId } from 'react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '../services/api'
-import { avatarColor } from '../utils/avatarColor'
-import Reveal from '../components/common/Reveal'
+import Avatar from '../components/common/Avatar'
 import s from './MetricsPage.module.css'
 
-// Mesmo cuidado de fuso do TeamTimePage.jsx — `toISOString()` desloca a data
-// à noite em Brasília (UTC-3), por isso monta a data local manualmente.
+// Métricas dos quadros: o período é lido numa frase (o que mais importa: quanto o
+// time concluiu), depois quem concluiu, cada quadro e o ritmo dia a dia.
+
+// Data local (toISOString é UTC: depois das 21h de Brasília já seria amanhã).
 function isoDate(d) {
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
 function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d }
+const PRESETS = [[7, '7 dias'], [30, '30 dias'], [90, '90 dias']]
+const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0)
+const brDay = iso => { const [, m, d] = iso.split('-'); return `${d}/${m}` }
+
+// Todos os dias do período, com zero onde ninguém concluiu (a linha antiga pulava esses dias).
+function fillDays(from, to, rows) {
+  const byDate = new Map(rows.map(r => [r.date, r.completed]))
+  const out = []
+  const d = new Date(`${from}T12:00:00`), end = new Date(`${to}T12:00:00`)
+  for (let i = 0; d <= end && i < 400; i++, d.setDate(d.getDate() + 1)) {
+    const iso = isoDate(d)
+    out.push({ date: iso, label: brDay(iso), completed: byDate.get(iso) || 0 })
+  }
+  return out
+}
+
+function periodText(from, to, preset) {
+  if (preset) return `Nos últimos ${preset} dias`
+  return `De ${brDay(from)} a ${brDay(to)}`
+}
 
 export default function MetricsPage() {
+  const uid = useId()
   const [boards, setBoards] = useState([])
   const [boardId, setBoardId] = useState('')
   const [from, setFrom] = useState(isoDate(daysAgo(30)))
   const [to, setTo] = useState(isoDate(new Date()))
+  const [preset, setPreset] = useState(30)
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => { api.get('/boards').then(r => setBoards(r.data || [])).catch(() => {}) }, [])
 
-  const params = useMemo(() => {
-    const p = { from, to }
-    if (boardId) p.boardId = boardId
-    return p
-  }, [boardId, from, to])
-
+  const params = useMemo(() => ({ from, to, ...(boardId ? { boardId } : {}) }), [boardId, from, to])
   useEffect(() => {
     setLoading(true)
     api.get('/metrics/summary', { params })
-      .then(r => setSummary(r.data))
-      .catch(() => setSummary(null))
+      .then(r => { setSummary(r.data); setError('') })
+      .catch(e => { setSummary(null); setError(e?.response?.data?.error || 'Não deu para carregar as métricas. Tente de novo.') })
       .finally(() => setLoading(false))
   }, [params])
 
-  const byUserChart = summary?.byUser || []
-  const byBoardChart = summary?.byBoard || []
-  const trendChart = summary?.completedOverTime || []
-  const overdueChart = summary?.overdueByBoard || []
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null
-    return (
-      <div className={s.tooltip}>
-        <strong>{label}</strong>
-        {payload.map((p, i) => <div key={i}>{p.name}: {p.value}</div>)}
-      </div>
-    )
-  }
+  const choosePreset = days => { setPreset(days); setFrom(isoDate(daysAgo(days))); setTo(isoDate(new Date())) }
+  const setDate = (which, v) => { setPreset(null); which === 'from' ? setFrom(v) : setTo(v) }
 
   const t = summary?.totals
+  const people = summary?.byUser || []
+  const topPerson = Math.max(1, ...people.map(p => p.completed))
+  const overdueBy = new Map((summary?.overdueByBoard || []).map(b => [b.board_id, b.overdue]))
+  const boardRows = (summary?.byBoard || []).map(b => ({ ...b, overdue: overdueBy.get(b.board_id) || 0 }))
+  const days = useMemo(() => fillDays(from, to, summary?.completedOverTime || []), [from, to, summary])
+  const boardName = boards.find(b => b.id === boardId)?.name
 
   return (
     <div className={s.page}>
-      <div className={s.header}>
-        <div>
-          <h1 className={s.title}>Métricas</h1>
-          <p className={s.sub}>Quem concluiu o quê, em quantos quadros e tarefas — no estilo do Planner.</p>
+      <header className={s.header}>
+        <h1 className={s.title}>Métricas</h1>
+        <p className={s.sub}>O que o time concluiu nos quadros, quem concluiu e como está cada quadro.</p>
+      </header>
+
+      <div className={s.filters}>
+        <div className={s.field}>
+          <label className="label" htmlFor={`${uid}-b`}>Quadro</label>
+          <select id={`${uid}-b`} value={boardId} onChange={e => setBoardId(e.target.value)}>
+            <option value="">Todos os quadros</option>
+            {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        </div>
+        <div className={s.presets} role="group" aria-label="Período">
+          {PRESETS.map(([d, label]) => (
+            <button key={d} type="button" className={`${s.preset} ${preset === d ? s.presetOn : ''}`} aria-pressed={preset === d} onClick={() => choosePreset(d)}>{label}</button>
+          ))}
+        </div>
+        <div className={s.field}>
+          <label className="label" htmlFor={`${uid}-f`}>De</label>
+          <input id={`${uid}-f`} type="date" value={from} max={to} onChange={e => setDate('from', e.target.value)} />
+        </div>
+        <div className={s.field}>
+          <label className="label" htmlFor={`${uid}-t`}>Até</label>
+          <input id={`${uid}-t`} type="date" value={to} min={from} onChange={e => setDate('to', e.target.value)} />
         </div>
       </div>
 
-      <div className={s.filters}>
-        <select value={boardId} onChange={e => setBoardId(e.target.value)}>
-          <option value="">Todos os quadros</option>
-          {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </select>
-        <input type="date" value={from} onChange={e => setFrom(e.target.value)} />
-        <span className={s.rangeSep}>até</span>
-        <input type="date" value={to} onChange={e => setTo(e.target.value)} />
-      </div>
+      {error && <p className={s.error} role="alert">{error}</p>}
+      {loading && !summary && <div className={s.skeleton} aria-label="Carregando" />}
 
-      {loading ? (
-        <div className={s.skeleton} />
-      ) : !summary ? (
-        <div className={s.empty}>Não foi possível carregar as métricas.</div>
-      ) : (
-        <>
-          <div className={s.statsRow}>
-            <div className={s.statTile}>
-              <span className={s.statNumber}>{t.total}</span>
-              <span className={s.statLabel}>Tarefas criadas no período</span>
-            </div>
-            <div className={s.statTile}>
-              <span className={`${s.statNumber} ${s.green}`}>{t.completed}</span>
-              <span className={s.statLabel}>Concluídas</span>
-            </div>
-            <div className={s.statTile}>
-              <span className={`${s.statNumber} ${s.amber}`}>{t.inProgress}</span>
-              <span className={s.statLabel}>Em andamento</span>
-            </div>
-            <div className={s.statTile}>
-              <span className={s.statNumber}>{t.notStarted}</span>
-              <span className={s.statLabel}>Não iniciadas</span>
-            </div>
-            <div className={s.statTile}>
-              <span className={s.statNumber}>{t.completionRate}%</span>
-              <span className={s.statLabel}>Taxa de conclusão</span>
-            </div>
-            <div className={s.statTile}>
-              <span className={s.statNumber}>{t.boardsCount}</span>
-              <span className={s.statLabel}>Quadros visíveis</span>
-            </div>
-            <div className={s.statTile}>
-              <span className={`${s.statNumber} ${s.red}`}>{t.overdue}</span>
-              <span className={s.statLabel}>Atrasadas agora</span>
-            </div>
+      {summary && t && (
+        <div className={`${s.body} ${loading ? s.stale : ''}`}>
+          {/* ── A leitura do período ── */}
+          <section className={s.lead} aria-label="Resumo do período">
+            {t.total === 0 ? (
+              <p className={s.sentence}>{periodText(from, to, preset)}, nenhuma tarefa foi criada{boardName ? ` em ${boardName}` : ' nos quadros'}.</p>
+            ) : (
+              <p className={s.sentence}>
+                {periodText(from, to, preset)}, o time concluiu <strong>{t.completed}</strong> de <strong>{t.total}</strong> tarefas
+                {boardName ? ` em ${boardName}` : ''} <span className={s.rate}>({t.completionRate}%)</span>.
+              </p>
+            )}
+            {t.total > 0 && (
+              <>
+                <div className={s.bar} role="img" aria-label={`${t.completed} concluídas, ${t.inProgress} em andamento, ${t.notStarted} não iniciadas`}>
+                  <span className={s.segDone} style={{ width: `${pct(t.completed, t.total)}%` }} />
+                  <span className={s.segDoing} style={{ width: `${pct(t.inProgress, t.total)}%` }} />
+                  <span className={s.segTodo} style={{ width: `${pct(t.notStarted, t.total)}%` }} />
+                </div>
+                <ul className={s.legend}>
+                  <li><i className={s.dotDone} /> {t.completed} concluídas</li>
+                  <li><i className={s.dotDoing} /> {t.inProgress} em andamento</li>
+                  <li><i className={s.dotTodo} /> {t.notStarted} não iniciadas</li>
+                  {t.overdue > 0 && <li className={s.overdue}><i className={s.dotLate} /> {t.overdue} atrasada{t.overdue > 1 ? 's' : ''} agora</li>}
+                </ul>
+              </>
+            )}
+          </section>
+
+          <div className={s.grid}>
+            {/* ── Quem concluiu ── */}
+            <section className={s.panel} aria-labelledby={`${uid}-people`}>
+              <h2 id={`${uid}-people`} className={s.panelTitle}>Quem concluiu</h2>
+              {people.length === 0 ? (
+                <p className={s.empty}>Ninguém concluiu tarefas no período.</p>
+              ) : (
+                <ol className={s.people}>
+                  {people.map(p => (
+                    <li key={p.user_id} className={s.person}>
+                      <Avatar id={p.user_id} name={p.user_name} size={28} />
+                      <span className={s.personName}>{p.user_name}</span>
+                      <span className={s.personBar} aria-hidden="true"><span style={{ width: `${(p.completed / topPerson) * 100}%` }} /></span>
+                      <span className={s.personNum}>{p.completed}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+
+            {/* ── Cada quadro ── */}
+            <section className={s.panel} aria-labelledby={`${uid}-boards`}>
+              <h2 id={`${uid}-boards`} className={s.panelTitle}>Por quadro</h2>
+              {boardRows.length === 0 ? (
+                <p className={s.empty}>Nenhum quadro visível para você.</p>
+              ) : (
+                <table className={s.table}>
+                  <thead>
+                    <tr><th scope="col">Quadro</th><th scope="col">Criadas</th><th scope="col">Concluídas</th><th scope="col" className={s.colBar}>Progresso</th><th scope="col">Atrasadas</th></tr>
+                  </thead>
+                  <tbody>
+                    {boardRows.map(b => (
+                      <tr key={b.board_id}>
+                        <th scope="row"><span className={s.boardDot} style={{ background: b.board_color || 'var(--brand)' }} aria-hidden="true" />{b.board_name}</th>
+                        <td>{b.total}</td>
+                        <td>{b.completed}</td>
+                        <td className={s.colBar}><span className={s.miniBar} aria-label={`${pct(b.completed, b.total)}% concluído`}><span style={{ width: `${pct(b.completed, b.total)}%` }} /></span><span className={s.miniPct}>{pct(b.completed, b.total)}%</span></td>
+                        <td className={b.overdue ? s.lateCell : s.mutedCell}>{b.overdue || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
           </div>
 
-          <div className={s.chartsGrid}>
-            <Reveal className={s.chartCard}>
-              <h4>Concluídas por pessoa</h4>
-              {byUserChart.length === 0 ? (
-                <p className={s.chartEmpty}>Ninguém concluiu tarefas no período.</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={byUserChart} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
-                    <XAxis dataKey="user_name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="completed" name="Concluídas" radius={[4, 4, 0, 0]}>
-                      {byUserChart.map((u, i) => <Cell key={i} fill={avatarColor(u.user_id)} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </Reveal>
-
-            <Reveal delay={80} className={s.chartCard}>
-              <h4>Tarefas por quadro</h4>
-              {byBoardChart.length === 0 ? (
-                <p className={s.chartEmpty}>Nenhum quadro visível.</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={byBoardChart} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
-                    <XAxis dataKey="board_name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="total" name="Criadas" fill="var(--border2)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="completed" name="Concluídas" fill="var(--brand)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </Reveal>
-
-            <Reveal delay={160} className={s.chartCard}>
-              <h4>Cards atrasados por quadro</h4>
-              {overdueChart.length === 0 ? (
-                <p className={s.chartEmpty}>Nenhum card atrasado. 🎉</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={overdueChart} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
-                    <XAxis dataKey="board_name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="overdue" name="Atrasadas" fill="var(--danger)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </Reveal>
-
-            <Reveal delay={240} className={s.chartCard}>
-              <h4>Conclusões ao longo do tempo</h4>
-              {trendChart.length === 0 ? (
-                <p className={s.chartEmpty}>Sem conclusões no período.</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={trendChart} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
-                    <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Line type="monotone" dataKey="completed" name="Concluídas" stroke="#22c55e" strokeWidth={2} dot={{ fill: '#22c55e', r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </Reveal>
-          </div>
-        </>
+          {/* ── Ritmo ── */}
+          <section className={s.panel} aria-labelledby={`${uid}-days`}>
+            <h2 id={`${uid}-days`} className={s.panelTitle}>Concluídas por dia</h2>
+            {days.every(d => !d.completed) ? (
+              <p className={s.empty}>Nenhuma conclusão no período.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={days} margin={{ top: 6, right: 4, left: -24, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="var(--border)" />
+                  <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={18} />
+                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip cursor={{ fill: 'color-mix(in srgb, var(--text) 6%, transparent)' }}
+                    content={({ active, payload, label }) => active && payload?.length ? (
+                      <div className={s.tooltip}><strong>{label}</strong> · {payload[0].value} concluída{payload[0].value === 1 ? '' : 's'}</div>
+                    ) : null} />
+                  <Bar dataKey="completed" fill="var(--success)" radius={[3, 3, 0, 0]} maxBarSize={22} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </section>
+        </div>
       )}
     </div>
   )
