@@ -24,7 +24,13 @@ importante mudar. Documentação técnica longa: `docs/` (comece por
 - **Limite de 100 mil chamadas/dia estourou** em 1–3/nov/2026 (app fora do ar até 21h de Brasília). Suspeita: laço de reconexão do
   tempo real (`services/live.js`, já travado: espera só zera após 1 min conectado, mínimo 5 s, recarga geral no máx. a cada 5 min).
   Também em out/2026: sininho só reage a boards/approvals/purchase-requests; logs (observability) em 20%. Medir: `wrangler tail --format json`.
-- Banco D1 chama `uniflow`. Conta Cloudflare correta: **luiz.sanchez@colegioser.com** (account `8c6d…`).
+- Banco D1 chama `uniflow` (id `b87e55dd…`). Conta Cloudflare correta: **helpdesk.ti@fecaf.com.br** (account `fc23b9ee…`), desde 04/11/2026.
+  **Migração de conta (nov/2026)**: saiu da luiz.sanchez (account `8c6d…`, hoje `serfecaf-antigo.workers.dev`, sem crons — apagar o Worker e o D1
+  antigos depois de uns dias). O subdomínio `serfecaf` passou para a conta nova, então o endereço continua o mesmo. Google (login OAuth `…4ur5v531…`,
+  Gmail `…nj8kr804…`, conta de serviço) no projeto 320230369357 da helpdesk.ti; página `/privacidade` exigida pelo Google. **Chave do Cofre nova**
+  (a antiga nunca foi guardada fora do Worker) — cópia em `Documentos\UniFlow-backups\VAULT_ENCRYPTION_KEY-nova.txt`; GUARDAR num cofre.
+  Importar backup no D1: linhas > ~100 KB dão SQLITE_TOOBIG → dividir em INSERT com '' + `UPDATE col = col || 'pedaço'`.
+  `wrangler login` com o navegador na conta errada: autorizar em ~2 min (senão expira) ou usar janela anônima.
 
 ### Deploy (sempre nesta ordem)
 **`npm run release`** faz tudo abaixo com checagens (conta, git limpo, backup + migração, build, deploy, confere produção).
@@ -37,7 +43,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0064). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0065). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
