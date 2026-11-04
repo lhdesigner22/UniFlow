@@ -291,6 +291,20 @@ export default function Sidebar({ mobileOpen, onClose }) {
   useLiveRefresh(['developments'], () => bump('developments'))
   useLiveRefresh(['lab-incidents'], () => bump('incidents'))
   useLiveRefresh(['printer-supplies'], () => bump('supplies'))
+  // Alterações feitas por ESTA aba (o tempo real ignora a própria aba): services/api.js avisa.
+  // Por isso os contadores abaixo NÃO recarregam a cada troca de tela (era metade das
+  // chamadas de quem navega — estudo /saude-cloudflare de 04/11/2026).
+  useEffect(() => {
+    const KEYS = { boards: 'boards', printers: 'printers', companies: 'companies', approvals: 'approvals', 'purchase-requests': 'purchase',
+      developments: 'developments', 'lab-incidents': 'incidents', 'printer-supplies': 'supplies' }
+    const handle = e => {
+      const { r, s } = e.detail || {}
+      if (r === 'boards' && s) return // cartão/coluna não muda a lista de quadros
+      if (KEYS[r]) bump(KEYS[r])
+    }
+    window.addEventListener('app:local-write', handle)
+    return () => window.removeEventListener('app:local-write', handle)
+  }, [])
 
   // Impressoras → Estoque de insumos: itens no mínimo ou abaixo (todos os prédios).
   // Só ao abrir e quando o estoque muda (não a cada navegação — economiza leitura).
@@ -305,7 +319,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
   useEffect(() => {
     if (!canView(user, 'incidents')) return
     api.get('/lab-incidents/counts').then(r => setIncidentCounts(r.data || {})).catch(() => {})
-  }, [user?.id, location.pathname, liveTick.incidents])
+  }, [user?.id, liveTick.incidents])
   const incidentsTotal = Object.values(incidentCounts).reduce((a, n) => a + n, 0)
 
   // Gestão → Desenvolvimentos: só os nomes (sem as logos) pra listar no menu.
@@ -321,15 +335,15 @@ export default function Sidebar({ mobileOpen, onClose }) {
     api.get('/boards')
       .then(r => setBoards((r.data || []).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))))
       .catch(() => {})
-  }, [location.pathname, liveTick.boards])
+  }, [liveTick.boards])
 
   // Total de impressoras cadastradas (todos os locais) — só pro numerozinho
-  // ao lado do menu; refaz ao navegar pra refletir cadastros/remoções recentes.
+  // ao lado do menu; refaz quando alguém (ou esta aba) cadastra/remove.
   useEffect(() => {
     api.get('/printers')
       .then(r => setPrintersCount((r.data || []).length))
       .catch(() => {})
-  }, [location.pathname, liveTick.printers])
+  }, [liveTick.printers])
 
   // Total de filiais cadastradas (as duas empresas somadas) — mesmo
   // espírito do contador de impressoras acima.
@@ -337,7 +351,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
     api.get('/companies')
       .then(r => setCompaniesCount((r.data || []).length))
       .catch(() => {})
-  }, [location.pathname, liveTick.companies])
+  }, [liveTick.companies])
 
   // Quantas aprovações estão esperando MINHA decisão — badge ao lado do
   // menu, mesmo espírito do contador de não lidas nas notificações.
@@ -345,7 +359,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
     api.get('/approvals', { params: { scope: 'received' } })
       .then(r => setPendingApprovalsCount((r.data || []).filter(a => a.my_decision === 'pending').length))
       .catch(() => {})
-  }, [location.pathname, liveTick.approvals])
+  }, [liveTick.approvals])
 
   // Quantas Solicitações de Compra esperam MINHA decisão como aprovador —
   // mesmo espírito do contador de Aprovações acima (my_decision). Também
@@ -361,7 +375,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
         setPurchaseMonths([...months].sort().reverse().map(ym => ({ key: ym, label: monthLabel(ym) })))
       })
       .catch(() => {})
-  }, [location.pathname, liveTick.purchase])
+  }, [liveTick.purchase])
 
   // Fecha o menu de "..." de um quadro ao clicar fora dele
   useEffect(() => {

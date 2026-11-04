@@ -28,7 +28,16 @@ api.interceptors.request.use(config => {
 })
 
 api.interceptors.response.use(
-  r => r,
+  r => {
+    // Escrita bem-sucedida DESTA aba: avisa o menu lateral (os contadores dele não
+    // recarregam mais a cada navegação, e o tempo real ignora a própria aba).
+    const method = r.config?.method
+    if (method && method !== 'get') {
+      const parts = String(r.config.url || '').split('?')[0].split('/').filter(Boolean)
+      try { window.dispatchEvent(new CustomEvent('app:local-write', { detail: { r: parts[0], s: parts[0] === 'boards' ? parts[2] : undefined } })) } catch { /* sem window */ }
+    }
+    return r
+  },
   err => {
     if (err.circuitOpen) return Promise.reject(err)
     recordFailure(err.response?.status)
