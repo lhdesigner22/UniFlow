@@ -52,18 +52,21 @@ export async function runGlpiSync(env, db, { max = 30 } = {}) {
   const existingEvents = await db.prepare(
     'SELECT glpi_ticket_id, title, description, event_date, event_time FROM events WHERE glpi_ticket_id IS NOT NULL'
   ).all()
-  const duplicateIds = await db.prepare('SELECT glpi_ticket_id FROM glpi_duplicate_tickets').all()
   const unparsedRows = await db.prepare('SELECT id, glpi_ticket_id, dismissed FROM glpi_unparsed_tickets').all()
 
   const unparsedByTicket = new Map(unparsedRows.map(r => [Number(r.glpi_ticket_id), r]))
   const skipIds = new Set([
     ...existingEvents.map(e => Number(e.glpi_ticket_id)),
-    ...duplicateIds.map(d => Number(d.glpi_ticket_id)),
     ...unparsedRows.filter(r => r.dismissed).map(r => Number(r.glpi_ticket_id)),
   ])
   const retryLastIds = new Set(unparsedRows.filter(r => !r.dismissed).map(r => Number(r.glpi_ticket_id)))
 
-  const { tickets, totalInQueue, remaining } = await glpiFetchEventTickets(env, { statusId, entityId, skipIds, retryLastIds, max })
+  // Duplicatas já registradas: só as que estão na fila agora (antes lia a tabela
+  // inteira, ~880 linhas, a cada rodada — 37% das leituras do banco em nov/2026).
+  const skipLookup = async ids => new Set((await db.prepare(
+    'SELECT glpi_ticket_id FROM glpi_duplicate_tickets WHERE glpi_ticket_id IN (SELECT value FROM json_each(?))'
+  ).all(JSON.stringify(ids))).map(r => Number(r.glpi_ticket_id)))
+  const { tickets, totalInQueue, remaining } = await glpiFetchEventTickets(env, { statusId, entityId, skipIds, skipLookup, retryLastIds, max })
 
   // Índice dos eventos que já estão na Agenda, agrupados por título + data +
   // horário que se sobrepõe (a sala NÃO conta). Em ordem de número de chamado:

@@ -28,6 +28,8 @@ importante mudar. Documentação técnica longa: `docs/` (comece por
   app faz logout → `POST /api/audit/logout` → 401 → logout de novo (~3/s por aba). Corrigido no servidor (`worker.js`: "sair" sem sessão
   válida responde 200, sem auditoria) e no app (`authStore.logout`/`api.js`). Regra: **nenhuma rota chamada pelo próprio logout/401 pode
   responder 401**; e trocar JWT_SECRET derruba todo mundo de uma vez — publique a correção ANTES de uma troca dessas.
+  **Disjuntor** (`client/src/services/circuitBreaker.js`): a aba para de chamar a API com >200 chamadas ou >20 falhas por minuto.
+  Estudo de uso/limites: skill **`/saude-cloudflare`** (scripts de resumo do tráfego e do D1 em `.claude/skills/saude-cloudflare/scripts`).
 - Banco D1 chama `uniflow` (id `b87e55dd…`). Conta Cloudflare correta: **helpdesk.ti@fecaf.com.br** (account `fc23b9ee…`), desde 04/11/2026.
   **Migração de conta (nov/2026)**: saiu da luiz.sanchez (account `8c6d…`, hoje `serfecaf-antigo.workers.dev`, sem crons — apagar o Worker e o D1
   antigos depois de uns dias). O subdomínio `serfecaf` passou para a conta nova, então o endereço continua o mesmo. Google (login OAuth `…4ur5v531…`,

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import AppLayout from './components/layout/AppLayout'
@@ -62,8 +62,24 @@ export default function App() {
 
   useEffect(() => { if (token) fetchMe(); else useAuthStore.setState({ loading: false }) }, [])
 
+  // Disjuntor (services/circuitBreaker.js): a aba entrou em laço e parou de chamar a API.
+  const [circuitOpen, setCircuitOpen] = useState(false)
+  useEffect(() => {
+    const handle = () => setCircuitOpen(true)
+    window.addEventListener('app:circuit-open', handle)
+    return () => window.removeEventListener('app:circuit-open', handle)
+  }, [])
+
   return (
     <BrowserRouter>
+      {circuitOpen && (
+        <div role="alert" style={{ position: 'fixed', zIndex: 5000, left: 16, right: 16, bottom: 16, maxWidth: 560, margin: '0 auto',
+          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: 'var(--surface)',
+          border: '1px solid var(--danger)', color: 'var(--text)', boxShadow: 'var(--shadow-lg)', fontSize: 14 }}>
+          <span style={{ flex: 1 }}>Esta aba parou de se comunicar com o servidor para não sobrecarregá-lo. Recarregue a página.</span>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => window.location.reload()}>Recarregar</button>
+        </div>
+      )}
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<Navigate to="/login" replace />} />

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { clientId } from './clientId'
+import { allowRequest, recordFailure } from './circuitBreaker'
 
 // Same-origin agora: o Worker serve tanto os assets estáticos quanto /api/*,
 // então não precisa mais de VITE_API_URL apontando pra um backend separado.
@@ -11,6 +12,10 @@ const api = axios.create({
 })
 
 api.interceptors.request.use(config => {
+  // Disjuntor aberto (laço detectado nesta aba): nem sai da aba.
+  if (!allowRequest()) {
+    return Promise.reject(Object.assign(new Error('Muitas chamadas seguidas. Recarregue a página.'), { circuitOpen: true }))
+  }
   const token = localStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   config.headers['X-Client-Id'] = clientId // tempo real: a própria aba ignora o aviso da sua alteração
@@ -25,6 +30,8 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   r => r,
   err => {
+    if (err.circuitOpen) return Promise.reject(err)
+    recordFailure(err.response?.status)
     if (err.response?.status === 401) {
       // Don't treat auth-endpoint 401s as "session expired".
       // A failed login attempt is NOT the same as an expired session.

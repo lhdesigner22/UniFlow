@@ -97,11 +97,14 @@ async function glpiGetTicket(env, sessionToken, id) {
 // e `max` limita quantos são baixados nesta rodada. O que sobrar fica pra
 // próxima rodada (`remaining`). Sem isso, uma fila grande (ex: 280 chamados)
 // gastava toda a cota relendo chamados já importados e NUNCA chegava nos novos.
-export async function glpiFetchEventTickets(env, { statusId, entityId, skipIds = null, retryLastIds = null, max = Infinity }) {
+// `skipLookup(ids)` (opcional): recebe os números que estão na fila e devolve os que
+// também devem ser pulados — para quem pula consultar só esses, não a tabela inteira.
+export async function glpiFetchEventTickets(env, { statusId, entityId, skipIds = null, skipLookup = null, retryLastIds = null, max = Infinity }) {
   const sessionToken = await glpiInitSession(env)
   try {
     const allIds = (await glpiSearchTicketIds(env, sessionToken, { statusId, entityId })).map(Number)
-    let wanted = skipIds ? allIds.filter(id => !skipIds.has(id)) : allIds
+    const looked = skipLookup && allIds.length ? await skipLookup(allIds) : null
+    let wanted = allIds.filter(id => !skipIds?.has(id) && !looked?.has(id))
     // Chamados que já falharam no reconhecimento (e são retentados a cada rodada) vão pro
     // FIM da fila, pra não ocuparem as vagas da rodada à frente dos chamados novos.
     if (retryLastIds?.size) wanted = [...wanted.filter(id => !retryLastIds.has(id)), ...wanted.filter(id => retryLastIds.has(id))]
