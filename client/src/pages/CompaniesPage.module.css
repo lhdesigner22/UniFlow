@@ -1,61 +1,69 @@
-.page { padding: 36px 32px; display: flex; flex-direction: column; gap: 20px; }
+/* Empresas: cada filial é uma ficha cadastral. A cor institucional da empresa
+   (--brand, trocada na página por COMPANY_THEME) marca as abas e o filete das fichas. */
+.page { padding: 36px 32px; display: flex; flex-direction: column; gap: 18px; max-width: 1120px; }
 .loading { display: flex; align-items: center; justify-content: center; height: 60vh; color: var(--text-muted); }
 
-/* Faixa com a cor institucional da empresa (só aparece quando a empresa tem
-   uma paleta própria definida em COMPANY_THEME — ver CompaniesPage.jsx) */
-.accentBar { height: 4px; border-radius: 4px; background: var(--brand); }
+.header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title { margin: 0; font-size: 2rem; font-weight: 600; letter-spacing: -.032em; line-height: 1.1; }
+.sub { margin: 6px 0 0; font-size: 14px; color: var(--text-muted); }
 
-.header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.title { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
-.sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+/* ── Abas das empresas (cada uma na própria cor) ── */
+.tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); }
+.tab { display: inline-flex; align-items: center; gap: 8px; padding: 10px 2px; margin-bottom: -1px; border-bottom: 2px solid transparent;
+  color: var(--text-muted); font-size: 14px; font-weight: 500; text-decoration: none; }
+.tab:hover { color: var(--text); }
+.tabOn { color: var(--text); border-bottom-color: var(--tab, var(--brand)); }
+.tabCount { font-size: 12px; padding: 0 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
-/* ── Empty state ── */
-.empty { text-align: center; padding: 72px 24px; }
-.empty h3 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
-.empty p { color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 13px; }
-
-/* ── Grid de filiais ── */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-.card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm);
-  display: flex; flex-direction: column; gap: 8px;
-  transition: transform .18s var(--ease), box-shadow .18s var(--ease);
-  /* Entrada é o <Reveal> (componente), ao rolar até aqui. */
+/* ── Fichas ── */
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.branch {
+  display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 20px; align-items: stretch;
+  padding: 18px 18px 18px 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  border-left: 3px solid var(--brand);
 }
-.card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
-.cardHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.cardActions { display: flex; gap: 2px; }
-.iconBtn {
-  width: 26px; height: 26px; border-radius: 6px; border: none; background: transparent;
-  cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
-  transition: background .12s;
-}
-.iconBtn:hover { background: var(--surface-2); }
-.cardTitle { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
-.cardLine { font-size: 12.5px; color: var(--text-muted); line-height: 1.4; }
-.mono { font-family: var(--font-mono, ui-monospace, monospace); color: var(--text); }
-.cardFooter { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 6px; }
-.cardMeta { font-size: 11.5px; color: var(--text-muted); }
+.info { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.branchHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.branchName { margin: 0; font-size: 1.1rem; font-weight: 600; letter-spacing: -.015em; color: var(--text); }
 
-/* ── Mapa (embed do Google Maps, sem precisar de API key) ── */
-.mapEmbed {
-  width: 100%; height: 140px; border: 1px solid var(--border2); border-radius: var(--radius-sm);
+.facts { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 10px 14px; margin: 0; }
+.facts dt { font-size: 13px; color: var(--text-muted); padding-top: 4px; }
+.facts dd { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-width: 0; font-size: 14px; color: var(--text); }
+.cnpj { font-size: 1.05rem; font-weight: 600; letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+.addressRow { align-items: flex-start !important; flex-direction: column; }
+.address { line-height: 1.5; max-width: 62ch; }
+.addressBtns { display: flex; gap: 6px; flex-wrap: wrap; }
+.phone { display: inline-flex; align-items: center; gap: 6px; color: var(--text); text-decoration: none; font-variant-numeric: tabular-nums; }
+.phone:hover { text-decoration: underline; }
+.copyBtn {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid var(--border); background: transparent; color: var(--text-muted); font: inherit; font-size: 12.5px;
+  text-decoration: none; cursor: pointer;
 }
-/* Truque comum pra "escurecer" um iframe do Google Maps sem precisar da API
-   de verdade (que teria um estilo de mapa configurável) — inverte as cores
-   e desfaz o matiz pra manter azul=água, verde=parque etc. */
-[data-theme="dark"] .mapEmbed { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9); }
-.cardLink {
-  font: inherit; font-size: 12.5px; color: var(--brand); font-weight: 600; text-decoration: none;
-  border: none; background: none; padding: 0; margin: 0; cursor: pointer; text-align: left; width: fit-content;
-}
-.cardLink:hover { text-decoration: underline; }
+.copyBtn:hover { color: var(--text); border-color: color-mix(in srgb, var(--brand) 45%, transparent); }
+.meta { margin: auto 0 0; font-size: 12.5px; color: var(--text-muted); }
 
-.fileError { font-size: 12px; color: var(--danger, var(--danger)); margin-top: 6px; }
+/* Mapa (embed do Google Maps, sem chave de API) */
+.map { width: 100%; height: 100%; min-height: 170px; border: 1px solid var(--border); border-radius: 10px; }
+/* "escurece" o iframe do mapa no tema escuro mantendo água azul e parque verde */
+[data-theme="dark"] .map { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9); }
+
+.empty { text-align: center; padding: 64px 24px; background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; }
+.empty h2 { margin: 0 0 8px; font-size: 1.1rem; font-weight: 600; }
+.empty p { color: var(--text-muted); max-width: 46ch; margin: 0 auto; line-height: 1.6; font-size: 13.5px; }
+
+.fileError { font-size: 12px; color: var(--danger-text); margin-top: 6px; }
 .cepHint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 
-@media (max-width: 768px) {
-  .page { padding: 20px 16px; gap: 16px; }
-  .header { flex-direction: column; }
+@media (max-width: 860px) {
+  .branch { grid-template-columns: 1fr; }
+  .map { min-height: 160px; }
+}
+@media (max-width: 640px) {
+  .page { padding: 20px 16px; gap: 14px; }
+  .title { font-size: 1.6rem; }
+  .header { align-items: flex-start; }
+  .branch { padding: 16px 14px 16px 16px; }
+  .facts { grid-template-columns: 1fr; gap: 4px; }
+  .facts dt { padding-top: 6px; }
 }

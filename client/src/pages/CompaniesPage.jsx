@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, NavLink } from 'react-router-dom'
 import api from '../services/api'
 import { useLiveRefresh } from '../hooks/useLiveRefresh'
 import { useAuthStore } from '../store/authStore'
 import { confirmDialog, alertDialog } from '../store/dialogStore'
 import Modal from '../components/common/Modal'
-import Reveal from '../components/common/Reveal'
+import LineIcon from '../components/common/LineIcon'
+import RowMenu from '../components/common/RowMenu'
 import s from './CompaniesPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
@@ -85,7 +86,7 @@ function Editor({ branch, defaultCompany, onClose, onSaved }) {
       const full = `${linha}${linha ? ', ' : ''}CEP ${formatCep(digits)}`
       setForm(f => ({ ...f, address: full }))
     } catch {
-      setCepError('Erro ao buscar o CEP. Tenta de novo?')
+      setCepError('Não deu para buscar o CEP. Tente de novo ou preencha o endereço à mão.')
     } finally {
       setCepLoading(false)
     }
@@ -101,7 +102,7 @@ function Editor({ branch, defaultCompany, onClose, onSaved }) {
         : (await api.post('/companies', form)).data
       onSaved(saved)
     } catch (e) {
-      setError(e.response?.data?.error || 'Erro ao salvar. Tenta de novo?')
+      setError(e.response?.data?.error || 'Não deu para salvar a filial. Tente de novo.')
     } finally {
       setSaving(false)
     }
@@ -144,7 +145,7 @@ function Editor({ branch, defaultCompany, onClose, onSaved }) {
         disabled={(!form.name.trim() && !form.cnpj.trim()) || saving}
         onClick={save}
       >
-        {saving ? 'Salvando...' : 'Salvar'}
+        {saving ? 'Salvando…' : branch ? 'Salvar alterações' : 'Cadastrar filial'}
       </button>
     </Modal>
   )
@@ -153,13 +154,12 @@ function Editor({ branch, defaultCompany, onClose, onSaved }) {
 export default function CompaniesPage() {
   const { user } = useAuthStore()
   const { company: companyParam } = useParams()
-  // A empresa vem da rota (/empresas/colegio-ser|unifecaf — controlada pelo
-  // dropdown da sidebar, igual "Impressoras"); se vier algo inválido, cai
-  // na primeira.
+  // A empresa vem da rota (/empresas/colegio-ser|unifecaf); as abas no topo trocam.
   const companyTab = COMPANY_MAP[companyParam] ? companyParam : COMPANIES[0].key
   const [branches, setBranches] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null) // null = fechado, {} = novo, filial = editar
+  const [copied, setCopied] = useState(null)   // `${id}:${campo}` copiado agora há pouco
 
   useLiveRefresh(['companies'], () => load())
   const load = () => {
@@ -170,7 +170,10 @@ export default function CompaniesPage() {
   }
   useEffect(() => { load() }, [])
 
-  const filtered = useMemo(() => (branches || []).filter(b => b.company === companyTab), [branches, companyTab])
+  const filtered = useMemo(() => (branches || [])
+    .filter(b => b.company === companyTab)
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR')), [branches, companyTab])
+  const counts = useMemo(() => Object.fromEntries(COMPANIES.map(c => [c.key, (branches || []).filter(b => b.company === c.key).length])), [branches])
 
   const onSaved = branch => {
     setBranches(prev => {
@@ -187,74 +190,107 @@ export default function CompaniesPage() {
       await api.delete(`/companies/${b.id}`)
       setBranches(prev => (prev || []).filter(x => x.id !== b.id))
     } catch (e) {
-      await alertDialog(e.response?.data?.error || 'Erro ao excluir a filial.', { title: 'Erro', danger: true })
+      await alertDialog(e.response?.data?.error || 'Não deu para excluir a filial.', { title: 'Erro', danger: true })
     }
   }
 
+  const copy = async (key, text) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(key)
+      setTimeout(() => setCopied(c => (c === key ? null : c)), 1800)
+    } catch { /* área de transferência indisponível */ }
+  }
+
   const canEdit = b => b.created_by === user?.id || user?.system_role === 'super_admin'
-
-  if (loading) return <div className={s.loading}>Carregando empresas...</div>
-
+  const isSuper = user?.system_role === 'super_admin'
   const theme = COMPANY_THEME[companyTab]
+  const label = COMPANY_MAP[companyTab].label
+
+  if (loading) return <div className={s.loading}>Carregando filiais…</div>
+
+  const copyBtn = (k, text, what) => (
+    <button type="button" className={s.copyBtn} onClick={() => copy(k, text)} aria-label={copied === k ? `${what} copiado` : `Copiar ${what}`}>
+      <LineIcon name={copied === k ? 'check' : 'copy'} size={14} />{copied === k ? 'Copiado' : 'Copiar'}
+    </button>
+  )
 
   return (
     <div className={s.page} style={theme ? { '--brand': theme.brand, '--brand-dark': theme.brandDark } : undefined}>
-      {theme && <div className={s.accentBar} />}
-      <div className={s.header}>
+      <header className={s.header}>
         <div>
-          <h1 className={s.title}>Empresas — {COMPANY_MAP[companyTab].label}</h1>
-          <p className={s.sub}>CNPJ, endereço e telefone das filiais. Troque a empresa pelo menu "Empresas" na barra lateral.</p>
+          <h1 className={s.title}>{label}</h1>
+          <p className={s.sub}>Dados cadastrais das filiais: CNPJ, endereço e telefone, prontos para copiar.</p>
         </div>
-        {user?.system_role === 'super_admin' && (
-          <button className="btn btn-primary" onClick={() => setEditing({})}>+ Nova filial</button>
+        {isSuper && (
+          <button type="button" className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Nova filial</button>
         )}
-      </div>
+      </header>
+
+      <nav className={s.tabs} aria-label="Empresa">
+        {COMPANIES.map(c => (
+          <NavLink key={c.key} to={`/empresas/${c.key}`} className={({ isActive }) => `${s.tab} ${isActive ? s.tabOn : ''}`}
+            style={{ '--tab': COMPANY_THEME[c.key]?.brand }}>
+            {c.label} <span className={s.tabCount}>{counts[c.key] || 0}</span>
+          </NavLink>
+        ))}
+      </nav>
 
       {filtered.length === 0 ? (
         <div className={s.empty}>
-          <h3>Nenhuma filial em {COMPANY_MAP[companyTab].label}</h3>
-          <p>{user?.system_role === 'super_admin' ? 'Cadastre a primeira filial dessa empresa.' : 'Peça pra um Super Admin cadastrar.'}</p>
+          <h2>Nenhuma filial do {label} cadastrada</h2>
+          <p>{isSuper ? 'Use "Nova filial" para cadastrar a primeira: o endereço é preenchido sozinho pelo CEP.' : 'Peça a um Super Admin para cadastrar as filiais.'}</p>
         </div>
       ) : (
-        <div className={s.grid}>
-          {filtered.map((b, i) => (
-            <Reveal key={b.id} delay={Math.min(i, 10) * 50} className={s.card}>
-              <div className={s.cardHeader}>
-                <h3 className={s.cardTitle}>{b.name || 'Filial sem nome'}</h3>
-                {canEdit(b) && (
-                  <div className={s.cardActions}>
-                    <button className={s.iconBtn} title="Editar" onClick={() => setEditing(b)}>✏️</button>
-                    <button className={s.iconBtn} title="Excluir" onClick={() => deleteBranch(b)}>🗑️</button>
-                  </div>
-                )}
+        <ul className={s.list}>
+          {filtered.map(b => (
+            <li key={b.id} className={s.branch}>
+              <div className={s.info}>
+                <div className={s.branchHead}>
+                  <h2 className={s.branchName}>{b.name || 'Filial sem nome'}</h2>
+                  {canEdit(b) && (
+                    <RowMenu name={`Ações da filial ${b.name || b.cnpj}`} items={[
+                      { label: 'Editar filial', icon: 'edit', onClick: () => setEditing(b) },
+                      { label: 'Excluir filial', icon: 'trash', danger: true, onClick: () => deleteBranch(b) },
+                    ]} />
+                  )}
+                </div>
+                <dl className={s.facts}>
+                  {b.cnpj && (<>
+                    <dt>CNPJ</dt>
+                    <dd><span className={s.cnpj}>{b.cnpj}</span>{copyBtn(`${b.id}:cnpj`, b.cnpj, 'CNPJ')}</dd>
+                  </>)}
+                  {b.address && (<>
+                    <dt>Endereço</dt>
+                    <dd className={s.addressRow}>
+                      <span className={s.address}>{b.address}</span>
+                      <span className={s.addressBtns}>
+                        {copyBtn(`${b.id}:addr`, b.address, 'endereço')}
+                        <a className={s.copyBtn} href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}`} target="_blank" rel="noreferrer">
+                          <LineIcon name="pin" size={14} />Abrir no mapa
+                        </a>
+                      </span>
+                    </dd>
+                  </>)}
+                  {b.phone && (<>
+                    <dt>Telefone</dt>
+                    <dd><a className={s.phone} href={`tel:${b.phone.replace(/[^\d+]/g, '')}`}><LineIcon name="phone" size={14} />{b.phone}</a>{copyBtn(`${b.id}:tel`, b.phone, 'telefone')}</dd>
+                  </>)}
+                </dl>
+                <p className={s.meta}>Atualizado por {b.author_name || 'alguém'}, {timeAgo(b.updated_at)}</p>
               </div>
-              {b.cnpj && <p className={s.cardLine}>CNPJ: <span className={s.mono}>{b.cnpj}</span></p>}
               {b.address && (
-                <>
-                  <p className={s.cardLine}>📍 {b.address}</p>
-                  <iframe
-                    className={s.mapEmbed}
-                    title={`Mapa — ${b.name || b.address}`}
-                    src={`https://www.google.com/maps?q=${encodeURIComponent(b.address)}&output=embed`}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                  <a
-                    className={s.cardLink}
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}`}
-                    target="_blank" rel="noreferrer"
-                  >
-                    🗺️ Abrir no Google Maps
-                  </a>
-                </>
+                <iframe
+                  className={s.map}
+                  title={`Mapa de ${b.name || b.address}`}
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(b.address)}&output=embed`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
               )}
-              {b.phone && <p className={s.cardLine}>📞 {b.phone}</p>}
-              <div className={s.cardFooter}>
-                <span className={s.cardMeta}>{b.author_name || 'Alguém'} · {timeAgo(b.updated_at)}</span>
-              </div>
-            </Reveal>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {editing && (
