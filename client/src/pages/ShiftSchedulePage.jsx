@@ -11,17 +11,19 @@ import RowMenu from '../components/common/RowMenu'
 import s from './ShiftSchedulePage.module.css'
 
 // Time → Escala: quem trabalha onde em cada dia do mês. Quem tem Time "editar"
-// liga "Editar escala", escolhe um "pincel" (SEDE, CENTRO...) e clica ou arrasta
+// liga "Editar escala", escolhe um "pincel" (SEDE, CENTRO, G5, G5/SEDE, ADM...) e clica ou arrasta
 // sobre os dias — tudo o que foi pintado num arraste vai numa chamada só.
 export const STATUSES = [
   { key: 'SEDE', label: 'SEDE', short: 'SEDE', cls: 'sede' },
   { key: 'CENTRO', label: 'CENTRO', short: 'CTR', cls: 'centro' },
   { key: 'G5', label: 'G5', short: 'G5', cls: 'g5' },
+  { key: 'G5_SEDE', label: 'G5/SEDE', short: 'G5/S', cls: 'g5sede' },
+  { key: 'ADM', label: 'ADM', short: 'ADM', cls: 'adm' },
   { key: 'FOLGA', label: 'Folga', short: 'F', cls: 'folga' },
   { key: 'FERIAS', label: 'Férias', short: 'FÉR', cls: 'ferias' },
 ]
 const STATUS = Object.fromEntries(STATUSES.map(x => [x.key, x]))
-const WORKING = ['SEDE', 'CENTRO', 'G5']
+const WORKING = ['SEDE', 'CENTRO', 'G5', 'G5_SEDE', 'ADM']
 
 const pad = n => String(n).padStart(2, '0')
 function shiftMonth(month, delta) {

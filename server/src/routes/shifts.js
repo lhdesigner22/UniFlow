@@ -8,7 +8,7 @@ import { accessOf, departmentFilter, departmentForCreate, departmentForUpdate, c
 const app = new Hono()
 app.use('*', auth)
 
-export const SHIFT_STATUSES = ['SEDE', 'CENTRO', 'G5', 'FOLGA', 'FERIAS']
+export const SHIFT_STATUSES = ['SEDE', 'CENTRO', 'G5', 'G5_SEDE', 'ADM', 'FOLGA', 'FERIAS']
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/
 const DAY_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
 // dia que existe de verdade (31/11 passa na regex, não no calendário)

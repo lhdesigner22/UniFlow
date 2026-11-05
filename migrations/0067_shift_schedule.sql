@@ -19,7 +19,7 @@ CREATE TABLE shift_people (
 CREATE INDEX idx_shift_people_dept_order ON shift_people(department_id, order_index);
 
 -- Um registro por pessoa e dia. Sem registro = dia não definido.
--- status: SEDE | CENTRO | G5 | FOLGA | FERIAS
+-- status: SEDE | CENTRO | G5 | G5_SEDE (reveza) | ADM | FOLGA | FERIAS (lista em routes/shifts.js)
 CREATE TABLE shift_assignments (
   person_id TEXT NOT NULL,
   day TEXT NOT NULL,           -- YYYY-MM-DD
