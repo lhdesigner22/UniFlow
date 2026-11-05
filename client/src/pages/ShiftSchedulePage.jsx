@@ -205,23 +205,10 @@ export default function ShiftSchedulePage() {
     } finally { setBusy(false) }
   }
   const exportXlsx = async () => {
-    const { downloadXlsx } = await import('../utils/xlsxExport')
-    const columns = [
-      { header: 'Colaborador', key: 'name', width: 34 },
-      { header: 'Função', key: 'role', width: 20 },
-      { header: 'Horário', key: 'hours', width: 34, wrap: true },
-      ...days.map(d => ({ header: `${DOW[d.dow]} ${pad(d.n)}`, key: d.iso, width: 8 })),
-    ]
-    const rows = people.map(p => ({
-      name: p.name, role: p.role_title || '', hours: p.hours || '',
-      ...Object.fromEntries(days.map(d => [d.iso, STATUS[cells.get(`${p.id}|${d.iso}`)]?.label || '-'])),
-    }))
-    await downloadXlsx({
-      fileName: `Escala ${monthLabel(month)}`, title: `Escala de trabalho — ${monthLabel(month)}`,
-      subtitle: 'SEDE, CENTRO, G5, Folga, Férias; "-" = dia não marcado', author: user?.name,
-      sheets: [{ name: 'Escala', columns, rows }],
-    })
+    const { downloadShiftXlsx } = await import('../utils/shiftExport')
+    await downloadShiftXlsx({ monthLabel: monthLabel(month), statuses: STATUSES, people, days, cells, working: WORKING, author: user?.name })
   }
+
 
   // ── Painel do dia ──
   const dayGroups = useMemo(() => {
