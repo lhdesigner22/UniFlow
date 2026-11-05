@@ -341,7 +341,8 @@ export default function ShiftSchedulePage() {
                       <tr key={p.id}>
                         <th scope="row" className={s.personCol}>
                           <span className={s.pName}>{p.name}</span>
-                          <span className={s.pMeta}>{[p.role_title, p.hours].filter(Boolean).join(' · ')}</span>
+                          {p.role_title && <span className={s.pMeta}>{p.role_title}</span>}
+                          {p.hours && <span className={s.pHours}><LineIcon name="clock" />{p.hours}</span>}
                         </th>
                         {days.map(d => {
                           const st = STATUS[cells.get(`${p.id}|${d.iso}`)]

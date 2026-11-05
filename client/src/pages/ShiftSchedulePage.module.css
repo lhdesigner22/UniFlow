@@ -65,12 +65,15 @@
 
 .personCol {
   position: sticky; left: 0; z-index: 2; background: var(--surface); text-align: left; padding: 8px 14px !important;
-  width: 250px; min-width: 250px; max-width: 250px; border-right: 1px solid var(--border);
+  width: 280px; min-width: 280px; max-width: 280px; border-right: 1px solid var(--border);
 }
 thead .personCol { font-size: 12.5px; font-weight: 600; color: var(--text-muted); vertical-align: bottom; }
 tfoot .personCol { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
 .pName { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pMeta { display: block; font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 400; }
+/* horário inteiro (quebra em linhas): é o que o colaborador procura na escala */
+.pHours { display: flex; gap: 5px; align-items: flex-start; margin-top: 3px; font-size: 12px; line-height: 1.35; color: var(--text); font-weight: 400; white-space: normal; }
+.pHours svg { flex: none; margin-top: 2px; color: var(--text-muted); }
 
 .dayCol { width: 44px; min-width: 44px; vertical-align: bottom; }
 .dayBtn {
