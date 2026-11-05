@@ -49,7 +49,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0066). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0067). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -197,6 +197,12 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   Rotas `routes/teacher.js` + `lib/teacherPortal.js`. TI: **Empréstimos → Pedidos de Chromebook** (`/pedidos-chromebook`,
   `routes/chromebookRequests.js`, módulo `loans`): confirma/recusa (motivo obrigatório), professor recebe e-mail; pedido novo = sininho
   de quem tem Empréstimos "editar". Teste: `teacher-portal-e2e.mjs` (sobe o `mock-glpi.mjs` sozinho).
+- **Time → Escala** (nov/2026, migração 0067; `routes/shifts.js`, `ShiftSchedulePage.jsx`, rota `/time/escala`, módulo `team` —
+  Time "editar" monta, "ver" consulta; pessoas por departamento): quadro pessoa × TODOS os dias do mês, situação SEDE/CENTRO/G5/FOLGA/
+  FERIAS (`shift_assignments`, sem registro = não marcado); pessoas são lista própria `shift_people` (nem todo mundo tem login). Pincel
+  com arrastar manda vários dias num `PUT /assignments {items}` (≤500, 1 `db.batch`); "Repetir mês anterior" = mesmo dia da semana da
+  mesma semana, só dias vazios. Dados iniciais vieram da planilha "Escala Time TI.xlsx" (nov/dez, só fins de semana; "-" = Folga),
+  carregados direto no D1 (nomes de funcionários fora do repo). Teste: `shifts-e2e.mjs`.
 - **Base de Conhecimento → Padronização de máquinas** (`routes/machineStandards.js`, `components/kb/MachineStandards.jsx`, aba própria
   dentro de `KnowledgeBasePage`, recurso `/api/machine-standards` no módulo `kb`, sem departamento): processador/RAM/extra mínimos por
   **cargo** e exceções por **setor** (o setor vale para qualquer cargo dele). Os 5 perfis da apresentação vieram na migração 0060.
