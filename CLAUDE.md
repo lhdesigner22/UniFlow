@@ -198,11 +198,11 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   `routes/chromebookRequests.js`, módulo `loans`): confirma/recusa (motivo obrigatório), professor recebe e-mail; pedido novo = sininho
   de quem tem Empréstimos "editar". Teste: `teacher-portal-e2e.mjs` (sobe o `mock-glpi.mjs` sozinho).
 - **Time → Escala** (nov/2026, migração 0067; `routes/shifts.js`, `ShiftSchedulePage.jsx`, rota `/time/escala`, módulo `team` —
-  Time "editar" monta, "ver" consulta; pessoas por departamento): quadro pessoa × TODOS os dias do mês, situação SEDE/CENTRO/G5/FOLGA/
+  Time "editar" monta, "ver" consulta; pessoas por departamento): quadro pessoa × TODOS os dias do mês, situação SEDE/CENTRO/G5/G5_SEDE (reveza)/ADM/FOLGA/
   FERIAS (`shift_assignments`, sem registro = não marcado); pessoas são lista própria `shift_people` (nem todo mundo tem login). Pincel
   com arrastar manda vários dias num `PUT /assignments {items}` (≤500, 1 `db.batch`); "Repetir mês anterior" = mesmo dia da semana da
   mesma semana, só dias vazios. Dados iniciais vieram da planilha "Escala Time TI.xlsx" (nov/dez, só fins de semana; "-" = Folga),
-  carregados direto no D1 (nomes de funcionários fora do repo). Teste: `shifts-e2e.mjs`.
+  carregados direto no D1 (nomes de funcionários fora do repo). Dias úteis de nov/dez preenchidos com o prédio fixo de cada um (lista do Luiz, 05/11; feriados 02/11, 20/11, 25/12 vazios). Teste: `shifts-e2e.mjs`.
 - **Base de Conhecimento → Padronização de máquinas** (`routes/machineStandards.js`, `components/kb/MachineStandards.jsx`, aba própria
   dentro de `KnowledgeBasePage`, recurso `/api/machine-standards` no módulo `kb`, sem departamento): processador/RAM/extra mínimos por
   **cargo** e exceções por **setor** (o setor vale para qualquer cargo dele). Os 5 perfis da apresentação vieram na migração 0060.
