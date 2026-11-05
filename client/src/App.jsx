@@ -29,6 +29,7 @@ import InternetLinksPage from './pages/InternetLinksPage'
 import TeamPerformancePage from './pages/TeamPerformancePage'
 import OrgChartPage from './pages/OrgChartPage'
 import JourneyPage from './pages/JourneyPage'
+import ShiftSchedulePage from './pages/ShiftSchedulePage'
 import GoogleCallback from './pages/GoogleCallback'
 import RequireModule from './components/common/RequireModule'
 import TeacherPortalPage from './pages/TeacherPortalPage'
@@ -122,6 +123,7 @@ export default function App() {
           <Route path="time/desempenho" element={<RequireModule module="team"><TeamPerformancePage /></RequireModule>} />
           <Route path="time/organograma" element={<RequireModule module="team"><OrgChartPage /></RequireModule>} />
           <Route path="time/jornada" element={<RequireModule module="team"><JourneyPage /></RequireModule>} />
+          <Route path="time/escala" element={<RequireModule module="team"><ShiftSchedulePage /></RequireModule>} />
           <Route path="admin" element={<AdminPage />} />
         </Route>
       </Routes>

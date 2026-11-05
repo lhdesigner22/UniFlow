@@ -1,0 +1,114 @@
+/* Escala: o painel do dia responde "quem está onde hoje"; embaixo, o quadro do
+   mês (pessoa × dia) com o prédio como etiqueta colorida — SEDE azul da logo,
+   CENTRO verde (as mesmas cores da planilha), G5 roxo, Férias âmbar, Folga apagada. */
+.page { padding: 36px 32px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.loading { display: flex; align-items: center; justify-content: center; height: 40vh; color: var(--text-muted); }
+.header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title { font-size: 2rem; font-weight: 600; letter-spacing: -.032em; line-height: 1.1; margin: 0; }
+.sub { font-size: 14px; color: var(--text-muted); margin: 6px 0 0; }
+.error { font-size: 13px; color: var(--danger-text); margin: 0 0 8px; }
+.hint { margin: 0; font-size: 13.5px; color: var(--text-muted); }
+
+.actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.monthNav { display: inline-flex; align-items: center; gap: 2px; }
+.monthName { min-width: 150px; text-align: center; font-weight: 600; font-size: 15px; }
+.monthName::first-letter { text-transform: uppercase; }
+.navBtn {
+  width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; border: 1px solid transparent;
+  background: none; color: var(--text-muted); cursor: pointer; font-size: 18px;
+}
+.navBtn:hover { color: var(--text); border-color: var(--border); }
+
+/* ── Painel do dia ── */
+.dayPanel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.dayHead { display: flex; align-items: center; gap: 10px; }
+.dayTitle { flex: 1; min-width: 0; }
+.dayKicker { font-size: 12.5px; color: var(--text-muted); }
+.dayTitle h2 { margin: 2px 0 0; font-size: 1.35rem; font-weight: 600; letter-spacing: -.02em; }
+.dayTitle h2::first-letter { text-transform: uppercase; }
+.dayGroups { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; }
+.group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.group p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text); }
+.tag { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+.tag b { font-weight: 600; opacity: .75; font-variant-numeric: tabular-nums; }
+.dayEmpty, .noneLine { margin: 0; font-size: 13.5px; color: var(--text-muted); grid-column: 1 / -1; }
+
+/* ── Cores por situação (etiqueta do painel, células e pincéis) ── */
+.sede { background: color-mix(in srgb, var(--brand) 18%, transparent); color: var(--info-text); }
+.centro { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--success-text); }
+.g5 { background: color-mix(in srgb, var(--purple) 18%, transparent); color: var(--purple-text); }
+.ferias { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning-text); }
+.folga { background: transparent; color: var(--text-muted); box-shadow: inset 0 0 0 1px var(--border); }
+.clear { background: transparent; color: var(--text-muted); }
+.blank { background: transparent; color: color-mix(in srgb, var(--text-muted) 55%, transparent); }
+
+/* ── Pincel (modo edição) ── */
+.toolbar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--brand) 40%, transparent); border-radius: 14px; background: var(--surface);
+}
+.toolLabel { font-size: 13px; font-weight: 600; margin-right: 2px; }
+.brush {
+  border: 1px solid transparent; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.brush.clear { border-color: var(--border); border-style: dashed; }
+.brushOn { outline: 2px solid var(--text); outline-offset: 1px; }
+.toolHint { font-size: 12.5px; color: var(--text-muted); }
+.toolSpacer { flex: 1; }
+
+/* ── Quadro do mês ── */
+.gridWrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.grid { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 13px; }
+.grid th, .grid td { padding: 0; border-bottom: 1px solid var(--border); }
+.grid tbody tr:last-child th, .grid tbody tr:last-child td { border-bottom: 0; }
+.grid tfoot th, .grid tfoot td { border-top: 1px solid var(--border); border-bottom: 0; }
+
+.personCol {
+  position: sticky; left: 0; z-index: 2; background: var(--surface); text-align: left; padding: 8px 14px !important;
+  width: 250px; min-width: 250px; max-width: 250px; border-right: 1px solid var(--border);
+}
+thead .personCol { font-size: 12.5px; font-weight: 600; color: var(--text-muted); vertical-align: bottom; }
+tfoot .personCol { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.pName { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pMeta { display: block; font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 400; }
+
+.dayCol { width: 44px; min-width: 44px; vertical-align: bottom; }
+.dayBtn {
+  all: unset; box-sizing: border-box; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 0 6px; cursor: pointer; color: var(--text-muted);
+}
+.dayBtn:hover { color: var(--text); }
+.dow { font-size: 11px; }
+.dnum { font-size: 14px; font-weight: 600; color: var(--text); width: 26px; height: 26px; display: grid; place-items: center; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.dnum.today { background: var(--brand-dark); color: #fff; }
+
+.weekend { background: color-mix(in srgb, var(--text) 4%, transparent); }
+.selCol { background: color-mix(in srgb, var(--brand) 9%, transparent); }
+
+.cell { text-align: center; height: 44px; }
+.mark {
+  box-sizing: border-box; width: 38px; height: 26px; margin: 0 auto; display: grid; place-items: center; border-radius: 7px;
+  font-size: 11px; font-weight: 700; letter-spacing: .01em; border: 0; font-family: inherit; padding: 0; user-select: none;
+}
+button.mark { cursor: crosshair; }
+.isEditing .cell { touch-action: none; }
+.isEditing button.mark.blank { outline: 1px dashed var(--border); outline-offset: -1px; }
+.isEditing button.mark:hover { outline: 2px solid var(--text); outline-offset: 0; }
+
+.total { text-align: center; font-size: 12.5px; font-weight: 600; color: var(--text-muted); height: 34px; font-variant-numeric: tabular-nums; }
+.menuCol { width: 48px; min-width: 48px; text-align: center; position: sticky; right: 0; background: var(--surface); }
+
+.legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--text-muted); }
+.legend li { display: inline-flex; align-items: center; gap: 8px; }
+.legend .mark { margin: 0; }
+
+.emptyBox { text-align: center; padding: 64px 24px; background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; }
+.emptyBox h2 { margin: 0 0 8px; font-size: 1.1rem; font-weight: 600; }
+.emptyBox p { color: var(--text-muted); max-width: 46ch; margin: 0 auto; line-height: 1.6; font-size: 13.5px; }
+
+@media (max-width: 760px) {
+  .page { padding: 20px 16px; }
+  .personCol { width: 140px; min-width: 140px; max-width: 140px; padding: 8px 10px !important; }
+  .pMeta { display: none; }
+  .toolHint { display: none; }
+}

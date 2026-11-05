@@ -474,6 +474,9 @@ export default function Sidebar({ mobileOpen, onClose }) {
               <NavLink to="/time/jornada" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
                 <span>Jornada</span>
               </NavLink>
+              <NavLink to="/time/escala" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
+                <span>Escala</span>
+              </NavLink>
             </div>
           )}
           </>

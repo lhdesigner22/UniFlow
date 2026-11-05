@@ -16,7 +16,7 @@ export const MODULES = [
   { key: 'boards', label: 'Quadros e cartões', hint: 'Quadros Kanban, cartões e tempo trabalhado' },
   { key: 'agenda', label: 'Agenda', hint: 'Eventos e compromissos' },
   { key: 'metrics', label: 'Métricas e Tempo', hint: 'Métricas do time e relatório de tempo' },
-  { key: 'team', label: 'Time', hint: 'Desempenho, Organograma e Jornada' },
+  { key: 'team', label: 'Time', hint: 'Desempenho, Organograma, Jornada e Escala' },
   { key: 'tickets', label: 'Chamados (GLPI)', hint: 'Backlog e Total de Chamados' },
   { key: 'kb', label: 'Base de Conhecimento', hint: 'Artigos e anexos' },
   { key: 'gestao', label: 'Gestão', hint: 'Documentos, Desenvolvimentos e Cases de Sucesso' },
@@ -43,6 +43,7 @@ const RESOURCE_MODULE = {
   'team-kudos': 'team',
   'org-chart': 'team',
   journey: 'team',
+  shifts: 'team', // Time → Escala
   'glpi-backlog': 'tickets',
   'glpi-total': 'tickets',
   kb: 'kb', // Gestão usa a mesma rota com category=gestao — ver moduleForRequest
