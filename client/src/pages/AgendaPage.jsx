@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { canEdit as canEditModule } from '../utils/permissions'
@@ -10,6 +10,8 @@ import s from './AgendaPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
 import { pressable } from '../utils/pressable'
+
+const GLPI_TICKET = 'https://glpi.inventario.unifecaf.edu.br/front/ticket.form.php?id='
 
 const WEEKDAY_LONG = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const WEEKDAY_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
@@ -79,6 +81,12 @@ export default function AgendaPage() {
   const periodLabel = view === 'calendar'
     ? `${MONTH_LONG[monthAnchor.getMonth()].charAt(0).toUpperCase()}${MONTH_LONG[monthAnchor.getMonth()].slice(1)} de ${monthAnchor.getFullYear()}`
     : formatRangeLabel(from, to)
+  // versão curta para o celular: "2–8 nov" (ou "30 nov–6 dez")
+  const periodShort = view === 'calendar' ? periodLabel : (() => {
+    const a = new Date(`${from}T12:00:00`), b = new Date(`${to}T12:00:00`)
+    const m = d => MONTH_LONG[d.getMonth()].slice(0, 3)
+    return a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${m(b)}` : `${a.getDate()} ${m(a)}–${b.getDate()} ${m(b)}`
+  })()
 
   useEffect(() => { api.get('/boards').then(r => setBoards(r.data || [])).catch(() => {}) }, [])
 
@@ -181,7 +189,7 @@ export default function AgendaPage() {
             ? `${events.length} ${events.length === 1 ? 'evento' : 'eventos'} ${view === 'calendar' ? 'neste mês' : 'nesta semana'}, incluindo os que vêm do GLPI.`
             : 'Eventos da equipe e reservas que chegam do GLPI.'}</p>
         </div>
-        {writable && <button className="btn btn-primary" onClick={() => openCreate()}><LineIcon name="plus" size={15} /> Novo evento</button>}
+        {writable && <button className={`btn btn-primary ${s.newBtn}`} onClick={() => openCreate()} aria-label="Novo evento"><LineIcon name="plus" size={15} /> <span className={s.newBtnText}>Novo evento</span></button>}
       </div>
 
       <div className={s.periodBar}>
@@ -192,7 +200,7 @@ export default function AgendaPage() {
           <button type="button" className={s.navBtn} onClick={goNext} aria-label={view === 'calendar' ? 'Próximo mês' : 'Próxima semana'} title={view === 'calendar' ? 'Próximo mês' : 'Próxima semana'}>
             <LineIcon name="chevronRight" size={16} />
           </button>
-          <h2 className={s.periodLabel} aria-live="polite">{periodLabel}</h2>
+          <h2 className={s.periodLabel} aria-live="polite"><span className={s.labelLong}>{periodLabel}</span><span className={s.labelShort} aria-hidden="true">{periodShort}</span></h2>
           {!todayInView && <button type="button" className="btn btn-ghost btn-sm" onClick={goToday}>Voltar para hoje</button>}
         </div>
 
@@ -285,6 +293,11 @@ export default function AgendaPage() {
             {editing && (
               <button className="btn btn-danger" onClick={deleteEvent}>Excluir evento</button>
             )}
+            {editing?.glpi_ticket_id && (
+              <a className="btn btn-ghost" href={`${GLPI_TICKET}${encodeURIComponent(editing.glpi_ticket_id)}`} target="_blank" rel="noreferrer">
+                <LineIcon name="link" size={14} /> Abrir chamado #{editing.glpi_ticket_id} no GLPI
+              </a>
+            )}
             <button
               className="btn btn-primary"
               style={{ marginLeft: 'auto' }}
@@ -341,7 +354,7 @@ function EventRow({ ev, board, past, onOpen }) {
         <span className={s.eventTags}>
           {board && <span className={s.tag}><span className={s.tagDot} style={{ background: board.color || 'var(--brand)' }} />{board.name}</span>}
           {ev.recurrence_type !== 'none' && <span className={s.tag}><LineIcon name="refresh" size={11} />{RECURRENCE_LABEL[ev.recurrence_type] || ev.recurrence_type}</span>}
-          {ev.glpi_ticket_id && <span className={s.tag}>Chamado #{ev.glpi_ticket_id}</span>}
+          {ev.glpi_ticket_id && <span className={`${s.tag} ${s.tagGlpi}`} title="Veio de um chamado do GLPI"><LineIcon name="link" size={11} />GLPI #{ev.glpi_ticket_id}</span>}
         </span>
       </div>
     </li>
@@ -354,9 +367,38 @@ function WeekView({ weekStart, byDay, boardById, onOpenEvent, onCreate, writable
   const now = useNowHM()
   const todayStr = isoDate(new Date())
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  // dias que já passaram sem nada marcado (2 ou mais seguidos) viram uma linha só,
+  // para o "Hoje" não ficar lá embaixo
+  const rows = []
+  for (const day of days) {
+    const ds = isoDate(day)
+    const quietPast = ds < todayStr && !(byDay[ds] || []).length
+    const last = rows[rows.length - 1]
+    if (quietPast && last?.quiet) last.days.push(day)
+    else rows.push(quietPast ? { quiet: true, days: [day] } : { day })
+  }
+  const todayRef = useRef(null)
+  useEffect(() => {
+    // no celular a semana é uma coluna comprida: abre já no dia de hoje
+    if (todayRef.current && window.matchMedia('(max-width: 768px)').matches) todayRef.current.scrollIntoView({ block: 'start' })
+  }, [weekStart])
   return (
     <ol className={s.week}>
-      {days.map(day => {
+      {rows.map(row => {
+        if (row.quiet && row.days.length > 1) {
+          const first = row.days[0], last = row.days[row.days.length - 1]
+          return (
+            <li key={isoDate(first)} className={`${s.day} ${s.dayPast} ${s.dayQuiet}`}>
+              <div className={s.dateCol}>
+                <span className={s.dateNum}>{first.getDate()}–{last.getDate()}</span>
+                <span className={s.dateWeek}>{WEEKDAY_LONG[first.getDay()]} a {WEEKDAY_LONG[last.getDay()].toLowerCase()}</span>
+                <span className={s.dateMonth}>{MONTH_LONG[last.getMonth()]}</span>
+              </div>
+              <div className={s.dayBody}><div className={s.dayEmpty}><span>Nada marcado nesses dias</span></div></div>
+            </li>
+          )
+        }
+        const day = row.day || row.days[0]
         const dateStr = isoDate(day)
         const list = byDay[dateStr] || []
         const isToday = dateStr === todayStr
@@ -368,7 +410,7 @@ function WeekView({ weekStart, byDay, boardById, onOpenEvent, onCreate, writable
           if (nowAt === -1) nowAt = list.length
         }
         return (
-          <li key={dateStr} className={`${s.day} ${isToday ? s.dayToday : ''} ${isPast ? s.dayPast : ''}`} aria-current={isToday ? 'date' : undefined}>
+          <li key={dateStr} ref={isToday ? todayRef : undefined} className={`${s.day} ${isToday ? s.dayToday : ''} ${isPast ? s.dayPast : ''}`} aria-current={isToday ? 'date' : undefined}>
             <div className={s.dateCol}>
               <span className={s.dateNum}>{day.getDate()}</span>
               <span className={s.dateWeek}>{isToday ? 'Hoje' : WEEKDAY_LONG[day.getDay()]}</span>
