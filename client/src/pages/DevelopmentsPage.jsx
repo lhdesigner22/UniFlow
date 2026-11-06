@@ -11,6 +11,8 @@ import Modal from '../components/common/Modal'
 import Reveal from '../components/common/Reveal'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
+import LineIcon from '../components/common/LineIcon'
+import RowMenu from '../components/common/RowMenu'
 import s from './DevelopmentsPage.module.css'
 
 // Gestão → Desenvolvimentos: vitrine dos sistemas que a equipe desenvolveu —
@@ -184,7 +186,7 @@ export default function DevelopmentsPage() {
           <h1 className={s.title}>Desenvolvimentos</h1>
           <p className={s.sub}>Sistemas e ferramentas desenvolvidos pela equipe — o que cada um faz e onde acessar.</p>
         </div>
-        {writable && <button className="btn btn-primary" onClick={() => setEditing({})}>+ Novo desenvolvimento</button>}
+        {writable && <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Novo desenvolvimento</button>}
       </div>
 
       {devs.length > 3 && (
@@ -213,13 +215,15 @@ export default function DevelopmentsPage() {
                     </div>
                     {canEdit(d) && (
                       <div className={s.cardActions}>
-                        <button className={s.iconBtn} title="Editar" onClick={() => setEditing(d)}>✏️</button>
-                        <button className={s.iconBtn} title="Excluir" onClick={() => remove(d)}>🗑️</button>
+                        <RowMenu name={d.name} items={[
+                          { label: 'Editar', icon: 'edit', onClick: () => setEditing(d) },
+                          { label: 'Excluir', icon: 'trash', danger: true, onClick: () => remove(d) },
+                        ]} />
                       </div>
                     )}
                   </div>
                   {d.purpose && <p className={s.purpose}>{d.purpose}</p>}
-                  {d.url && <a className={s.cardLink} href={safeHref(d.url)} target="_blank" rel="noreferrer">🔗 Abrir {d.name}</a>}
+                  {d.url && <a className={s.cardLink} href={safeHref(d.url)} target="_blank" rel="noreferrer"><LineIcon name="link" size={14} /> Abrir {d.name}</a>}
                   <div className={s.cardFooter}>
                     <span className={s.cardMeta}>{d.author_name || 'Alguém'}{d.department_name ? ` · ${d.department_name}` : ''}</span>
                   </div>

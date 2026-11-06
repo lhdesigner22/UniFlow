@@ -42,10 +42,10 @@ function timeAgo(iso) {
   return new Date(iso.replace(' ', 'T') + 'Z').toLocaleDateString('pt-BR')
 }
 
-function Editor({ article, onClose, onSaved }) {
+function Editor({ article, onClose, onSaved, fixedCategory }) {
   const [form, setForm] = useState({
     title: article?.title || '',
-    category: article?.category || 'texto_pronto',
+    category: article?.category || fixedCategory || 'texto_pronto',
     content: article?.content || '',
     link_url: article?.link_url || '',
     department_id: article ? article.department_id : defaultDepartment(),
@@ -113,13 +113,13 @@ function Editor({ article, onClose, onSaved }) {
         <label htmlFor="knowledge-base-titulo" className="label">Título</label>
         <input id="knowledge-base-titulo" autoFocus value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Resposta padrão — reset de senha" />
       </div>
-      <div className="form-group">
+      {!fixedCategory && <div className="form-group">
         <label htmlFor="knowledge-base-categoria" className="label">Categoria</label>
         <select id="knowledge-base-categoria" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
           {CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
         </select>
         {CATEGORY_MAP[form.category]?.hint && <p className={s.fieldHint}>{CATEGORY_MAP[form.category].hint}</p>}
-      </div>
+      </div>}
       <div className="form-group">
         <label htmlFor="knowledge-base-conteudo" className="label">Conteúdo</label>
         <textarea id="knowledge-base-conteudo"
@@ -196,7 +196,12 @@ function Highlight({ text, query }) {
   return parts
 }
 
-export default function KnowledgeBasePage() {
+// mode="gestao": a mesma estante de leitura para Gestão → Documentos (artigos da
+// categoria 'gestao', módulo `gestao`, sem as abas de categoria nem a Padronização).
+const GESTAO = { category: 'gestao', module: 'gestao', title: 'Documentos de gestão', sub: 'Relatórios, contratos e materiais de referência da gestão.', label: 'Gestão', item: 'documento' }
+
+export default function KnowledgeBasePage({ mode }) {
+  const g = mode === 'gestao' ? GESTAO : null
   const { user } = useAuthStore()
   const [articles, setArticles] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -212,13 +217,13 @@ export default function KnowledgeBasePage() {
   useLiveRefresh(['kb'], () => load())
   useLiveRefresh(['machine-standards'], () => loadMachines())
   const load = () => {
-    api.get('/kb')
+    api.get('/kb', g ? { params: { category: g.category } } : undefined)
       .then(r => setArticles(r.data || []))
       .catch(() => setArticles([]))
       .finally(() => setLoading(false))
   }
   const loadMachines = () => api.get('/machine-standards').then(r => setMachines(r.data || [])).catch(() => {})
-  useEffect(() => { load(); loadMachines() }, [])
+  useEffect(() => { load(); if (!g) loadMachines() }, [])
 
   const filtered = useMemo(() => {
     if (!articles) return []
@@ -275,36 +280,37 @@ export default function KnowledgeBasePage() {
 
   // Auditor também edita/exclui QUALQUER artigo (é a área liberada pra esse
   // perfil escrever — ver server/src/routes/kb.js).
-  const writable = canEditModule(user, 'kb')
+  const writable = canEditModule(user, g ? g.module : 'kb')
   const canEdit = a => writable && (a.created_by === user?.id || user?.system_role === 'super_admin' || user?.system_role === 'auditor')
 
   const open = a => { setSelectedId(a.id); setReading(true) }
 
-  if (loading) return <div className={s.loading}>Carregando base de conhecimento...</div>
+  if (loading) return <div className={s.loading}>Carregando {g ? 'documentos' : 'base de conhecimento'}...</div>
 
   const total = (articles || []).length
+  const itemWord = g ? 'documento' : 'artigo'
   const isReply = selected?.category === 'texto_pronto'
 
   return (
     <div className={s.page}>
       <div className={s.header}>
         <div>
-          <h1 className={s.title}>Base de Conhecimento</h1>
-          <p className={s.sub}>Textos prontos de chamado, políticas e materiais de referência da equipe.</p>
+          <h1 className={s.title}>{g ? g.title : 'Base de Conhecimento'}</h1>
+          <p className={s.sub}>{g ? g.sub : 'Textos prontos de chamado, políticas e materiais de referência da equipe.'}</p>
         </div>
         {writable && categoryFilter !== MACHINES_TAB && (
-          <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> Novo artigo</button>
+          <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" size={15} /> {g ? 'Novo documento' : 'Novo artigo'}</button>
         )}
       </div>
 
-      <nav className={s.tabs} aria-label="Categorias" ref={el => { el?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }}>
+      {!g && <nav className={s.tabs} aria-label="Categorias" ref={el => { el?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }}>
         {[['', 'Todos', total], ...CATEGORIES.map(c => [c.key, c.label, countByCategory[c.key] || 0]), [MACHINES_TAB, 'Padronização de máquinas', machines.length]].map(([key, label, count]) => (
           <button key={key || 'todos'} type="button" aria-current={categoryFilter === key ? 'true' : undefined}
             className={`${s.tab} ${categoryFilter === key ? s.tabActive : ''}`} onClick={() => { setCategoryFilter(key); setReading(false) }}>
             {label}<span className={s.tabCount}>{count}</span>
           </button>
         ))}
-      </nav>
+      </nav>}
 
       {categoryFilter === MACHINES_TAB ? (
         <MachineStandards items={machines} setItems={setMachines} writable={writable} />
@@ -323,7 +329,7 @@ export default function KnowledgeBasePage() {
               <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por título ou conteúdo" />
             </label>
             <p className={s.listCount} role="status">
-              {search.trim() ? `${filtered.length} de ${categoryFilter ? countByCategory[categoryFilter] || 0 : total} ${filtered.length === 1 ? 'artigo' : 'artigos'}` : `${filtered.length} ${filtered.length === 1 ? 'artigo' : 'artigos'}`}
+              {search.trim() ? `${filtered.length} de ${categoryFilter ? countByCategory[categoryFilter] || 0 : total} ${filtered.length === 1 ? itemWord : itemWord + 's'}` : `${filtered.length} ${filtered.length === 1 ? itemWord : itemWord + 's'}`}
             </p>
             {filtered.length === 0 ? (
               <p className={s.noMatch}>{search.trim()
@@ -338,7 +344,7 @@ export default function KnowledgeBasePage() {
                       <span className={s.itemTitle}><Highlight text={a.title} query={search} /></span>
                       {a.content && <span className={s.itemExcerpt}>{a.content.replace(/\s+/g, ' ')}</span>}
                       <span className={s.itemMeta}>
-                        {!categoryFilter && <>{(CATEGORY_MAP[a.category] || CATEGORY_MAP.outro).label}, </>}
+                        {!categoryFilter && !g && <>{(CATEGORY_MAP[a.category] || CATEGORY_MAP.outro).label}, </>}
                         {timeAgo(a.updated_at)}
                         {!!a.has_attachment && <LineIcon name="download" size={12} title="Tem anexo" />}
                         {a.link_url && <LineIcon name="link" size={12} title="Tem link" />}
@@ -357,7 +363,7 @@ export default function KnowledgeBasePage() {
               </button>
               <header className={s.readerHead}>
                 <div className={s.readerTitleBox}>
-                  <span className={s.readerCategory}>{(CATEGORY_MAP[selected.category] || CATEGORY_MAP.outro).label}</span>
+                  <span className={s.readerCategory}>{(g ? g.label : (CATEGORY_MAP[selected.category] || CATEGORY_MAP.outro).label)}</span>
                   <h2 id="kb-article-title" className={s.readerTitle}>{selected.title}</h2>
                   <p className={s.readerMeta}>{selected.author_name || 'Alguém'}, atualizado {timeAgo(selected.updated_at)}</p>
                 </div>
@@ -406,7 +412,7 @@ export default function KnowledgeBasePage() {
       )}
 
       {editing && (
-        <Editor
+        <Editor fixedCategory={g?.category}
           article={editing.id ? editing : null}
           onClose={() => setEditing(null)}
           onSaved={onSaved}
