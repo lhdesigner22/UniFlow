@@ -333,20 +333,28 @@ export default function ShiftSchedulePage() {
                           {p.role_title && <span className={s.pMeta}>{p.role_title}</span>}
                           {p.hours && <span className={s.pHours}><LineIcon name="clock" />{p.hours}</span>}
                         </th>
-                        {days.map(d => {
-                          const st = STATUS[cells.get(`${p.id}|${d.iso}`)]
+                        {days.map((d, i) => {
+                          // dias seguidos no mesmo lugar viram uma faixa só; o nome aparece no começo da faixa
+                          const key = cells.get(`${p.id}|${d.iso}`)
+                          const st = STATUS[key]
+                          const same = j => j >= 0 && j < days.length && key && cells.get(`${p.id}|${days[j].iso}`) === key
+                          const start = !same(i - 1), end = !same(i + 1)
+                          let run = 1
+                          while (start && same(i + run)) run++
+                          const text = st && start ? (run >= 2 ? st.label : st.short) : ''
                           const label = `${p.name}, ${dayLong(d.iso)}: ${st ? st.label : 'não marcado'}`
+                          const cls = `${s.mark} ${st ? s[st.cls] : s.blank} ${st && start ? s.runStart : ''} ${st && end ? s.runEnd : ''}`
                           return (
                             <td key={d.iso} className={`${s.cell} ${d.weekend ? s.weekend : ''} ${d.iso === selectedDay ? s.selCol : ''}`}>
                               {editing ? (
-                                <button type="button" data-cell={`${p.id}|${d.iso}`} className={`${s.mark} ${st ? s[st.cls] : s.blank}`}
+                                <button type="button" data-cell={`${p.id}|${d.iso}`} className={cls}
                                   aria-label={label} title={label} onKeyDown={e => onCellKey(e, p.id, d.iso)}>
-                                  {st ? st.short : ''}
+                                  <span className={s.runText} aria-hidden="true">{text}</span>
                                 </button>
                               ) : (
-                                <span className={`${s.mark} ${st ? s[st.cls] : s.blank}`} title={label}>
-                                  {st ? st.short : <span aria-hidden="true">·</span>}
-                                  <span className="sr-only">{st ? '' : 'não marcado'}</span>
+                                <span className={cls} title={label}>
+                                  <span className={s.runText} aria-hidden="true">{st ? text : '·'}</span>
+                                  <span className="sr-only">{st ? st.label : 'não marcado'}</span>
                                 </span>
                               )}
                             </td>

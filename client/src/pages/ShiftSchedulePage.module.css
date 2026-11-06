@@ -40,7 +40,7 @@
 .g5sede { background: linear-gradient(90deg, color-mix(in srgb, var(--purple) 22%, transparent) 50%, color-mix(in srgb, var(--brand) 22%, transparent) 50%); color: var(--text); }
 .adm { background: color-mix(in srgb, var(--text) 12%, transparent); color: var(--text); }
 .ferias { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning-text); }
-.folga { background: transparent; color: var(--text-muted); box-shadow: inset 0 0 0 1px var(--border); }
+.folga { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text-muted) 16%, transparent) 0 2px, transparent 2px 7px); color: var(--text-muted); }
 .clear { background: transparent; color: var(--text-muted); }
 .blank { background: transparent; color: color-mix(in srgb, var(--text-muted) 55%, transparent); }
 
@@ -95,6 +95,19 @@ tfoot .personCol { font-size: 12.5px; font-weight: 600; color: var(--text-muted)
   box-sizing: border-box; width: 38px; height: 26px; margin: 0 auto; display: grid; place-items: center; border-radius: 7px;
   font-size: 11px; font-weight: 700; letter-spacing: .01em; border: 0; font-family: inherit; padding: 0; user-select: none;
 }
+/* na grade, dias seguidos no mesmo lugar formam uma faixa contínua; o nome do
+   lugar aparece só no começo da faixa (antes repetia "SEDE" em todo dia) */
+.cell .mark {
+  position: relative; height: 28px; border-radius: 0; overflow: visible;
+  width: calc(100% - var(--ml, 0px) - var(--mr, 0px)); margin: 0 var(--mr, 0px) 0 var(--ml, 0px);
+}
+/* G5/SEDE na faixa: cor única entre o roxo e o azul (o meio a meio listrava a faixa) */
+.cell .mark.g5sede { background: color-mix(in srgb, color-mix(in srgb, var(--purple) 50%, var(--brand)) 22%, transparent); }
+.cell .mark.runStart { --ml: 3px; border-top-left-radius: 7px; border-bottom-left-radius: 7px; }
+.cell .mark.runEnd { --mr: 3px; border-top-right-radius: 7px; border-bottom-right-radius: 7px; }
+/* o nome do lugar "escorre" por cima da faixa sem alargar a coluna do dia */
+.runText { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); z-index: 1; white-space: nowrap; font-size: 11.5px; font-weight: 600; pointer-events: none; }
+.blank .runText { left: 50%; transform: translate(-50%, -50%); }
 button.mark { cursor: crosshair; }
 .isEditing .cell { touch-action: none; }
 .isEditing button.mark.blank { outline: 1px dashed var(--border); outline-offset: -1px; }
