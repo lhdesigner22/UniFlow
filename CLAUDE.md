@@ -248,7 +248,7 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   etiquetas, tempo, excluir); no celular o painel vem logo após o título.
   **Pedidos de Chromebook** (nov/2026): total do dia por prédio (pendentes + confirmados), filtro de prédio, Confirmar/Recusar só nos
   pendentes (filete âmbar) e "Mudar para..." no "⋯" dos decididos. **Portal do Professor**: próxima reserva em destaque no topo com a
-  situação em uma frase. **Escala**: dias seguidos no mesmo lugar = uma faixa com o nome no começo; Folga listrada.
+  situação em uma frase. **Escala**: um bloco por dia com a sigla (o Luiz NÃO gostou da faixa contínua por lugar); Folga listrada.
   **Movimento** (nov/2026): sem corte seco — o que troca o "Carregando…", submenus da lateral, menus ⋯/coluna e o seletor de pessoas
   entram com `@starting-style` (CSS puro, sem lib); tokens `--dur-fast/--dur/--dur-slow`; `transition: all` proibido (lista as
   propriedades); `prefers-reduced-motion` global no `index.css`.
