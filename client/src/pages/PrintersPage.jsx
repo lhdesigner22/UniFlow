@@ -178,6 +178,13 @@ export default function PrintersPage() {
       .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
+  // Insumos de cada impressora (pelo modelo em "Serve em" do catálogo do Estoque)
+  const [supplies, setSupplies] = useState([])
+  const loadSupplies = () => api.get('/printer-supplies').then(r => setSupplies(r.data || [])).catch(() => {})
+  useEffect(() => { loadSupplies() }, [])
+  useLiveRefresh(['printer-supplies'], () => loadSupplies())
+  const norm = v => String(v || '').trim().toLowerCase()
+  const suppliesOf = p => supplies.filter(sp => sp.active !== 0 && (sp.models || []).some(m => norm(m) === norm(p.model)))
 
   const filtered = useMemo(() => (printers || []).filter(p => p.location === locationTab), [printers, locationTab])
   const countByLoc = useMemo(() => {
@@ -337,9 +344,20 @@ export default function PrintersPage() {
                           </span>
                         </td>
                         <td>
-                          <button type="button" className={s.linkBtn} onClick={() => setSuppliesFor(p)}>
-                            <LineIcon name="clock" size={14} /> Histórico
-                          </button>
+                          <span className={s.supplyList}>
+                            {suppliesOf(p).map(sp => {
+                              const st = sp.stocks?.[p.location]
+                              const low = st && st.quantity <= (st.min_quantity || 0)
+                              return (
+                                <span key={sp.id} className={`${s.supplyItem} ${low ? s.supplyLow : ''}`} title={st ? `${st.quantity} em estoque em ${p.location.toUpperCase()}` : 'Sem controle de estoque neste prédio'}>
+                                  {sp.name}{st ? <b>{st.quantity}</b> : null}
+                                </span>
+                              )
+                            })}
+                            <button type="button" className={s.linkBtn} onClick={() => setSuppliesFor(p)}>
+                              <LineIcon name="clock" size={14} /> Histórico
+                            </button>
+                          </span>
                         </td>
                         <td className={s.actionsCol}>
                           <span className={s.rowActions}>

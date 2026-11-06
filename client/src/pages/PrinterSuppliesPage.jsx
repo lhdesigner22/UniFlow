@@ -348,28 +348,31 @@ export default function PrinterSuppliesPage() {
                   const otherStock = SUPPLY_LOCATIONS.filter(l => l.key !== location && sp.stocks[l.key]?.quantity > 0).map(l => `${l.label} ${sp.stocks[l.key].quantity}`).join(', ')
                   return (
                     <tr key={sp.id}>
-                      <td>
+                      <td className={s.supplyCell}>
                         <div className={s.supplyName}><ColorDot color={sp.color} />{sp.name}</div>
                         <div className={s.supplyMeta}>{[sp.code && `Cód. ${sp.code}`, otherStock && `outros prédios: ${otherStock}`].filter(Boolean).join('; ')}</div>
                       </td>
-                      <td className={s.typeCell}>{SUPPLY_TYPES[sp.type] || sp.type}</td>
-                      <td className={s.modelsCell} title={sp.models.join(', ')}>{sp.models.length ? sp.models.join(', ') : <span className={s.muted}>—</span>}</td>
-                      <td className={`${s.num} ${s.qty} ${low ? s.qtyLow : ''}`}>{low && <span className={s.lowDot} aria-hidden="true" />}{st.quantity}{low && <span className="sr-only"> (no mínimo ou abaixo)</span>}</td>
-                      <td className={`${s.num} ${s.muted}`}>{st.min_quantity || '—'}</td>
-                      <td className={`${s.num} ${s.muted}`}>{f.perMonth ? f.perMonth.toFixed(1).replace('.', ',') : '—'}</td>
-                      <td className={`${s.num} ${f.months != null && f.months < 1 ? s.qtyLow : s.muted}`} title="Saldo ÷ consumo médio dos últimos 90 dias">
+                      <td className={s.typeCell} data-label="Tipo">{SUPPLY_TYPES[sp.type] || sp.type}</td>
+                      <td className={s.modelsCell} data-label="Serve em" title={sp.models.join(', ')}>{sp.models.length ? sp.models.join(', ') : <span className={s.muted}>—</span>}</td>
+                      <td className={`${s.num} ${s.qty} ${s.qtyCell} ${low ? s.qtyLow : ''}`} data-label="Saldo">{low && <span className={s.lowDot} aria-hidden="true" />}{st.quantity}{low && <span className="sr-only"> (no mínimo ou abaixo)</span>}</td>
+                      <td className={`${s.num} ${s.muted}`} data-label="Mínimo">{st.min_quantity || '—'}</td>
+                      <td className={`${s.num} ${s.muted}`} data-label="Consumo/mês">{f.perMonth ? f.perMonth.toFixed(1).replace('.', ',') : '—'}</td>
+                      <td className={`${s.num} ${f.months != null && f.months < 1 ? s.qtyLow : s.muted}`} title="Saldo ÷ consumo médio dos últimos 90 dias" data-label="Dura">
                         {f.months == null ? '—' : f.months < 1
                           ? (d => `~${d} ${d === 1 ? 'dia' : 'dias'}`)(Math.max(1, Math.round(f.months * 30)))
                           : `~${f.months.toFixed(1).replace('.', ',')} ${f.months.toFixed(1) === '1.0' ? 'mês' : 'meses'}`}
                       </td>
-                      <td>
+                      <td className={s.actionsCell}>
                         <div className={s.actions}>
                           {writable && <>
-                            <button type="button" className={s.actBtn} disabled={!st.quantity} onClick={() => setMoving({ supply: sp, kind: 'troca' })}
-                              title={st.quantity ? 'Registrar a troca numa impressora' : 'Sem saldo neste prédio'}>
-                              <LineIcon name="refresh" size={14} /> Trocar
-                            </button>
-                            <button type="button" className={s.actBtn} onClick={() => setMoving({ supply: sp, kind: 'entrada' })} title="Compra ou recebimento">
+                            {st.quantity ? (
+                              <button type="button" className={s.actBtn} onClick={() => setMoving({ supply: sp, kind: 'troca' })} title="Registrar a troca numa impressora">
+                                <LineIcon name="refresh" size={14} /> Trocar
+                              </button>
+                            ) : (
+                              <span className={s.noStock} title="Não há este insumo neste prédio: registre uma entrada">Sem saldo</span>
+                            )}
+                            <button type="button" className={`${s.actBtn} ${!st.quantity ? s.actBtnMain : ''}`} onClick={() => setMoving({ supply: sp, kind: 'entrada' })} title="Compra ou recebimento">
                               <LineIcon name="plus" size={14} /> Entrada
                             </button>
                           </>}

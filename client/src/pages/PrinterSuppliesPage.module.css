@@ -119,3 +119,28 @@
   .minGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .toolbar select { width: 100%; }
 }
+
+/* sem saldo: o "Trocar" dá lugar a um aviso, e a Entrada vira o botão principal */
+.noStock { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; white-space: nowrap; font-size: 12.5px; color: var(--danger-text); }
+.actBtnMain { background: var(--brand-dark); border-color: var(--brand-dark); color: #fff; }
+.actBtnMain:hover { background: var(--brand-dark); color: #fff; filter: brightness(1.1); }
+
+/* ── Celular: cada insumo vira uma ficha (antes a tabela cortava o saldo e os botões) ── */
+@media (max-width: 768px) {
+  .tableWrap { overflow: visible; }
+  .table { min-width: 0; }
+  .table thead { display: none; }
+  .table, .table tbody, .table tr { display: block; width: 100%; }
+  .table tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .table tbody tr:last-child { border-bottom: 0; }
+  .table td { display: block; padding: 0; border: 0; text-align: left; min-width: 0; }
+  .table td.supplyCell { grid-column: 1 / 3; }
+  .table td.num { text-align: left; }
+  .table td.qtyCell { grid-column: 3; grid-row: 1; text-align: right; font-size: 1.6rem; }
+  .table td.qtyCell::before { text-align: right; }
+  .table td.modelsCell { grid-column: 1 / -1; white-space: normal; max-width: none; }
+  .table td[data-label]::before { content: attr(data-label); display: block; font-size: 11.5px; font-weight: 400; color: var(--text-muted); margin-bottom: 2px; }
+  .table td.actionsCell { grid-column: 1 / -1; }
+  .table td.actionsCell .actions { justify-content: flex-start; }
+  .actBtn, .noStock { min-height: 40px; padding: 0 14px; }
+}
