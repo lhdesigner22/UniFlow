@@ -256,6 +256,13 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   **Movimento** (nov/2026): sem corte seco — o que troca o "Carregando…", submenus da lateral, menus ⋯/coluna e o seletor de pessoas
   entram com `@starting-style` (CSS puro, sem lib); tokens `--dur-fast/--dur/--dur-slow`; `transition: all` proibido (lista as
   propriedades); `prefers-reduced-motion` global no `index.css`.
+  **Revisão aba por aba (ui-ux-pro-max, 06/11/2026)**: padrão adotado em todas as listas — no celular a tabela vira FICHA (`thead` some,
+  `td[data-label]::before` mostra o rótulo, o item principal vai em cima com `order:-1`, ações no canto); números na fonte normal (nada de
+  `--font-mono` em data/valor); colunas quase sempre vazias viram linha embaixo do item; atalhos de período (Hoje/7/30/Tudo ou Este mês/3 meses/
+  Este ano/Tudo) + "Outras datas"; ações secundárias no "⋯". Empréstimos: "atrasado" = aguardando devolução de dia que já passou (o prazo
+  manhã/noite NÃO é gravado, só vai no e-mail). Total de Chamados: `flowByMonth` (criados × resolvidos; resolvido ≈ `date_mod`). Logs abrem
+  com `hide_pages=1` (sem "Tela aberta"). Gestão → Documentos = `KnowledgeBasePage mode="gestao"`. Rótulo `.label` sem caixa alta (app todo).
+  Cor verde/azul nas Empresas = cor institucional (SER/UniFECAF), de propósito. `npm run release` espera até ~40 s a produção trocar.
   **Desempenho** (nov/2026): telas em `React.lazy` via `utils/lazyPage.js` (recarrega 1× se a aba antiga pedir arquivo que sumiu);
   Login/Início no pacote inicial. App inicial 1,9 MB → 350 KB. `manualChunks` dá pedaço próprio aos `commonjsHelpers` — senão caem no
   pdf-lib e TODA página pré-carrega o PDF (conferir `index.html` do build: não pode ter modulepreload de pdf-lib/exceljs/three).
