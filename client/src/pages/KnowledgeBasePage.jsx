@@ -23,10 +23,10 @@ const MACHINES_TAB = 'maquinas'
 const MAX_FILE_BYTES = 95 * 1024 * 1024
 
 const CATEGORIES = [
-  { key: 'texto_pronto', label: 'Textos prontos' },
-  { key: 'politica', label: 'Políticas' },
-  { key: 'documento', label: 'Documentos' },
-  { key: 'outro', label: 'Outros' },
+  { key: 'texto_pronto', label: 'Textos prontos', hint: 'Respostas prontas para copiar e colar no chamado.' },
+  { key: 'politica', label: 'Políticas', hint: 'Regras e normas que a equipe precisa seguir.' },
+  { key: 'documento', label: 'Documentos', hint: 'Manuais, orientações e materiais para consulta (com anexo ou link).' },
+  { key: 'outro', label: 'Outros', hint: 'Passo a passo e anotações que não se encaixam acima.' },
 ]
 const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map(c => [c.key, c]))
 
@@ -118,6 +118,7 @@ function Editor({ article, onClose, onSaved }) {
         <select id="knowledge-base-categoria" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
           {CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
         </select>
+        {CATEGORY_MAP[form.category]?.hint && <p className={s.fieldHint}>{CATEGORY_MAP[form.category].hint}</p>}
       </div>
       <div className="form-group">
         <label htmlFor="knowledge-base-conteudo" className="label">Conteúdo</label>
@@ -163,6 +164,23 @@ function Editor({ article, onClose, onSaved }) {
 }
 
 // Destaca o termo buscado dentro de um texto (sem HTML: só divide e envolve em <mark>)
+// Endereços http(s) no texto viram link clicável (abre em outra aba, passando
+// pelo safeHref); a busca continua destacando o termo dentro e fora dos links.
+const URL_RE = /(https?:\/\/[^\s<>"']+)/g
+function Linkified({ text, query }) {
+  if (!text) return null
+  return text.split(URL_RE).map((part, i) => {
+    if (i % 2 === 0) return <Highlight key={i} text={part} query={query} />
+    const m = part.match(/^(.*?)([.,;:!?)\]]*)$/) // pontuação do fim da frase fica fora do link
+    const url = m[1], tail = m[2]
+    return (
+      <span key={i}>
+        <a href={safeHref(url)} target="_blank" rel="noreferrer" className={s.inlineLink}><Highlight text={url} query={query} /></a>{tail}
+      </span>
+    )
+  })
+}
+
 function Highlight({ text, query }) {
   const q = query.trim()
   if (!q || !text) return text || null
@@ -279,7 +297,7 @@ export default function KnowledgeBasePage() {
         )}
       </div>
 
-      <nav className={s.tabs} aria-label="Categorias">
+      <nav className={s.tabs} aria-label="Categorias" ref={el => { el?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }) }}>
         {[['', 'Todos', total], ...CATEGORIES.map(c => [c.key, c.label, countByCategory[c.key] || 0]), [MACHINES_TAB, 'Padronização de máquinas', machines.length]].map(([key, label, count]) => (
           <button key={key || 'todos'} type="button" aria-current={categoryFilter === key ? 'true' : undefined}
             className={`${s.tab} ${categoryFilter === key ? s.tabActive : ''}`} onClick={() => { setCategoryFilter(key); setReading(false) }}>
@@ -357,7 +375,7 @@ export default function KnowledgeBasePage() {
 
               {selected.content ? (
                 <div className={isReply ? s.reply : s.body}>
-                  <p className={s.text}><Highlight text={selected.content} query={search} /></p>
+                  <p className={s.text}><Linkified text={selected.content} query={search} /></p>
                 </div>
               ) : (
                 <p className={s.noContent}>Este artigo não tem texto, só {selected.has_attachment ? 'o anexo' : 'o link'} abaixo.</p>

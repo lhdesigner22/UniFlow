@@ -125,3 +125,10 @@
   .header { flex-direction: column; }
   .title { font-size: 1.6rem; }
 }
+
+.fieldHint { margin: 6px 0 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.4; }
+.inlineLink { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+/* celular: degradê na borda direita das abas avisando que dá para arrastar */
+@media (max-width: 768px) {
+  .tabs { -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent); mask-image: linear-gradient(90deg, #000 82%, transparent); padding-right: 32px; }
+}

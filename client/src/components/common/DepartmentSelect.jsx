@@ -16,8 +16,8 @@ export default function DepartmentSelect({ value, onChange, label = 'Departament
     <div className="form-group">
       <label htmlFor={id} className="label">{label}</label>
       <select id={id} value={value || ''} onChange={e => onChange(e.target.value || null)}>
-        <option value="">Geral (todos os departamentos)</option>
-        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+        <option value="">Geral: todos os departamentos veem</option>
+        {departments.map(d => <option key={d.id} value={d.id}>{d.name}: só quem é desse departamento</option>)}
       </select>
     </div>
   )
