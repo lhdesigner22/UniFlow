@@ -168,7 +168,7 @@ export default function PartnersPage() {
                   : <p className={s.missing}>Sem descrição do que cuidam.</p>}
               </div>
               <div className={s.contact}>
-                {p.responsible_name && <span className={s.person}><LineIcon name="user" size={14} />{p.responsible_name}</span>}
+                {/[\p{L}\d]/u.test(p.responsible_name || '') && <span className={s.person}><LineIcon name="user" size={14} />{p.responsible_name}</span>}
                 {p.phone && (
                   <span className={s.line}>
                     <a className={s.phone} href={`tel:${p.phone.replace(/[^\d+]/g, '')}`}><LineIcon name="phone" size={14} />{p.phone}</a>
