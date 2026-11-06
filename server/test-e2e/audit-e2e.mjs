@@ -130,4 +130,11 @@ expect('...e nada disso vira linha de auditoria', await countLogs(), before)
 expect('"sair" válido continua registrado', (await call('colab', 'POST', '/api/audit/logout')).s, 200)
 expect('...como auth.logout', (await last('auth.logout'))?.user_id, 'u-col')
 
+// hide_pages=1: a lista sem as telas abertas (padrão da tela de Logs)
+await call('admin', 'POST', '/api/audit/view', { path: '/agenda' })
+await new Promise(r => setTimeout(r, 300))
+const rowsOf = j => (Array.isArray(j) ? j : j?.rows) || []
+expect('hide_pages tira as telas abertas', rowsOf((await call('admin', 'GET', '/api/audit?hide_pages=1&limit=200')).j).some(r => r.category === 'page'), false)
+expect('pedindo a área de telas, hide_pages não atrapalha', rowsOf((await call('admin', 'GET', '/api/audit?category=page&hide_pages=1&limit=50')).j).length > 0, true)
+
 console.log(ok ? '\nTUDO OK' : '\nHOUVE FALHAS')

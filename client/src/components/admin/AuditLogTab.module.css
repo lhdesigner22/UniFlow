@@ -105,3 +105,21 @@
   .kpi:nth-child(2n) { border-right: none; }
   .actions { margin-left: 0; }
 }
+
+/* atalhos de período */
+.presets { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+.preset { border: 0; background: none; min-height: 30px; padding: 0 12px; border-radius: 999px; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.preset:hover { color: var(--text); }
+.presetOn { background: var(--surface-2); color: var(--text); }
+:not(.presets) > .preset { border: 1px solid var(--border); }
+
+/* celular: cada registro vira uma ficha (o que foi feito em cima) */
+@media (max-width: 768px) {
+  .table { min-width: 0; }
+  .table thead { display: none; }
+  .table, .table tbody, .table tr { display: block; width: 100%; }
+  .table tbody tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .table td { display: block; padding: 0; border: 0; min-width: 0; text-align: left; }
+  .table td:not([data-label]) { grid-column: 1 / -1; order: -1; }
+  .table td[data-label]::before { content: attr(data-label); display: block; font-size: 11.5px; color: var(--text-muted); margin-bottom: 2px; }
+}

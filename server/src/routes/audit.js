@@ -41,6 +41,7 @@ function filters(c) {
   const args = []
   const category = c.req.query('category')
   if (category && CATEGORIES.includes(category)) { where.push('category = ?'); args.push(category) }
+  else if (c.req.query('hide_pages') === '1') where.push("category != 'page'")
   const userId = c.req.query('user_id')
   if (userId) { where.push('user_id = ?'); args.push(userId) }
   const severity = c.req.query('severity')

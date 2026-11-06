@@ -19,6 +19,8 @@ export default function AuditLogTab({ initialCategory = '', fixedCategory = null
   const [category, setCategory] = useState(fixedCategory || initialCategory)
   const [userId, setUserId] = useState('')
   const [onlyAlerts, setOnlyAlerts] = useState(false)
+  // as telas abertas são a maioria dos registros: por padrão a lista mostra só as ações
+  const [withPages, setWithPages] = useState(false)
   const [q, setQ] = useState('')
   const [qDebounced, setQDebounced] = useState('')
   const [from, setFrom] = useState('')
@@ -42,11 +44,12 @@ export default function AuditLogTab({ initialCategory = '', fixedCategory = null
     if (category) p.category = category
     if (userId) p.user_id = userId
     if (onlyAlerts) p.severity = 'warning'
+    if (!withPages && !category) p.hide_pages = '1'
     if (qDebounced) p.q = qDebounced
     if (from) p.from = from
     if (to) p.to = to
     return p
-  }, [category, userId, onlyAlerts, qDebounced, from, to])
+  }, [category, userId, onlyAlerts, withPages, qDebounced, from, to])
 
   const load = useCallback(async () => {
     const id = ++reqId.current
@@ -90,7 +93,19 @@ export default function AuditLogTab({ initialCategory = '', fixedCategory = null
 
   const refresh = () => { load(); loadSummary() }
   const hasFilter = (!fixedCategory && category) || userId || onlyAlerts || q || from || to
-  const clear = () => { if (!fixedCategory) setCategory(''); setUserId(''); setOnlyAlerts(false); setQ(''); setFrom(''); setTo('') }
+  const clear = () => { if (!fixedCategory) setCategory(''); setUserId(''); setOnlyAlerts(false); setWithPages(false); setQ(''); setFrom(''); setTo(''); setCustomDates(false) }
+  // atalhos de período (datas locais: toISOString viraria o dia seguinte depois das 21h)
+  const [customDates, setCustomDates] = useState(false)
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const daysAgo = n => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d) }
+  const choosePeriod = k => {
+    setCustomDates(false)
+    if (k === 'all') { setFrom(''); setTo(''); return }
+    setFrom(k === 'today' ? iso(new Date()) : daysAgo(Number(k) - 1)); setTo(iso(new Date()))
+  }
+  const period = !from && !to ? 'all'
+    : to !== iso(new Date()) ? 'custom'
+    : from === iso(new Date()) ? 'today' : from === daysAgo(6) ? '7' : from === daysAgo(29) ? '30' : 'custom'
 
   const v = summary?.vault7d
   const showVaultPanel = !category || category === 'vault'
@@ -147,12 +162,25 @@ export default function AuditLogTab({ initialCategory = '', fixedCategory = null
           <LineIcon name="search" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por item, tela, e-mail ou IP" aria-label="Buscar nos logs" />
         </div>
-        <label className={s.date}>De <input type="date" value={from} onChange={e => setFrom(e.target.value)} /></label>
-        <label className={s.date}>Até <input type="date" value={to} onChange={e => setTo(e.target.value)} /></label>
+        <div className={s.presets} role="group" aria-label="Período">
+          {[['today', 'Hoje'], ['7', '7 dias'], ['30', '30 dias'], ['all', 'Tudo']].map(([k, label]) => (
+            <button key={k} type="button" aria-pressed={period === k} className={`${s.preset} ${period === k ? s.presetOn : ''}`} onClick={() => choosePeriod(k)}>{label}</button>
+          ))}
+        </div>
+        {(customDates || period === 'custom') ? <>
+          <label className={s.date}>De <input type="date" value={from} onChange={e => setFrom(e.target.value)} /></label>
+          <label className={s.date}>Até <input type="date" value={to} onChange={e => setTo(e.target.value)} /></label>
+        </> : <button type="button" className={s.preset} onClick={() => setCustomDates(true)}>Outras datas</button>}
         <label className={s.check}>
           <input type="checkbox" checked={onlyAlerts} onChange={e => setOnlyAlerts(e.target.checked)} />
           Só alertas
         </label>
+        {!fixedCategory && !category && (
+          <label className={s.check}>
+            <input type="checkbox" checked={withPages} onChange={e => setWithPages(e.target.checked)} />
+            Incluir telas abertas
+          </label>
+        )}
         <div className={s.actions}>
           {hasFilter && <button type="button" className="btn btn-ghost btn-sm" onClick={clear}>Limpar filtros</button>}
           <button type="button" className="btn btn-ghost btn-sm" onClick={refresh}><LineIcon name="refresh" /> Atualizar</button>
@@ -187,8 +215,8 @@ export default function AuditLogTab({ initialCategory = '', fixedCategory = null
                 const d = describe(r)
                 return (
                   <tr key={r.id} data-severity={r.severity}>
-                    <td className={s.when}>{fmtWhen(r.created_at)}</td>
-                    <td className={s.who}>
+                    <td className={s.when} data-label="Quando">{fmtWhen(r.created_at)}</td>
+                    <td className={s.who} data-label="Quem">
                       <span className={s.person}>{r.user_name || '—'}</span>
                       {r.user_email && <span className={s.sub}>{r.user_email}</span>}
                     </td>
@@ -200,7 +228,7 @@ export default function AuditLogTab({ initialCategory = '', fixedCategory = null
                       </span>
                       {d.note && <span className={s.sub}>{d.note}</span>}
                     </td>
-                    <td className={s.from}>
+                    <td className={s.from} data-label="De onde">
                       <span className={s.mono}>{r.ip || '—'}</span>
                       <span className={s.sub}>{browserName(r.user_agent)}</span>
                     </td>
