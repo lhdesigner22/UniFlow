@@ -22,6 +22,21 @@ const ticketStatus = n => ({ 1: 'Novo', 2: 'Em atendimento', 3: 'Em atendimento'
 const ticketTone = n => (n === 5 || n === 6 ? 'ok' : n === 4 ? 'warn' : 'info')
 const KIND_ICON = { computador: 'monitor', projetor: 'tv', internet: 'wifi', acesso: 'key', outro: 'wrench' }
 
+// O que a situação da reserva quer dizer, em uma frase para o professor
+const NEXT_TEXT = {
+  pendente: 'A TI ainda vai confirmar. Você recebe um e-mail com a resposta.',
+  aprovada: 'Confirmado pela TI.',
+  recusada: 'A TI não conseguiu atender este pedido.',
+}
+function LogoMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M10 2L16 6V14L10 18L4 14V6L10 2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M10 6V10L13 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 const firstName = n => String(n || '').trim().split(/\s+/)[0] || ''
 function dayLabel(iso, today) {
   const d = new Date(`${iso}T12:00:00`)
@@ -57,11 +72,13 @@ export default function TeacherPortalPage() {
   const today = data?.today
   const upcoming = (data?.requests || []).filter(r => r.use_date >= today).sort((a, b) => (a.use_date + a.start_time).localeCompare(b.use_date + b.start_time))
   const past = (data?.requests || []).filter(r => r.use_date < today)
+  // a reserva mais próxima que ainda vale vira o destaque do topo
+  const next = upcoming.find(r => r.status !== 'cancelada')
 
   return (
     <div className={s.shell}>
       <header className={s.top}>
-        <span className={s.brand}><span className={s.mark} aria-hidden="true"><LineIcon name="laptop" size={16} /></span><span>Uni<em>FLOW</em></span></span>
+        <span className={s.brand}><span className={s.mark} aria-hidden="true"><LogoMark /></span><span>Uni<em>FLOW</em></span></span>
         <span className={s.topActions}>
           <button type="button" className={s.textBtn} onClick={logout}><LineIcon name="logout" size={15} /> Sair</button>
         </span>
@@ -71,13 +88,24 @@ export default function TeacherPortalPage() {
         <h1 className={s.hello}>Olá{user?.name ? `, ${firstName(user.name)}` : ''}</h1>
         <p className={s.sub}>Peça Chromebooks para a sua aula ou avise a TI de um problema.</p>
 
+        {next && (
+          <section className={`${s.next} ${s['next_' + next.status] || ''}`} aria-label="Sua próxima reserva">
+            <span className={s.nextWhen}>{dayLabel(next.use_date, today)}, {next.start_time} às {next.end_time}</span>
+            <p className={s.nextWhat}>{next.quantity} Chromebook{next.quantity > 1 ? 's' : ''} em {data.buildings[next.building] || next.building}, {next.room}</p>
+            <p className={s.nextState}>
+              <span className={`${s.pill} ${s[(REQUEST_STATUS[next.status] || REQUEST_STATUS.pendente).tone]}`}>{(REQUEST_STATUS[next.status] || REQUEST_STATUS.pendente).label}</span>
+              {NEXT_TEXT[next.status]}{next.status === 'recusada' && next.decision_note ? ` Motivo: ${next.decision_note}` : ''}
+            </p>
+          </section>
+        )}
+
         <div className={s.actions}>
           <button type="button" className={`${s.action} ${open === 'reserve' ? s.actionOn : ''}`} aria-expanded={open === 'reserve'} onClick={() => toggleForm('reserve')}>
-            <LineIcon name="laptop" size={26} />
+            <span className={s.actionIcon}><LineIcon name="laptop" size={22} /></span>
             <span><strong>Reservar Chromebooks</strong><small>A TI confirma por e-mail</small></span>
           </button>
           <button type="button" className={`${s.action} ${open === 'ticket' ? s.actionOn : ''}`} aria-expanded={open === 'ticket'} onClick={() => toggleForm('ticket')}>
-            <LineIcon name="wrench" size={26} />
+            <span className={s.actionIcon}><LineIcon name="wrench" size={22} /></span>
             <span><strong>Abrir chamado</strong><small>Projetor, internet, computador...</small></span>
           </button>
         </div>
@@ -153,7 +181,7 @@ function RequestRow({ r, today, data, onChanged }) {
       </span>
       <span className={s.rowEnd}>
         <span className={`${s.pill} ${s[st.tone]}`}>{st.label}</span>
-        {canCancel && <button type="button" className={s.linkBtn} onClick={cancel} disabled={busy}>Cancelar</button>}
+        {canCancel && <button type="button" className={s.cancelBtn} onClick={cancel} disabled={busy}>Cancelar reserva</button>}
       </span>
     </li>
   )
