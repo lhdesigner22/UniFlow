@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { confirmDialog } from '../../store/dialogStore'
 import CardItem from './CardItem'
 import s from './Column.module.css'
+import LineIcon from '../common/LineIcon'
 import { pressable } from '../../utils/pressable'
 
 // Lembra, por coluna, se os cards concluídos estão escondidos — estilo
@@ -80,7 +81,7 @@ export default function Column({ column, cards, onOpenCard, onAddCard, onToggleP
   return (
     <div className={s.column}>
       <div className={s.header}>
-        <button type="button" className={s.dragHandle} title="Arrastar para reordenar" {...dragHandleProps}>⠿</button>
+        <button type="button" className={s.dragHandle} title="Arrastar para reordenar" aria-label={`Arrastar a coluna ${column.name}`} {...dragHandleProps}><LineIcon name="grip" /></button>
         {editingName ? (
           <input
             autoFocus
@@ -96,12 +97,12 @@ export default function Column({ column, cards, onOpenCard, onAddCard, onToggleP
         ) : (
           <span ref={nameRef} className={s.name} {...pressable(() => { setNameDraft(column.name); setEditingName(true) })} title="Clique para renomear" aria-label={`Renomear a coluna ${column.name}`}>{column.name}</span>
         )}
-        <span className={s.count}>{cards.length}</span>
+        <span className={s.count} title={`${cards.length} cartão(ões)`}>{cards.length}</span>
         <div className={s.menuWrap} ref={menuRef}>
-          <button type="button" className={s.menuBtn} onClick={() => setMenuOpen(v => !v)} title="Mais opções">⋮</button>
+          <button type="button" className={s.menuBtn} onClick={() => setMenuOpen(v => !v)} title="Mais opções" aria-label={`Mais opções da coluna ${column.name}`} aria-expanded={menuOpen}><LineIcon name="more" /></button>
           {menuOpen && (
             <div className={s.menu}>
-              <button type="button" className={s.menuItem} onClick={handleDelete}>🗑️ Excluir coluna</button>
+              <button type="button" className={s.menuItem} onClick={handleDelete}><LineIcon name="trash" /> Excluir coluna</button>
             </div>
           )}
         </div>
@@ -119,7 +120,7 @@ export default function Column({ column, cards, onOpenCard, onAddCard, onToggleP
               title={hideCompleted ? 'Mostrar concluídos' : 'Esconder concluídos'}
             >
               <span className={s.completedChevron} data-open={!hideCompleted}>›</span>
-              ✓ {completedCards.length} concluído{completedCards.length > 1 ? 's' : ''}
+              {completedCards.length} concluído{completedCards.length > 1 ? 's' : ''}
             </button>
             {!hideCompleted && completedCards.map(renderCard)}
           </>
@@ -138,7 +139,7 @@ export default function Column({ column, cards, onOpenCard, onAddCard, onToggleP
             onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') { setTitle(''); setAdding(false) } }}
           />
         ) : (
-          <button className={s.addBtn} onClick={() => setAdding(true)}>+ Adicionar cartão</button>
+          <button className={s.addBtn} onClick={() => setAdding(true)}><LineIcon name="plus" /> Adicionar cartão</button>
         )}
       </div>
     </div>

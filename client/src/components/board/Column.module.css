@@ -1,6 +1,6 @@
 .column {
-  width: 272px; min-width: 272px; flex-shrink: 0;
-  background: var(--surface-2); border-radius: var(--radius);
+  width: 284px; min-width: 284px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent); border-radius: 16px;
   display: flex; flex-direction: column;
   max-height: 100%; overflow: hidden;
 }
@@ -14,32 +14,32 @@
 
 .header {
   display: flex; align-items: center; gap: 8px;
-  padding: 12px 12px 8px;
+  padding: 12px 12px 10px 8px;
 }
 .dragHandle {
   width: 20px; height: 20px; flex-shrink: 0; border: none; background: transparent;
   color: var(--text-muted); cursor: grab; font-size: 14px; line-height: 1;
   display: flex; align-items: center; justify-content: center; border-radius: 6px;
-  touch-action: none; margin-left: -2px;
+  touch-action: none; margin-left: -2px; opacity: 0; transition: opacity .15s;
 }
+/* a alça só aparece quando a coluna está sob o mouse ou com foco (no toque, sempre) */
+.column:hover .dragHandle, .dragHandle:focus-visible { opacity: 1; }
+@media (hover: none) { .dragHandle { opacity: .7; } }
 .dragHandle:hover { background: var(--border2); color: var(--text); }
 .dragHandle:active { cursor: grabbing; }
 
-.name { font-weight: 600; font-size: 13px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
+.name { font-weight: 600; font-size: 14px; letter-spacing: -.01em; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
 .name:hover { color: var(--brand); }
 .nameInput {
   flex: 1; font-weight: 600; font-size: 13px; padding: 3px 6px;
   min-width: 0; background: var(--surface); border: 1px solid var(--brand); border-radius: 6px;
 }
-.count {
-  font-size: 11px; font-weight: 700; color: var(--text-muted);
-  background: var(--border2); border-radius: 20px; padding: 1px 8px;
-}
+.count { font-size: 13px; font-weight: 500; color: var(--text-muted); font-variant-numeric: tabular-nums; padding: 0 2px; }
 
 .menuWrap { position: relative; flex-shrink: 0; }
 .menuBtn {
   width: 22px; height: 22px; border-radius: 6px; border: none; background: transparent;
-  color: var(--text-muted); cursor: pointer; font-size: 14px; line-height: 1;
+  color: var(--text-muted); cursor: pointer; font-size: 16px; line-height: 1;
   display: flex; align-items: center; justify-content: center; transition: background .12s;
 }
 .menuBtn:hover { background: var(--border2); color: var(--text); }
@@ -74,9 +74,9 @@
 
 .footer { padding: 8px 10px 12px; }
 .addBtn {
-  width: 100%; text-align: left; background: none; border: none;
+  width: 100%; display: flex; align-items: center; gap: 7px; text-align: left; background: none; border: none; cursor: pointer;
   color: var(--text-muted); font-size: 13px; padding: 7px 8px;
-  border-radius: var(--radius-sm); transition: background .15s var(--ease), color .15s var(--ease), padding-left .15s var(--ease);
+  border-radius: var(--radius-sm); transition: background .15s var(--ease), color .15s var(--ease);
 }
-.addBtn:hover { background: var(--border2); color: var(--text); padding-left: 12px; }
+.addBtn:hover { background: var(--border2); color: var(--text); }
 .quickAdd { font-size: 13px; }

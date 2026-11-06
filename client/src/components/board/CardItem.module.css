@@ -1,47 +1,51 @@
+/* Cartão do quadro: título primeiro; etiquetas como marcadores discretos (ponto
+   na cor da etiqueta), prazo em palavras e só ele ganha cor quando aperta. */
 .card {
-  background: var(--surface); border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm); padding: 10px 12px;
-  display: flex; flex-direction: column; gap: 6px;
-  cursor: pointer; transition: box-shadow .18s var(--ease), transform .18s var(--ease);
-  animation: fadeIn .25s var(--ease) both;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 11px 12px 10px; display: flex; flex-direction: column; gap: 8px;
+  cursor: pointer; transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
 }
-.card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-.card.overlay { box-shadow: var(--shadow-lg); cursor: grabbing; transform: rotate(2deg) scale(1.03); }
+.card:hover { border-color: color-mix(in srgb, var(--brand) 45%, transparent); }
+.card.overlay { box-shadow: var(--shadow-lg); cursor: grabbing; transform: rotate(1.5deg); border-color: var(--brand); }
 
-.labels { display: flex; gap: 4px; flex-wrap: wrap; }
+.labels { display: flex; gap: 6px; flex-wrap: wrap; }
 .labelChip {
-  display: inline-block; max-width: 100%; padding: 1px 8px; border-radius: 10px;
-  font-size: 10.5px; font-weight: 600; line-height: 1.5; color: #fff;
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+  padding: 1px 8px 1px 6px; border-radius: 999px; font-size: 11.5px; font-weight: 500; line-height: 1.6;
+  color: var(--text); background: color-mix(in srgb, var(--lc) 14%, transparent);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.labelChip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--lc); flex: none; }
 
-.titleRow { display: flex; align-items: flex-start; gap: 8px; }
-.title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+.titleRow { display: flex; align-items: flex-start; gap: 9px; }
+.title { font-size: 13.5px; font-weight: 500; color: var(--text); line-height: 1.42; }
 .titleDone { text-decoration: line-through; color: var(--text-muted); }
 
-/* ── Status estilo Planner (não iniciado / em andamento / concluído) ── */
+/* ── Andamento: anel vazio → anel meio cheio → verde com ✓ ── */
 .progressDot {
-  width: 16px; height: 16px; margin-top: 2px; border-radius: 50%;
-  border: 2px solid var(--text-muted); background: transparent;
-  flex-shrink: 0; padding: 0; cursor: pointer; line-height: 1;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700; color: #fff;
-  transition: all .18s var(--ease-spring);
+  width: 17px; height: 17px; margin-top: 1px; border-radius: 50%;
+  border: 1.75px solid color-mix(in srgb, var(--text-muted) 75%, transparent); background: transparent;
+  flex-shrink: 0; padding: 0; cursor: pointer; display: grid; place-items: center; color: #fff;
+  transition: border-color .15s, background .15s, transform .15s var(--ease-spring);
 }
-.progressDot:hover { border-color: var(--brand); transform: scale(1.15); }
+.progressDot:hover { border-color: var(--brand); }
 .progressDot:active { transform: scale(.85); }
-.progressInProgress { border-color: var(--warning); background: var(--warning); animation: pop .3s var(--ease-spring); }
-.progressCompleted { border-color: var(--success); background: var(--success); animation: pop .3s var(--ease-spring); }
-
-.metaRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.badge {
-  font-size: 11px; font-weight: 600; color: var(--text-muted);
-  background: var(--surface-2); border-radius: 4px; padding: 2px 6px;
-  display: inline-flex; align-items: center; gap: 3px;
+.progressInProgress {
+  border-color: var(--warning);
+  background: conic-gradient(var(--warning) 0 50%, transparent 50% 100%);
 }
-.badge.danger { color: #fff; background: var(--danger); }
-.badge.warning { color: #7a4a04; background: color-mix(in srgb, var(--warning) 25%, transparent); }
-[data-theme="dark"] .badge.warning { color: #fbbf24; background: color-mix(in srgb, var(--warning) 18%, transparent); }
+.progressCompleted { border-color: var(--success); background: var(--success); color: var(--bg); }
+
+.metaRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.metaRow:empty { display: none; }
+.badge {
+  font-size: 12px; font-weight: 500; color: var(--text-muted);
+  display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums;
+}
+.badge svg { font-size: 13px; }
+.badge.danger { color: var(--danger-text); font-weight: 600; }
+.badge.warning { color: var(--warning-text); font-weight: 600; }
+.badge.allDone { color: var(--success-text); }
 .badge.muted { color: var(--text-muted); }
 
-.membersRow { display: flex; justify-content: flex-end; }
+.membersRow { display: flex; justify-content: flex-end; margin-top: -2px; }

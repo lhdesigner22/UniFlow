@@ -17,6 +17,9 @@ import ColumnTrashModal from '../components/board/ColumnTrashModal'
 import { CardItemPreview } from '../components/board/CardItem'
 import CardModal from '../components/card/CardModal'
 import { avatarColor } from '../utils/avatarColor'
+import LineIcon from '../components/common/LineIcon'
+import RowMenu from '../components/common/RowMenu'
+import { todayLocalISO } from '../utils/formatDuration'
 import s from './BoardPage.module.css'
 
 const COL = id => `column:${id}`
@@ -341,31 +344,46 @@ export default function BoardPage() {
     }
   }
 
+  // linha de resumo embaixo do nome: "12 cartões abertos, 2 atrasados"
+  const today = todayLocalISO()
+  const openCards = cards.filter(c => c.progress !== 'completed')
+  const overdue = openCards.filter(c => c.due_date && c.due_date.slice(0, 10) < today).length
+  const summary = openCards.length
+    ? `${openCards.length} ${openCards.length === 1 ? 'cartão aberto' : 'cartões abertos'}${overdue ? `, ${overdue} ${overdue === 1 ? 'atrasado' : 'atrasados'}` : ''}`
+    : 'Nenhum cartão aberto'
+  const canArchive = board && (['owner', 'admin', 'dept_admin'].includes(board.my_role) || user?.system_role === 'super_admin')
+
   if (loading) return <div className={s.loading}>Carregando quadro...</div>
   if (!board) return <div className={s.loading}>Quadro não encontrado.</div>
 
   return (
     <div className={s.page}>
-      <div className={s.accentBar} style={{ background: board.color || avatarColor(board.id) }} />
 
       <div className={s.header}>
-        {editingName ? (
-          <input
-            autoFocus
-            className={s.nameInput}
-            value={nameDraft}
-            onChange={e => setNameDraft(e.target.value)}
-            onBlur={saveBoardName}
-            onKeyDown={e => { if (e.key === 'Enter') saveBoardName(); if (e.key === 'Escape') { setNameDraft(board.name); setEditingName(false) } }}
-          />
-        ) : (
-          <h1 className={s.boardName} onClick={() => setEditingName(true)} title="Clique para renomear">{board.name}</h1>
-        )}
+        <div className={s.titleBlock}>
+          <span className={s.colorDot} style={{ background: board.color || avatarColor(board.id) }} aria-hidden="true" />
+          <div className={s.titleText}>
+            {editingName ? (
+              <input
+                autoFocus
+                className={s.nameInput}
+                aria-label="Nome do quadro"
+                value={nameDraft}
+                onChange={e => setNameDraft(e.target.value)}
+                onBlur={saveBoardName}
+                onKeyDown={e => { if (e.key === 'Enter') saveBoardName(); if (e.key === 'Escape') { setNameDraft(board.name); setEditingName(false) } }}
+              />
+            ) : (
+              <h1 className={s.boardName} onClick={() => setEditingName(true)} title="Clique para renomear">{board.name}</h1>
+            )}
+            <p className={s.summary}>{summary}</p>
+          </div>
+        </div>
 
         <div className={s.headerRight}>
           <AvatarStack members={board.members || []} max={6} size={30} />
           <div className={s.inviteWrap}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setShowInvite(v => !v)}>+ Convidar</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowInvite(v => !v)}><LineIcon name="plus" /> Convidar</button>
             {showInvite && (
               <MemberPicker
                 align="right"
@@ -375,19 +393,11 @@ export default function BoardPage() {
               />
             )}
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => setShowTrash(true)} title="Colunas excluídas">
-            🗑️ Lixeira{trashCount > 0 ? ` (${trashCount})` : ''}
-          </button>
-          {(board.my_role === 'owner' || board.my_role === 'admin' || board.my_role === 'dept_admin' || user?.system_role === 'super_admin') && (
-            <button className="btn btn-ghost btn-sm" onClick={archiveBoard} title="Arquivar quadro">
-              📦 Arquivar
-            </button>
-          )}
-          {board.my_role === 'owner' && (
-            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red)' }} onClick={deleteBoard} title="Excluir quadro">
-              🗑️ Excluir
-            </button>
-          )}
+          <RowMenu name={board.name} items={[
+            { label: 'Colunas excluídas', hint: trashCount ? `${trashCount} na lixeira` : 'Lixeira vazia', icon: 'undo', onClick: () => setShowTrash(true) },
+            canArchive && { label: 'Arquivar quadro', icon: 'download', onClick: archiveBoard },
+            board.my_role === 'owner' && { label: 'Excluir quadro', icon: 'trash', danger: true, onClick: deleteBoard },
+          ]} />
         </div>
       </div>
 
@@ -434,7 +444,7 @@ export default function BoardPage() {
                 onKeyDown={e => { if (e.key === 'Enter') addColumn(); if (e.key === 'Escape') setAddingColumn(false) }}
               />
             ) : (
-              <button className={s.newColumnBtn} onClick={() => setAddingColumn(true)}>+ Adicionar coluna</button>
+              <button className={s.newColumnBtn} onClick={() => setAddingColumn(true)}><LineIcon name="plus" /> Nova coluna</button>
             )}
           </div>
         </div>

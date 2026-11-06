@@ -1,18 +1,23 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import AvatarStack from '../common/AvatarStack'
+import LineIcon from '../common/LineIcon'
 import { formatDuration, parseDateOnly } from '../../utils/formatDuration'
 import s from './CardItem.module.css'
 
-function dueMeta(due) {
+// Prazo em linguagem de gente: "Venceu ontem", "Hoje", "Amanhã", "15 nov"
+function dueMeta(due, done) {
   if (!due) return null
   const now = new Date()
   const d = parseDateOnly(due)
-  const diffDays = (d.setHours(0, 0, 0, 0) - new Date(now.setHours(0, 0, 0, 0))) / 86400000
-  const label = parseDateOnly(due).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-  if (diffDays < 0) return { label, tone: 'danger' }
-  if (diffDays <= 2) return { label, tone: 'warning' }
-  return { label, tone: 'muted' }
+  const diffDays = Math.round((d.setHours(0, 0, 0, 0) - new Date(now.setHours(0, 0, 0, 0))) / 86400000)
+  const short = parseDateOnly(due).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '').replace(' de ', ' ')
+  if (done) return { label: short, tone: 'muted' }
+  if (diffDays === -1) return { label: 'Venceu ontem', tone: 'danger' }
+  if (diffDays < 0) return { label: `Venceu ${short}`, tone: 'danger' }
+  if (diffDays === 0) return { label: 'Hoje', tone: 'warning' }
+  if (diffDays === 1) return { label: 'Amanhã', tone: 'warning' }
+  return { label: short, tone: 'muted' }
 }
 
 // Cor/símbolo do status estilo Planner + pra onde o clique leva em seguida
@@ -32,15 +37,16 @@ function ProgressToggle({ progress, onToggle }) {
       type="button"
       className={`${s.progressDot} ${meta.cls ? s[meta.cls] : ''}`}
       title={meta.title}
+      aria-label={meta.title}
       onClick={e => { e.stopPropagation(); onToggle?.(PROGRESS_CYCLE[p]) }}
     >
-      {p === 'completed' ? '✓' : ''}
+      {p === 'completed' && <LineIcon name="check" size={11} />}
     </button>
   )
 }
 
 function CardBody({ card, onToggleProgress }) {
-  const due = dueMeta(card.due_date)
+  const due = dueMeta(card.due_date, card.progress === 'completed')
   const checklist = card.checklist || []
   const checklistDone = checklist.filter(i => i.done).length
   const members = card.members || []
@@ -52,7 +58,9 @@ function CardBody({ card, onToggleProgress }) {
     <>
       {labels.length > 0 && (
         <div className={s.labels}>
-          {labels.map(l => <span key={l.id} className={s.labelChip} style={{ background: l.color }} title={l.name}>{l.name}</span>)}
+          {labels.map(l => (
+            <span key={l.id} className={s.labelChip} style={{ '--lc': l.color }} title={l.name}>{l.name}</span>
+          ))}
         </div>
       )}
 
@@ -62,12 +70,14 @@ function CardBody({ card, onToggleProgress }) {
       </div>
 
       <div className={s.metaRow}>
-        {due && <span className={`${s.badge} ${s[due.tone]}`}>📅 {due.label}</span>}
+        {due && <span className={`${s.badge} ${s[due.tone]}`}><LineIcon name="calendar" />{due.label}</span>}
         {checklist.length > 0 && (
-          <span className={s.badge}>☑ {checklistDone}/{checklist.length}</span>
+          <span className={`${s.badge} ${checklistDone === checklist.length ? s.allDone : ''}`} title="Itens do checklist feitos">
+            <LineIcon name="check" />{checklistDone}/{checklist.length}
+          </span>
         )}
         {typeof totalSeconds === 'number' && totalSeconds > 0 && (
-          <span className={s.badge}>⏱ {formatDuration(totalSeconds)}</span>
+          <span className={s.badge} title="Tempo registrado"><LineIcon name="clock" />{formatDuration(totalSeconds)}</span>
         )}
       </div>
 
