@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/authStore'
 import { canEdit as canEditModule } from '../utils/permissions'
 import { confirmDialog, alertDialog } from '../store/dialogStore'
 import { exportLoansXlsx } from '../utils/exports'
-import ExportXlsxButton from '../components/common/ExportXlsxButton'
+import RowMenu from '../components/common/RowMenu'
 import Modal from '../components/common/Modal'
 import Reveal from '../components/common/Reveal'
 import InventoryPicker from '../components/common/InventoryPicker'
@@ -42,6 +42,19 @@ const EQUIPMENT_SUGGESTIONS = [
 function todayISO() {
   return todayLocalISO()
 }
+
+// Data do empréstimo em linguagem de gente ("Hoje", "Ontem", "05/11")
+function dayWord(v) {
+  if (!v) return '—'
+  const today = todayLocalISO()
+  const y = new Date(); y.setDate(y.getDate() - 1)
+  const yest = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`
+  const d = String(v).slice(0, 10)
+  return d === today ? 'Hoje' : d === yest ? 'Ontem' : fmtDate(v)
+}
+// Atrasado = ainda "aguardando devolução" de um dia que já passou (o prazo é
+// sempre no mesmo dia: manhã até 10h, noite até 22h)
+const isOverdue = l => l.status === 'aguardando_devolucao' && String(l.loan_date || '').slice(0, 10) < todayLocalISO()
 
 function fmtDate(v) {
   if (!v) return '—'
@@ -610,10 +623,10 @@ export default function EquipmentLoansPage() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
     return (loans || []).filter(l => {
-      if (statusFilter === 'abertos' ? l.status === 'devolvido' : (statusFilter && l.status !== statusFilter)) return false
+      if (statusFilter === 'atrasados' ? !isOverdue(l) : statusFilter === 'abertos' ? l.status === 'devolvido' : (statusFilter && l.status !== statusFilter)) return false
       if (term && !`${l.requester_name} ${l.equipment_model} ${l.patrimony || ''} ${l.location || ''} ${l.author_name || ''}`.toLowerCase().includes(term)) return false
       return true
-    })
+    }).sort((a, b) => Number(isOverdue(b)) - Number(isOverdue(a)))
   }, [loans, statusFilter, search])
 
   // Os cartões de cima contam tudo do prédio (inclusive devolvidos), mesmo
@@ -624,7 +637,8 @@ export default function EquipmentLoansPage() {
     const aguardando = all.filter(l => l.status === 'aguardando_devolucao').length
     const devolvido = all.filter(l => l.status === 'devolvido').length
     const permanente = all.filter(l => l.status === 'uso_permanente').length
-    return { items, aguardando, devolvido, permanente }
+    const atrasados = all.filter(isOverdue).length
+    return { items, aguardando, devolvido, permanente, atrasados }
   }, [loans])
 
   const onSaved = saved => {
@@ -680,20 +694,18 @@ export default function EquipmentLoansPage() {
     <div className={s.page}>
       <div className={s.header}>
         <div>
-          <h1 className={s.title}>Empréstimo de Equipamentos — {BUILDING_MAP[building].label}</h1>
-          <p className={s.sub}>Chromebook, controle de projetor, caixa de som e outros itens emprestados — quem pegou, onde e a situação.</p>
+          <h1 className={s.title}>Empréstimos</h1>
+          <p className={s.sub}>{BUILDING_MAP[building].label}: quem pegou cada equipamento, onde está e se já voltou.</p>
         </div>
         <div className={s.headerRight}>
           {user?.system_role === 'super_admin' && (
-            <>
-              <button className="btn btn-ghost" disabled={syncingRooms} onClick={syncRoomSchedule}>
-                {syncingRooms ? 'Atualizando grade...' : <><LineIcon name="refresh" /> Atualizar grade de salas</>}
-              </button>
-              <button className="btn btn-ghost" onClick={() => setShowInventory(true)}><LineIcon name="list" /> Inventário</button>
-            </>
+            <button className="btn btn-ghost" onClick={() => setShowInventory(true)}><LineIcon name="list" /> Inventário</button>
           )}
-          <ExportXlsxButton onExport={exportLoansXlsx} />
-          {writable && <button className="btn btn-primary" onClick={() => setEditing({})}>+ Novo empréstimo</button>}
+          {writable && <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" /> Novo empréstimo</button>}
+          <RowMenu name="Empréstimos" items={[
+            { label: 'Baixar Excel', icon: 'sheet', onClick: async () => { try { await exportLoansXlsx() } catch (e) { alertDialog(e.response?.data?.error || 'Não deu pra gerar a planilha.', { title: 'Erro ao exportar', danger: true }) } } },
+            user?.system_role === 'super_admin' && { label: syncingRooms ? 'Atualizando grade...' : 'Atualizar grade de salas', hint: 'Copia os horários do site de salas', icon: 'refresh', disabled: syncingRooms, onClick: syncRoomSchedule },
+          ]} />
         </div>
       </div>
 
@@ -706,6 +718,11 @@ export default function EquipmentLoansPage() {
           <span className={s.kpiNumber}>{totals.aguardando}</span>
           <span className={s.kpiLabel}>Aguardando devolução</span>
         </div>
+        <button type="button" className={`${s.kpiCard} ${s.kpiLate} ${statusFilter === 'atrasados' ? s.kpiOn : ''}`} aria-pressed={statusFilter === 'atrasados'}
+          onClick={() => setStatusFilter(f => (f === 'atrasados' ? 'abertos' : 'atrasados'))} title="Mostrar só os atrasados">
+          <span className={`${s.kpiNumber} ${totals.atrasados ? s.lateNum : ''}`}>{totals.atrasados}</span>
+          <span className={s.kpiLabel}>Atrasados</span>
+        </button>
         <div className={`${s.kpiCard} ${s.kpiDone}`}>
           <span className={s.kpiNumber}>{totals.devolvido}</span>
           <span className={s.kpiLabel}>Devolvido</span>
@@ -733,6 +750,7 @@ export default function EquipmentLoansPage() {
             />
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} aria-label="Filtrar por situação">
               <option value="abertos">Em aberto (sem devolvidos)</option>
+              <option value="atrasados">Só os atrasados</option>
               <option value="">Todas as situações</option>
               {STATUSES.map(st => <option key={st.key} value={st.key}>{st.label}</option>)}
             </select>
@@ -743,28 +761,27 @@ export default function EquipmentLoansPage() {
             <table className={s.table}>
               <thead>
                 <tr>
-                  <th>Data</th><th>Solicitante</th><th>Equipamento</th>
-                  <th>Patrimônio</th><th>Prédio</th><th>Sala / Localidade</th><th>Observação</th><th>Registrado por</th>
-                  <th className={s.stickyStatus}>Situação</th><th className={s.stickyActions}>Ações</th>
+                  <th>Equipamento</th><th>Quem pegou</th><th>Sala</th><th>Data</th><th>Registrado por</th>
+                  <th className={s.stickyStatus}>Situação</th><th className={s.stickyActions}><span className="sr-only">Ações</span></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(l => (
                   <tr key={l.id}>
-                    <td className={s.mono}>{fmtDate(l.loan_date)}</td>
-                    <td className={s.itemCell}>
+                    <td className={s.equipCell}>
+                      <span className={s.itemName} title={l.equipment_model}>{l.equipment_model}</span>
+                      {l.patrimony && <span className={s.itemDesc}>Patrimônio {l.patrimony}</span>}
+                      {isOverdue(l) && <span className={s.lateTag}>Não devolvido desde {dayWord(l.loan_date) === 'Ontem' ? 'ontem' : fmtDate(l.loan_date)}</span>}
+                      {l.notes && <span className={s.itemNote} title={l.notes}>Obs.: {l.notes}</span>}
+                    </td>
+                    <td className={s.itemCell} data-label="Quem pegou">
                       <span className={s.itemName} title={l.requester_name}>{l.requester_name}</span>
                       {l.requester_email && <span className={s.itemDesc} title={l.requester_email}>{l.requester_email}</span>}
                     </td>
-                    <td className={s.itemCell}>
-                      <span className={s.itemName} title={l.equipment_model}>{l.equipment_model}</span>
-                    </td>
-                    <td className={s.mono}>{l.patrimony || '—'}</td>
-                    <td className={s.mono}>{BUILDING_MAP[l.building]?.label || l.building || '—'}</td>
-                    <td className={s.descCell} title={l.location}>{l.location || '—'}</td>
-                    <td className={s.descCell} title={l.notes}>{l.notes || '—'}</td>
-                    <td className={s.itemCell}><span className={s.itemName} title={l.author_name}>{l.author_name || '—'}</span></td>
-                    <td className={s.stickyStatus}>
+                    <td className={s.descCell} data-label="Sala" title={l.location}>{l.location || '—'}</td>
+                    <td className={s.dateCell} data-label="Data">{dayWord(l.loan_date)}</td>
+                    <td className={s.itemCell} data-label="Registrado por"><span className={s.itemName} title={l.author_name}>{l.author_name || '—'}</span></td>
+                    <td className={s.stickyStatus} data-label="Situação">
                       <select
                         className={s.statusSelect}
                         aria-label={`Situação do empréstimo de ${l.requester_name}`}
@@ -795,7 +812,7 @@ export default function EquipmentLoansPage() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={10} className={s.chartEmpty}>{statusFilter === 'abertos' && !search.trim() ? 'Nenhum empréstimo em aberto — tudo foi devolvido.' : 'Nenhum empréstimo bate com esse filtro.'}</td></tr>
+                  <tr><td colSpan={7} className={s.chartEmpty}>{statusFilter === 'atrasados' ? 'Nenhum empréstimo atrasado.' : statusFilter === 'abertos' && !search.trim() ? 'Nenhum empréstimo em aberto — tudo foi devolvido.' : 'Nenhum empréstimo bate com esse filtro.'}</td></tr>
                 )}
               </tbody>
             </table>

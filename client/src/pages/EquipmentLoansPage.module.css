@@ -140,3 +140,32 @@
 .roomHint svg { margin-right: 2px; }
 :global([data-theme="dark"]) .kpiCard,
 :global([data-theme="dark"]) .tableCard { box-shadow: 0 1px 0 rgba(255,255,255,.04) inset; }
+
+/* ── Atrasados (nov/2026) ── */
+.kpiLate { text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.kpiLate:hover { background: var(--surface-2); }
+.kpiOn { outline: 2px solid var(--danger); outline-offset: -1px; }
+.lateNum { color: var(--danger-text); }
+.lateTag { display: block; margin-top: 3px; font-size: 12px; font-weight: 600; color: var(--danger-text); }
+.equipCell { max-width: 260px; }
+.itemNote { display: block; margin-top: 2px; font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dateCell { white-space: nowrap; color: var(--text-muted); }
+.table { min-width: 820px; }
+
+/* ── Celular: cada empréstimo vira uma ficha ── */
+@media (max-width: 768px) {
+  .header > div { min-width: 0; }
+  .title { font-size: 1.6rem; }
+  .headerRight { flex-wrap: wrap; }
+  .kpiRow { grid-template-columns: 1fr 1fr; }
+  .tableWrap { overflow: visible; }
+  .table { min-width: 0; }
+  .table thead { display: none; }
+  .table, .table tbody, .table tr { display: block; width: 100%; }
+  .table tbody tr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 14px 4px; border-bottom: 1px solid var(--border2); position: relative; }
+  .table td { display: block; padding: 0; border: 0; text-align: left; position: static; box-shadow: none; background: none !important; min-width: 0; max-width: none; }
+  .table td.equipCell { grid-column: 1 / -1; padding-right: 110px; font-size: 14.5px; }
+  .table td[data-label]::before { content: attr(data-label); display: block; font-size: 11.5px; color: var(--text-muted); margin-bottom: 2px; }
+  .table td[data-label="Quem pegou"], .table td[data-label="Situação"] { grid-column: 1 / -1; }
+  .table td.stickyActions { position: absolute; top: 10px; right: 0; }
+}
