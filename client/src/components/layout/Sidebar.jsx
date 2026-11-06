@@ -161,6 +161,13 @@ function IconDots() {
   )
 }
 
+function IconBox() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 8 12 3 3 8v8l9 5 9-5V8Z" /><path d="m3 8 9 5 9-5" /><path d="M12 13v8" />
+    </svg>
+  )
+}
 function IconArchive() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -232,6 +239,8 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const companiesActive = COMPANIES_PATHS.includes(location.pathname)
   const [companiesOpen, setCompaniesOpen] = useState(companiesActive)
   const teamActive = TEAM_PATHS.includes(location.pathname)
+  const inventoryActive = location.pathname.startsWith('/inventario')
+  const [inventoryOpen, setInventoryOpen] = useState(inventoryActive)
   const [teamOpen, setTeamOpen] = useState(teamActive)
   const purchaseActive = location.pathname.startsWith('/solicitacoes-compra')
   const [purchaseMonthsOpen, setPurchaseMonthsOpen] = useState(purchaseActive)
@@ -707,6 +716,32 @@ export default function Sidebar({ mobileOpen, onClose }) {
               </NavLink>
               <NavLink to="/parceiros" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
                 <span>Parceiros</span>
+              </NavLink>
+            </div>
+          )}
+          </>
+          )}
+          {can('inventory') && (
+          <>
+          <button
+            type="button"
+            className={`${s.navGroupHeader} ${inventoryActive ? s.active : ''}`}
+            onClick={() => showLabels ? setInventoryOpen(o => !o) : navigate('/inventario/brain')}
+            aria-expanded={showLabels ? inventoryOpen : undefined}
+            aria-label={showLabels ? undefined : 'Inventário'}
+          >
+            <span className={s.navIcon}><IconBox /></span>
+            {showLabels && (
+              <>
+                <span>Inventário</span>
+                <span className={`${s.navGroupChevron} ${inventoryOpen ? s.open : ''}`}><IconChevronSmall open={inventoryOpen} /></span>
+              </>
+            )}
+          </button>
+          {showLabels && inventoryOpen && (
+            <div className={s.navSubList}>
+              <NavLink to="/inventario/brain" className={({ isActive }) => `${s.navSubItem} ${isActive ? s.active : ''}`}>
+                <span>Brain</span>
               </NavLink>
             </div>
           )}

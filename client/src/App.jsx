@@ -36,6 +36,7 @@ const TeamPerformancePage = lazyPage(() => import('./pages/TeamPerformancePage')
 const OrgChartPage = lazyPage(() => import('./pages/OrgChartPage'))
 const JourneyPage = lazyPage(() => import('./pages/JourneyPage'))
 const ShiftSchedulePage = lazyPage(() => import('./pages/ShiftSchedulePage'))
+const InventoryPage = lazyPage(() => import('./pages/InventoryPage'))
 const TeacherPortalPage = lazyPage(() => import('./pages/TeacherPortalPage'))
 const ChromebookRequestsPage = lazyPage(() => import('./pages/ChromebookRequestsPage'))
 
@@ -128,6 +129,7 @@ export default function App() {
           <Route path="time/organograma" element={<RequireModule module="team"><OrgChartPage /></RequireModule>} />
           <Route path="time/jornada" element={<RequireModule module="team"><JourneyPage /></RequireModule>} />
           <Route path="time/escala" element={<RequireModule module="team"><ShiftSchedulePage /></RequireModule>} />
+          <Route path="inventario/:kind" element={<RequireModule module="inventory"><InventoryPage /></RequireModule>} />
           <Route path="admin" element={<AdminPage />} />
         </Route>
       </Routes>

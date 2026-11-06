@@ -19,7 +19,7 @@ const AREA = {
   'purchase-requests': 'Solicitações de Compra', companies: 'Empresas', partners: 'Parceiros',
   'internet-links': 'Links de Internet', 'org-chart': 'Organograma', 'team-kudos': 'Desempenho do Time',
   vlans: 'VLANs', 'equipment-loans': 'Empréstimos', 'equipment-inventory': 'Inventário de empréstimos',
-  'room-schedule': 'Grade de salas', directory: 'Diretório', journey: 'Jornada', shifts: 'Escala', developments: 'Desenvolvimentos',
+  'room-schedule': 'Grade de salas', directory: 'Diretório', journey: 'Jornada', shifts: 'Escala', inventory: 'Inventário', developments: 'Desenvolvimentos',
   'lab-incidents': 'Incidentes Laboratórios', 'success-cases': 'Cases de Sucesso',
   'machine-standards': 'Padronização de máquinas', 'glpi-backlog': 'Backlog de Chamados',
   'glpi-total': 'Total de Chamados', 'time-entries': 'Tempo da equipe',
@@ -35,7 +35,7 @@ const SCREENS = [
   ['/solicitacoes-compra', 'Solicitações de Compra'], ['/impressoras', 'Impressoras'], ['/estoque-insumos', 'Estoque de insumos'],
   ['/emprestimo-equipamentos', 'Empréstimo de Equipamentos'], ['/empresas', 'Empresas'], ['/link-internet', 'Links de Internet'],
   ['/parceiros', 'Parceiros'], ['/time/desempenho', 'Desempenho do Time'], ['/time/organograma', 'Organograma'],
-  ['/time/jornada', 'Jornada'], ['/time/escala', 'Escala'], ['/time', 'Time'], ['/tempo', 'Tempo da equipe'], ['/metricas', 'Métricas'],
+  ['/time/jornada', 'Jornada'], ['/time/escala', 'Escala'], ['/inventario/brain', 'Inventário — Brain'], ['/time', 'Time'], ['/tempo', 'Tempo da equipe'], ['/metricas', 'Métricas'],
   ['/agenda', 'Agenda'], ['/admin', 'Administração'],
 ]
 export function screenName(path) {

@@ -37,6 +37,7 @@ import roomScheduleRoutes from './routes/roomSchedule.js'
 import directoryRoutes from './routes/directory.js'
 import journeyRoutes from './routes/journey.js'
 import shiftsRoutes from './routes/shifts.js'
+import inventoryRoutes from './routes/inventory.js'
 import liveRoutes from './routes/live.js'
 import developmentsRoutes from './routes/developments.js'
 import labIncidentsRoutes from './routes/labIncidents.js'
@@ -259,6 +260,7 @@ app.route('/api/room-schedule', roomScheduleRoutes)
 app.route('/api/directory', directoryRoutes)
 app.route('/api/journey', journeyRoutes)
 app.route('/api/shifts', shiftsRoutes)
+app.route('/api/inventory', inventoryRoutes)
 app.route('/api/developments', developmentsRoutes)
 app.route('/api/lab-incidents', labIncidentsRoutes)
 app.route('/api/success-cases', successCasesRoutes)

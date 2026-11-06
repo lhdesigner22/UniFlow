@@ -26,6 +26,7 @@ export const MODULES = [
   { key: 'loans', label: 'Empréstimo de Equipamentos', hint: 'Empréstimos, inventário e grade de salas' },
   { key: 'companies', label: 'Empresas, Parceiros e Links', hint: 'Filiais, parceiros e links de internet' },
   { key: 'incidents', label: 'Incidentes Laboratórios', hint: 'Defeitos, sinistros e ocorrências nos laboratórios' },
+  { key: 'inventory', label: 'Inventário', hint: 'Controles de patrimônio (Brain...)' },
   { key: 'teacher', label: 'Portal do Professor', hint: 'Pedir Chromebooks e abrir chamados (cargo Professor)' },
 ]
 export const MODULE_KEYS = MODULES.map(m => m.key)
@@ -44,6 +45,7 @@ const RESOURCE_MODULE = {
   'org-chart': 'team',
   journey: 'team',
   shifts: 'team', // Time → Escala
+  inventory: 'inventory', // Inventário → Brain
   'glpi-backlog': 'tickets',
   'glpi-total': 'tickets',
   kb: 'kb', // Gestão usa a mesma rota com category=gestao — ver moduleForRequest
