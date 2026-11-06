@@ -246,6 +246,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   andamento em anel (meio cheio = em andamento); alça da coluna só no hover. Cartão aberto (CardModal) refeito: conteúdo à esquerda (descrição, checklist,
   comentários, histórico recolhido) + painel de propriedades à direita (andamento em 3 anéis, coluna, prazo, prioridade, responsáveis,
   etiquetas, tempo, excluir); no celular o painel vem logo após o título.
+  **Pedidos de Chromebook** (nov/2026): total do dia por prédio (pendentes + confirmados), filtro de prédio, Confirmar/Recusar só nos
+  pendentes (filete âmbar) e "Mudar para..." no "⋯" dos decididos. **Portal do Professor**: próxima reserva em destaque no topo com a
+  situação em uma frase. **Escala**: dias seguidos no mesmo lugar = uma faixa com o nome no começo; Folga listrada.
   **Incidentes Laboratórios** refeita (out/2026): KPIs num painel, situação em abas (Pendentes = não resolvidos, Abertos, Em andamento,
   Resolvidos, Todos), lista em linhas com foto/ícone do tipo (`INCIDENT_CATEGORIES[].icon` = nome do `LineIcon`), "hoje, 08:40" e a
   gravidade como escala de 4 barras (`Severity`); detalhe com o andamento em passo a passo + "Começar atendimento", "Marcar como
