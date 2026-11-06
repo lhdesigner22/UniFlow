@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore'
 import { canEdit } from '../utils/permissions'
 import { useLiveRefresh } from '../hooks/useLiveRefresh'
 import LineIcon from '../components/common/LineIcon'
+import RowMenu from '../components/common/RowMenu'
 import s from './ChromebookRequestsPage.module.css'
 
 // Empréstimos → Pedidos de Chromebook: o que os professores pediram pelo Portal
@@ -31,6 +32,7 @@ export default function ChromebookRequestsPage() {
   const [range, setRange] = useState('upcoming')
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
+  const [building, setBuilding] = useState('all')
 
   const load = useCallback(async () => {
     try { setData((await api.get('/chromebook-requests', { params: { range } })).data); setError('') }
@@ -39,7 +41,7 @@ export default function ChromebookRequestsPage() {
   useEffect(() => { setData(null); load() }, [load])
   useLiveRefresh(['teacher', 'chromebook-requests'], load)
 
-  const rows = data?.requests || []
+  const rows = (data?.requests || []).filter(r => building === 'all' || r.building === building)
   const waiting = rows.filter(r => r.status === 'pendente').length
   const days = []
   for (const r of rows) {
@@ -60,10 +62,17 @@ export default function ChromebookRequestsPage() {
         </p>
       </header>
 
-      <div className={s.tabs} role="tablist" aria-label="Período">
-        {[['upcoming', 'Próximos'], ['past', 'Já passaram']].map(([k, label]) => (
-          <button key={k} type="button" role="tab" aria-selected={range === k} className={`${s.tab} ${range === k ? s.tabOn : ''}`} onClick={() => setRange(k)}>{label}</button>
-        ))}
+      <div className={s.toolbar}>
+        <div className={s.tabs} role="tablist" aria-label="Período">
+          {[['upcoming', 'Próximos'], ['past', 'Já passaram']].map(([k, label]) => (
+            <button key={k} type="button" role="tab" aria-selected={range === k} className={`${s.tab} ${range === k ? s.tabOn : ''}`} onClick={() => setRange(k)}>{label}</button>
+          ))}
+        </div>
+        <div className={s.chips} role="radiogroup" aria-label="Prédio">
+          {[['all', 'Todos os prédios'], ...Object.entries(BUILDINGS)].map(([k, label]) => (
+            <button key={k} type="button" role="radio" aria-checked={building === k} className={`${s.chip} ${building === k ? s.chipOn : ''}`} onClick={() => setBuilding(k)}>{label}</button>
+          ))}
+        </div>
       </div>
 
       {error && <p className={s.error} role="alert">{error}</p>}
@@ -77,13 +86,30 @@ export default function ChromebookRequestsPage() {
 
       {days.map(day => (
         <section key={day.date} className={s.day} aria-label={dayHeading(day.date, data.today)}>
-          <h2 className={s.dayTitle}>{dayHeading(day.date, data.today)}</h2>
+          <div className={s.dayHead}>
+            <h2 className={s.dayTitle}>{dayHeading(day.date, data.today)}</h2>
+            <DayTotals items={day.items} />
+          </div>
           <ul className={s.list}>
             {day.items.map(r => <RequestRow key={r.id} r={r} editable={editable && range === 'upcoming'} onChanged={load} />)}
           </ul>
         </section>
       ))}
     </div>
+  )
+}
+
+// Quantos Chromebooks o dia pede em cada prédio (confirmados + esperando) — é o
+// que a TI confere contra o que tem no armário. Recusados/cancelados não contam.
+function DayTotals({ items }) {
+  const per = {}
+  for (const r of items) if (r.status === 'pendente' || r.status === 'aprovada') per[r.building] = (per[r.building] || 0) + r.quantity
+  const list = Object.entries(per)
+  if (!list.length) return null
+  return (
+    <p className={s.totals}>
+      {list.map(([b, n]) => <span key={b}><strong>{n}</strong> no {BUILDINGS[b] || b}</span>)}
+    </p>
   )
 }
 
@@ -103,20 +129,28 @@ function RequestRow({ r, editable, onChanged }) {
   }
   const canDecide = editable && r.status !== 'cancelada'
 
+  const pending = r.status === 'pendente'
+  const place = `${BUILDINGS[r.building] || r.building}, ${r.room}`
+
   return (
-    <li className={`${s.row} ${r.status === 'cancelada' ? s.rowOff : ''}`}>
+    <li className={`${s.row} ${r.status === 'cancelada' ? s.rowOff : ''} ${pending ? s.rowPending : ''}`}>
       <span className={s.time}>{r.start_time}<small>até {r.end_time}</small></span>
+      <span className={s.qty}><strong>{r.quantity}</strong><small>Chromebook{r.quantity > 1 ? 's' : ''}</small></span>
       <span className={s.main}>
-        <span className={s.what}><strong>{r.quantity}</strong> Chromebook{r.quantity > 1 ? 's' : ''} · {BUILDINGS[r.building] || r.building}, {r.room}</span>
-        <span className={s.who}>{r.requester_name} · {r.requester_email}</span>
-        {r.notes && <span className={s.notes}>"{r.notes}"</span>}
-        {r.decision_note && <span className={s.decision}>{r.status === 'recusada' ? 'Motivo' : 'Observação'}: {r.decision_note}{r.decided_by_name ? ` — ${r.decided_by_name}` : ''}</span>}
+        <span className={s.what}>{place}</span>
+        <span className={s.who}>{r.requester_name} <a href={`mailto:${r.requester_email}`} className={s.mail}>{r.requester_email}</a></span>
+        {r.notes && <span className={s.notes}>{r.notes}</span>}
+        {r.decision_note && (
+          <span className={s.decision}>
+            {r.status === 'recusada' ? 'Recusado' : 'Confirmado'}{r.decided_by_name ? ` por ${r.decided_by_name}` : ''}: {r.decision_note}
+          </span>
+        )}
         {refusing && (
           <span className={s.refuse}>
-            <label className="label" htmlFor={`${uid}-m`}>Motivo da recusa (vai para o professor)</label>
+            <label className="label" htmlFor={`${uid}-m`}>Motivo da recusa (vai para o professor por e-mail)</label>
             <span className={s.refuseRow}>
               <input id={`${uid}-m`} value={note} onChange={e => setNote(e.target.value)} maxLength={500} placeholder="Ex.: todos os Chromebooks do G5 já estão reservados" autoFocus />
-              <button type="button" className="btn btn-sm btn-danger" disabled={busy || !note.trim()} onClick={() => decide('recusada', note)}>Recusar</button>
+              <button type="button" className="btn btn-sm btn-danger" disabled={busy || !note.trim()} onClick={() => decide('recusada', note)}>Recusar pedido</button>
               <button type="button" className="btn btn-sm btn-ghost" onClick={() => setRefusing(false)}>Voltar</button>
             </span>
           </span>
@@ -124,12 +158,19 @@ function RequestRow({ r, editable, onChanged }) {
         {err && <span className={s.error} role="alert">{err}</span>}
       </span>
       <span className={s.end}>
-        <span className={`${s.pill} ${s[st.tone]}`}>{st.label}</span>
-        {canDecide && !refusing && (
+        {pending && canDecide && !refusing ? (
           <span className={s.btns}>
-            {r.status !== 'aprovada' && <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={() => decide('aprovada')}><LineIcon name="check" size={14} /> Confirmar</button>}
-            {r.status !== 'recusada' && <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => { setNote(''); setRefusing(true) }}>Recusar</button>}
+            <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={() => decide('aprovada')}><LineIcon name="check" size={14} /> Confirmar</button>
+            <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => { setNote(''); setRefusing(true) }}>Recusar</button>
           </span>
+        ) : (
+          <span className={`${s.pill} ${s[st.tone]}`}>{st.label}</span>
+        )}
+        {!pending && canDecide && !refusing && (
+          <RowMenu name={`pedido de ${r.requester_name}`} items={[
+            r.status !== 'aprovada' && { label: 'Mudar para confirmado', icon: 'check', onClick: () => decide('aprovada') },
+            r.status !== 'recusada' && { label: 'Mudar para recusado', icon: 'close', onClick: () => { setNote(''); setRefusing(true) } },
+          ]} />
         )}
       </span>
     </li>
