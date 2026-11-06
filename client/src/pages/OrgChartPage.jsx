@@ -105,6 +105,8 @@ function NodeBox({ node, isRoot, canEdit, onAddChild, onEdit, onDelete, onLinkCl
       style={style}
       className={`${s.node} ${isRoot ? s.nodeRoot : ''} ${isLinking ? s.nodeLinking : ''} ${isDragging ? s.nodeDragging : ''}`}
       onMouseDown={canEdit ? handleMouseDown : undefined}
+      tabIndex={canEdit ? 0 : undefined}
+      aria-label={canEdit ? `${node.name}${node.role ? `, ${node.role}` : ''}: toque para ver as ações` : undefined}
     >
       <span className={s.initials} style={{ '--hue': avatarColor(node.id) }} aria-hidden="true">{initials(node.name)}</span>
       <span className={s.nodeText}>

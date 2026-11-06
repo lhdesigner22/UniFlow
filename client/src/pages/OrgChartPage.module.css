@@ -79,7 +79,7 @@
 .nodeActions button:hover { background: var(--surface-2); color: var(--text); }
 .nodeActions .actOn { color: var(--info-text); background: color-mix(in srgb, var(--brand) 14%, transparent); }
 .nodeActions .actDanger:hover { color: var(--danger-text); }
-@media (hover: none) { .nodeActions { opacity: 1; pointer-events: auto; } }
+/* no toque não há "passar o mouse": as ações aparecem só na caixa tocada (foco), e não em todas por cima dos nomes */
 
 /* Linhas: <svg> por cima da árvore, dentro da prancheta (acompanha o scroll).
    Hierarquia = sólida; ligação sem hierarquia = tracejada; linha solta = azul. */

@@ -299,13 +299,12 @@ export default function TeamPerformancePage() {
                     <Avatar id={r.user_id} name={r.user_name} photo={r.user_avatar} size={30} />
                     <div className={s.postBody}>
                       <p className={s.postHead}>
-                        <strong>{r.user_name}</strong> recebeu um reconhecimento
+                        <span className={s.postWho}><strong>{r.user_name}</strong>, por {r.given_by_name}</span>
                         <span className={s.postWhen}>{relTime(r.created_at)}</span>
                       </p>
                       {r.comment
-                        ? <blockquote className={s.postQuote}>{r.comment}</blockquote>
-                        : <p className={s.postNoComment}>Sem motivo escrito.</p>}
-                      <p className={s.postBy}>por {r.given_by_name}</p>
+                        ? <p className={s.postQuote}>{r.comment}</p>
+                        : <p className={s.postNoComment}>Reconhecimento sem motivo escrito.</p>}
                     </div>
                   </li>
                 ))}

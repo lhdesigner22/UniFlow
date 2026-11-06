@@ -240,13 +240,25 @@ export default function JourneyPage() {
   const [showPicker, setShowPicker] = useState(false)
   const canEdit = user?.system_role === 'super_admin'
 
+  // Quem abrir: a última pessoa vista neste aparelho; senão a própria jornada;
+  // senão quem já tem marcos (abrir numa jornada vazia parecia tela quebrada).
+  const pick = list => {
+    let last = null
+    try { last = localStorage.getItem('uniflow-journey-last') } catch { /* sem storage */ }
+    return (list.find(p => p.user_id === last) || list.find(p => p.user_id === user?.id)
+      || list.find(p => p.events_count > 0) || list[0])?.user_id || null
+  }
+  useEffect(() => {
+    if (!selectedId) return
+    try { localStorage.setItem('uniflow-journey-last', selectedId) } catch { /* sem storage */ }
+  }, [selectedId])
+
   useEffect(() => {
     api.get('/journey/members')
       .then(r => {
         const list = r.data || []
         setPeople(list)
-        // Abre a própria jornada se a pessoa estiver no quadro; senão a primeira.
-        setSelectedId((list.find(p => p.user_id === user?.id) || list[0])?.user_id || null)
+        setSelectedId(pick(list))
       })
       .catch(() => setPeople([]))
   }, [])
@@ -255,7 +267,7 @@ export default function JourneyPage() {
     api.get('/journey/members').then(r => {
       const list = r.data || []
       setPeople(list)
-      setSelectedId(cur => (keepSelected && list.some(p => p.user_id === cur)) ? cur : (list.find(p => p.user_id === user?.id) || list[0])?.user_id || null)
+      setSelectedId(cur => (keepSelected && list.some(p => p.user_id === cur)) ? cur : pick(list))
     })
 
   useLiveRefresh(['journey'], () => { load().catch(() => {}) }) // lista de pessoas mudou em outro aparelho
@@ -316,7 +328,7 @@ export default function JourneyPage() {
                 className={`${s.chip} ${p.user_id === selectedId ? s.chipOn : ''}`} onClick={() => setSelectedId(p.user_id)}>
                 <Avatar id={p.user_id} name={p.user_name} photo={p.user_avatar} size={26} />
                 <span className={s.chipName}>{p.user_name}</span>
-                <span className={s.chipCount}>{p.events_count || 0}</span>
+                {p.events_count > 0 && <span className={s.chipCount} aria-label={`${p.events_count} marcos`}>{p.events_count}</span>}
               </button>
             ))}
           </nav>
