@@ -117,3 +117,10 @@
 :global([data-theme="dark"]) .tableCard { box-shadow: 0 1px 0 rgba(255,255,255,.04) inset; }
 .viewToggle button { font-weight: 500; }
 .viewToggle .viewOn { background: var(--surface); color: var(--text); box-shadow: 0 0 0 1px var(--border2); }
+
+/* atalhos de período (Este mês, 3 meses, Este ano, Tudo, Outro período) */
+.presets { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+.preset { border: 0; background: none; min-height: 30px; padding: 0 13px; border-radius: 999px; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.preset:hover { color: var(--text); }
+.presetOn { background: var(--surface-2); color: var(--text); }
+.periodBar > .preset { border: 1px solid var(--border); }

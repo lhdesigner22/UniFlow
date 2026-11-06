@@ -105,6 +105,22 @@ function computeOriginStats(tickets) {
 // de chamados já filtrada — reaproveitado tanto pelo sync (todo o período)
 // quanto pela rota de filtro por data (ver glpiTotal.js), que recalcula isso
 // na hora sobre um subconjunto, em JS puro, sem bater no GLPI de novo.
+const MONTH_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+function computeFlowByMonth(tickets, months = 12) {
+  const created = {}, resolved = {}
+  for (const t of tickets) {
+    const c = String(t.date_creation || '').slice(0, 7)
+    if (c.length === 7) created[c] = (created[c] || 0) + 1
+    const code = Number(t.status)
+    const r = String(t.date_mod || '').slice(0, 7)
+    if ((code === RESOLVED_CODE || code === CLOSED_CODE) && r.length === 7) resolved[r] = (resolved[r] || 0) + 1
+  }
+  return [...new Set([...Object.keys(created), ...Object.keys(resolved)])].sort().slice(-months).map(key => {
+    const [y, m] = key.split('-')
+    return { month: key, label: `${MONTH_SHORT[Number(m) - 1] || m}/${y.slice(2)}`, created: created[key] || 0, resolved: resolved[key] || 0 }
+  })
+}
+
 export function buildTotalSnapshot(tickets, assigneeNamesByTicket) {
   const base = computeBacklogSnapshot({ tickets, assigneeNamesByTicket })
   const resolution = computeResolutionStats(tickets)
@@ -113,6 +129,7 @@ export function buildTotalSnapshot(tickets, assigneeNamesByTicket) {
     totalTickets: tickets.length,
     ...resolution,
     ...computeOriginStats(tickets),
+    flowByMonth: computeFlowByMonth(tickets),
     updatedAt: new Date().toISOString(),
   }
 }

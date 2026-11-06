@@ -24,7 +24,7 @@ const AGE_COLORS = { '0-7 dias': '#22C55E', '8-30 dias': '#F59E0B', '31-90 dias'
 // zeradas — agora só aparecem no SERVICE DESK ou se a fila tiver chamado.
 const KPI_DEFS = [
   { key: 'novos', label: 'Novos', codes: ['1'], calc: b => b.byStatus['1'] || 0 },
-  { key: 'andamento', label: 'Em andamento / Aguardando', codes: ['2', '3'], calc: b => (b.byStatus['2'] || 0) + (b.byStatus['3'] || 0) },
+  { key: 'andamento', label: 'Em andamento', codes: ['2', '3'], calc: b => (b.byStatus['2'] || 0) + (b.byStatus['3'] || 0) },
   { key: 'pendentes', label: 'Pendentes', codes: ['4'], calc: b => b.byStatus['4'] || 0 },
   { key: 'compras', label: 'Compras', codes: ['10'], queue: true, calc: b => b.byStatus['10'] || 0 },
   { key: 'manutencao', label: 'Manutenção', codes: ['13'], queue: true, calc: b => b.byStatus['13'] || 0 },
@@ -40,6 +40,7 @@ const OLD_BUCKETS = ['31-90 dias', '90+ dias']
 const PRIORITY_LABEL = { 1: 'Muito baixa', 2: 'Baixa', 3: 'Média', 4: 'Alta', 5: 'Muito alta', 6: 'Crítica' }
 const TECH_COLOR = { green: 'var(--success)', amber: 'var(--warning)', red: 'var(--danger)' }
 const AGE_BUCKETS_ORDER = ['0-7 dias', '8-30 dias', '31-90 dias', '90+ dias']
+const fmtInt = n => Number(n || 0).toLocaleString('pt-BR')
 
 function ageBucket(dateCreation) {
   if (!dateCreation) return null
@@ -208,81 +209,55 @@ export default function BacklogPage() {
         </div>
       ) : (
         <>
-          {/* ── KPIs (clicáveis) ── */}
-          <div className={s.kpiRow}>
-            <button
-              type="button"
-              className={`${s.kpiCard} ${s.kpiTotal} ${s.kpiClickable} ${!hasActiveFilter ? s.kpiActive : ''}`}
-              onClick={clearFilters}
-              title="Limpar filtros"
-            >
-              <span className={s.kpiNumber}>{snapshot.totalOpen}</span>
-              <span className={s.kpiLabel}>Total em aberto</span>
-            </button>
-            {kpis.map(k => (
-              <button
-                key={k.key}
-                type="button"
-                className={`${s.kpiCard} ${s.kpiClickable} ${statusFilter === k.codes.join(',') ? s.kpiActive : ''}`}
-                onClick={() => applyStatus(k.codes.join(','))}
-              >
-                <span className={s.kpiNumber}>{k.calc(snapshot)}</span>
-                <span className={s.kpiLabel}>{k.label}</span>
-              </button>
-            ))}
-            <button
-              type="button"
-              className={`${s.kpiCard} ${s.kpiWarn} ${s.kpiClickable} ${techFilter === '__none__' ? s.kpiActive : ''}`}
-              onClick={() => applyTech('__none__')}
-            >
-              <span className={s.kpiNumber}>{snapshot.semTecnico}</span>
-              <span className={s.kpiLabel}>Sem técnico atribuído</span>
-            </button>
-            {snapshot.highPriority !== undefined && (
-              <button
-                type="button"
-                className={`${s.kpiCard} ${s.kpiWarn} ${s.kpiClickable} ${priorityFilter === 'alta' ? s.kpiActive : ''}`}
-                onClick={() => applyPriority('alta')}
-                title="Prioridade Alta, Muito alta ou Crítica"
-              >
-                <span className={s.kpiNumber}>{snapshot.highPriority}</span>
-                <span className={s.kpiLabel}>Alta prioridade</span>
-              </button>
+          {/* ── Números em três blocos (clicáveis: filtram a tabela) ── */}
+          <div className={s.kpiGroups}>
+            <section className={s.kpiGroup} aria-label="Situação">
+              <h3 className={s.kpiGroupTitle}>Situação</h3>
+              <div className={s.kpiItems}>
+                <button type="button" className={`${s.kpiItem} ${s.kpiItemTotal} ${!hasActiveFilter ? s.kpiActive : ''}`} onClick={clearFilters} title="Limpar filtros">
+                  <span className={s.kpiNumber}>{fmtInt(snapshot.totalOpen)}</span>
+                  <span className={s.kpiLabel}>Em aberto</span>
+                </button>
+                {kpis.filter(k => !k.queue).map(k => (
+                  <button key={k.key} type="button" className={`${s.kpiItem} ${statusFilter === k.codes.join(',') ? s.kpiActive : ''}`} onClick={() => applyStatus(k.codes.join(','))}>
+                    <span className={s.kpiNumber}>{fmtInt(k.calc(snapshot))}</span>
+                    <span className={s.kpiLabel}>{k.label}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+            {kpis.some(k => k.queue) && (
+              <section className={s.kpiGroup} aria-label="Filas da TI">
+                <h3 className={s.kpiGroupTitle}>Filas da TI</h3>
+                <div className={s.kpiItems}>
+                  {kpis.filter(k => k.queue).map(k => {
+                    const n = k.calc(snapshot)
+                    return (
+                      <button key={k.key} type="button" className={`${s.kpiItem} ${n === 0 ? s.kpiZero : ''} ${statusFilter === k.codes.join(',') ? s.kpiActive : ''}`} onClick={() => applyStatus(k.codes.join(','))}>
+                        <span className={s.kpiNumber}>{fmtInt(n)}</span>
+                        <span className={s.kpiLabel}>{k.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
             )}
-            {snapshot.olderThan30 !== undefined && (
-              <button
-                type="button"
-                className={`${s.kpiCard} ${s.kpiWarn} ${s.kpiClickable} ${ageFilter === '__old__' ? s.kpiActive : ''}`}
-                onClick={() => applyAge('__old__')}
-                title="Abertos há mais de 30 dias"
-              >
-                <span className={s.kpiNumber}>{snapshot.olderThan30}</span>
-                <span className={s.kpiLabel}>Parados há +30 dias</span>
-              </button>
-            )}
+            <section className={s.kpiGroup} aria-label="Precisa de atenção">
+              <h3 className={s.kpiGroupTitle}>Precisa de atenção</h3>
+              <div className={s.kpiItems}>
+                {[
+                  { n: snapshot.semTecnico, label: 'Sem técnico', on: techFilter === '__none__', go: () => applyTech('__none__'), title: 'Sem técnico atribuído' },
+                  snapshot.highPriority !== undefined && { n: snapshot.highPriority, label: 'Alta prioridade', on: priorityFilter === 'alta', go: () => applyPriority('alta'), title: 'Prioridade Alta, Muito alta ou Crítica' },
+                  snapshot.olderThan30 !== undefined && { n: snapshot.olderThan30, label: 'Parados há +30 dias', on: ageFilter === '__old__', go: () => applyAge('__old__'), title: 'Abertos há mais de 30 dias' },
+                ].filter(Boolean).map(a => (
+                  <button key={a.label} type="button" title={a.title} className={`${s.kpiItem} ${a.n > 0 ? s.kpiAlert : s.kpiZero} ${a.on ? s.kpiActive : ''}`} onClick={a.go}>
+                    <span className={s.kpiNumber}>{fmtInt(a.n)}</span>
+                    <span className={s.kpiLabel}>{a.label}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
-
-          {/* ── Distribuição por status (largura cheia — cresce com o nº de categorias) ── */}
-          <Reveal className={s.chartCard}>
-            <h3>Distribuição por status</h3>
-            <ResponsiveContainer width="100%" height={Math.max(160, statusPieData.length * 32)}>
-              <BarChart data={statusPieData} layout="vertical" margin={{ top: 5, right: 24, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" width={100} tick={{ fill: 'var(--text)', fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: 'var(--text)', fontWeight: 600, marginBottom: 4 }}
-                  itemStyle={{ color: 'var(--text)' }}
-                />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]} cursor="pointer" onClick={d => d?.payload && applyStatus(d.payload.code)}>
-                  {statusPieData.map(d => (
-                    <Cell key={d.code} fill={STATUS_COLORS[d.code] || '#94A3B8'} opacity={statusFilter && !statusFilter.split(',').includes(d.code) ? 0.35 : 1} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </Reveal>
 
           {/* ── Mês a mês + idade do backlog ── */}
           <div className={s.chartsGrid}>

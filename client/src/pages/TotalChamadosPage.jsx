@@ -19,6 +19,10 @@ const TECH_COLOR = { green: 'var(--success)', amber: 'var(--warning)', red: 'var
 // usado pro clique na barra "Em aberto" do resumo filtrar a tabela.
 const OPEN_STATUS_CODES = ['1', '2', '3', '4', '10', '13', '14', '15', '16', '17']
 
+const PERIODS = [['month', 'Este mês'], ['3m', '3 meses'], ['year', 'Este ano'], ['all', 'Tudo']]
+const fmtInt = n => Number(n || 0).toLocaleString('pt-BR')
+const fmtDec = n => Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+
 function fmtGlpiDate(raw) {
   if (!raw) return '—'
   const [date, time] = raw.split(' ')
@@ -90,7 +94,7 @@ function OriginChart({ snapshot }) {
       </div>
       <p className={s.chartNote}>
         {view === 'ranking'
-          ? 'Quem mais abriu chamado no período selecionado (use De/Até para ver um mês ou o ano).'
+          ? 'Quem mais abriu chamado no período selecionado (use o período acima para ver um mês ou o ano).'
           : `As ${series.filter(n => n !== 'Outras').length} origens que mais abrem chamado, mês a mês (últimos 12 meses com dado).`}
         {sectorsOnly && hiddenCount > 0 && ` Escondidos: ${hiddenCount.toLocaleString('pt-BR')} chamados de Helpdesk, E-Mail e Sem origem.`}
       </p>
@@ -146,6 +150,27 @@ export default function TotalChamadosPage() {
   // resolução etc.) só com os chamados abertos dentro do intervalo.
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [customOpen, setCustomOpen] = useState(false)
+  // atalhos: Este mês, 3 meses, Este ano, Tudo (datas locais — toISOString viraria o dia seguinte depois das 21h)
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const choosePeriod = key => {
+    const now = new Date()
+    setCustomOpen(false)
+    if (key === 'all') { setDateFrom(''); setDateTo(''); return }
+    const from = key === 'month' ? new Date(now.getFullYear(), now.getMonth(), 1)
+      : key === '3m' ? new Date(now.getFullYear(), now.getMonth() - 2, 1)
+      : new Date(now.getFullYear(), 0, 1)
+    setDateFrom(iso(from)); setDateTo(iso(now))
+  }
+  const periodKey = (() => {
+    if (!dateFrom && !dateTo) return 'all'
+    const now = new Date(), today = iso(now)
+    if (dateTo !== today) return 'custom'
+    if (dateFrom === iso(new Date(now.getFullYear(), now.getMonth(), 1))) return 'month'
+    if (dateFrom === iso(new Date(now.getFullYear(), now.getMonth() - 2, 1))) return '3m'
+    if (dateFrom === iso(new Date(now.getFullYear(), 0, 1))) return 'year'
+    return 'custom'
+  })()
   const tableRef = useRef(null)
   // Entidade do GLPI: o departamento da pessoa define qual aparece; quem enxerga todos
   // os departamentos pode escolher (entityChoice vazio = a entidade padrão do servidor).
@@ -204,7 +229,7 @@ export default function TotalChamadosPage() {
   const statusBarData = useMemo(() => {
     if (!snapshot) return []
     return Object.entries(snapshot.byStatus)
-      .filter(([, count]) => count > 0)
+      .filter(([code, count]) => count > 0 && code !== '5' && code !== '6')
       .map(([code, count]) => ({ code, name: snapshot.statusLabels[code] || code, value: count }))
       .sort((a, b) => b.value - a.value)
   }, [snapshot])
@@ -219,6 +244,9 @@ export default function TotalChamadosPage() {
   }, [snapshot])
 
   const monthlyBarData = useMemo(() => snapshot?.monthlyTrend || [], [snapshot])
+  // entrada x saída: o resumo novo traz criados e resolvidos; o antigo (até o próximo ciclo) só os criados
+  const flowData = useMemo(() => snapshot?.flowByMonth || monthlyBarData.map(d => ({ ...d, created: d.count })), [snapshot, monthlyBarData])
+  const hasResolvedFlow = !!snapshot?.flowByMonth
 
   const filteredTickets = useMemo(() => {
     if (!snapshot) return []
@@ -264,6 +292,12 @@ export default function TotalChamadosPage() {
 
       {/* ── Período — filtra TODOS os KPIs/gráficos, não só a tabela ── */}
       <div className={s.periodBar}>
+        <div className={s.presets} role="group" aria-label="Período">
+          {PERIODS.map(([key, label]) => (
+            <button key={key} type="button" aria-pressed={periodKey === key} className={`${s.preset} ${periodKey === key ? s.presetOn : ''}`} onClick={() => choosePeriod(key)}>{label}</button>
+          ))}
+        </div>
+        {(customOpen || periodKey === 'custom') && <>
         <label className={s.smallLabel}>
           De
           <input type="date" value={dateFrom} max={dateTo || undefined} onChange={e => setDateFrom(e.target.value)} />
@@ -272,9 +306,8 @@ export default function TotalChamadosPage() {
           Até
           <input type="date" value={dateTo} min={dateFrom || undefined} onChange={e => setDateTo(e.target.value)} />
         </label>
-        {(dateFrom || dateTo) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setDateFrom(''); setDateTo('') }}>✕ Ver todo o período</button>
-        )}
+        </>}
+        {!customOpen && periodKey !== 'custom' && <button type="button" className={s.preset} onClick={() => setCustomOpen(true)}>Outro período</button>}
         {snapshot?.filtered && <span className={s.periodNote}>Mostrando só chamados abertos nesse período</span>}
       </div>
 
@@ -295,46 +328,39 @@ export default function TotalChamadosPage() {
               onClick={clearFilters}
               title="Limpar filtros"
             >
-              <span className={s.kpiNumber}>{snapshot.totalTickets}</span>
+              <span className={s.kpiNumber}>{fmtInt(snapshot.totalTickets)}</span>
               <span className={s.kpiLabel}>Total de chamados</span>
             </button>
             <div className={`${s.kpiCard} ${s.kpiGood}`}>
-              <span className={s.kpiNumber}>{snapshot.resolutionRate}%</span>
+              <span className={s.kpiNumber}>{fmtDec(snapshot.resolutionRate)}%</span>
               <span className={s.kpiLabel}>Taxa de resolução</span>
             </div>
             <div className={s.kpiCard}>
-              <span className={s.kpiNumber}>{snapshot.avgResolutionDays ?? '—'}</span>
-              <span className={s.kpiLabel}>Dias médios até resolver</span>
+              <span className={s.kpiNumber}>{snapshot.avgResolutionDays == null ? '—' : fmtDec(snapshot.avgResolutionDays)}</span>
+              <span className={s.kpiLabel}>Dias, em média, até resolver</span>
             </div>
             <button
               type="button"
-              className={`${s.kpiCard} ${s.kpiClickable} ${statusFilter === '5' ? s.kpiActive : ''}`}
-              onClick={() => applyStatus('5')}
+              className={`${s.kpiCard} ${s.kpiClickable} ${statusFilter === '5,6' ? s.kpiActive : ''}`}
+              onClick={() => applyStatus('5,6')}
             >
-              <span className={s.kpiNumber}>{snapshot.resolvedCount}</span>
-              <span className={s.kpiLabel}>Resolvidos</span>
-            </button>
-            <button
-              type="button"
-              className={`${s.kpiCard} ${s.kpiClickable} ${statusFilter === '6' ? s.kpiActive : ''}`}
-              onClick={() => applyStatus('6')}
-            >
-              <span className={s.kpiNumber}>{snapshot.closedCount}</span>
-              <span className={s.kpiLabel}>Fechados</span>
+              <span className={s.kpiNumber}>{fmtInt((snapshot.resolvedCount || 0) + (snapshot.closedCount || 0))}</span>
+              <span className={s.kpiLabel}>Resolvidos ou fechados</span>
             </button>
             <button
               type="button"
               className={`${s.kpiCard} ${s.kpiWarn} ${s.kpiClickable} ${statusFilter === OPEN_STATUS_CODES.join(',') ? s.kpiActive : ''}`}
               onClick={() => applyStatus(OPEN_STATUS_CODES.join(','))}
             >
-              <span className={s.kpiNumber}>{snapshot.openCount}</span>
+              <span className={s.kpiNumber}>{fmtInt(snapshot.openCount)}</span>
               <span className={s.kpiLabel}>Ainda em aberto</span>
             </button>
           </div>
 
           {/* ── Distribuição por status (largura cheia — cresce com o nº de categorias) ── */}
           <Reveal className={s.chartCard}>
-            <h3>Distribuição por status</h3>
+            <h3>Em aberto por status</h3>
+            <p className={s.chartNote}>Os resolvidos e fechados ficam de fora: eles são quase todos e escondiam o resto.</p>
             <ResponsiveContainer width="100%" height={Math.max(160, statusBarData.length * 32)}>
               <BarChart data={statusBarData} layout="vertical" margin={{ top: 5, right: 24, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" horizontal={false} />
@@ -354,58 +380,35 @@ export default function TotalChamadosPage() {
             </ResponsiveContainer>
           </Reveal>
 
-          {/* ── Mês a mês + resumo aberto/resolvido/fechado ── */}
-          <div className={s.chartsGrid}>
-            <Reveal className={s.chartCard}>
-              <h3>Chamados criados por mês</h3>
-              <p className={s.chartNote}>Volume histórico, últimos meses com dado.</p>
-              {monthlyBarData.length === 0 ? (
-                <p className={s.chartEmpty}>Sem dados suficientes ainda.</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={monthlyBarData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
-                    <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                    <Tooltip
-                      contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
-                      labelStyle={{ color: 'var(--text)', fontWeight: 600, marginBottom: 4 }}
-                      itemStyle={{ color: 'var(--text)' }}
-                      formatter={v => [`${v} chamado(s)`, 'Criados']}
-                    />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]} cursor="pointer" onClick={d => d?.payload && applyMonth(d.payload.month)}>
-                      {monthlyBarData.map(d => (
-                        <Cell key={d.month} fill="var(--brand)" opacity={monthFilter && monthFilter !== d.month ? 0.35 : 1} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </Reveal>
-
-            <Reveal delay={80} className={s.chartCard}>
-              <h3>Resumo: aberto x finalizado</h3>
-              <p className={s.chartNote}>Todos os chamados da entidade no período selecionado.</p>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={summaryBarData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" />
-                  <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                  <YAxis allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+          {/* ── Entrada x saída: criados e resolvidos em cada mês ── */}
+          <Reveal className={s.chartCard}>
+            <h3>Entrada x saída por mês</h3>
+            <p className={s.chartNote}>{hasResolvedFlow
+              ? 'Chamados criados e resolvidos em cada mês. Quando a barra verde fica abaixo da azul, o time está acumulando. Clique num mês para filtrar a tabela pelos criados nele.'
+              : 'Chamados criados em cada mês. Os resolvidos aparecem depois da próxima atualização do GLPI.'}</p>
+            {flowData.length === 0 ? (
+              <p className={s.chartEmpty}>Sem dados suficientes ainda.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={flowData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }} barGap={2}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} tickFormatter={fmtInt} />
                   <Tooltip
                     contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border2)', borderRadius: 8, fontSize: 12 }}
                     labelStyle={{ color: 'var(--text)', fontWeight: 600, marginBottom: 4 }}
                     itemStyle={{ color: 'var(--text)' }}
-                    formatter={v => [`${v} chamado(s)`, 'Quantidade']}
+                    formatter={(v, name) => [`${fmtInt(v)} chamado(s)`, name === 'created' ? 'Criados' : 'Resolvidos']}
                   />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]} cursor="pointer" onClick={d => d?.payload && applyStatus(d.payload.codes)}>
-                    {summaryBarData.map(d => (
-                      <Cell key={d.key} fill={d.color} opacity={statusFilter && statusFilter !== d.codes ? 0.35 : 1} />
-                    ))}
+                  <Legend formatter={v => (v === 'created' ? 'Criados' : 'Resolvidos')} wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="created" fill="var(--brand)" radius={[4, 4, 0, 0]} cursor="pointer" onClick={d => d?.payload && applyMonth(d.payload.month)}>
+                    {flowData.map(d => <Cell key={d.month} opacity={monthFilter && monthFilter !== d.month ? 0.35 : 1} />)}
                   </Bar>
+                  {hasResolvedFlow && <Bar dataKey="resolved" fill="var(--success)" radius={[4, 4, 0, 0]} />}
                 </BarChart>
               </ResponsiveContainer>
-            </Reveal>
-          </div>
+            )}
+          </Reveal>
 
           {/* ── Origem da requisição (campo 9 do GLPI): quem mais abre chamado ── */}
           <OriginChart snapshot={snapshot} />
