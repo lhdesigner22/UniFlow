@@ -333,17 +333,12 @@ export default function ShiftSchedulePage() {
                           {p.role_title && <span className={s.pMeta}>{p.role_title}</span>}
                           {p.hours && <span className={s.pHours}><LineIcon name="clock" />{p.hours}</span>}
                         </th>
-                        {days.map((d, i) => {
-                          // dias seguidos no mesmo lugar viram uma faixa só; o nome aparece no começo da faixa
-                          const key = cells.get(`${p.id}|${d.iso}`)
-                          const st = STATUS[key]
-                          const same = j => j >= 0 && j < days.length && key && cells.get(`${p.id}|${days[j].iso}`) === key
-                          const start = !same(i - 1), end = !same(i + 1)
-                          let run = 1
-                          while (start && same(i + run)) run++
-                          const text = st && start ? (run >= 2 ? st.label : st.short) : ''
+                        {days.map(d => {
+                          // um bloco por dia, com a sigla do lugar
+                          const st = STATUS[cells.get(`${p.id}|${d.iso}`)]
+                          const text = st ? st.short : ''
                           const label = `${p.name}, ${dayLong(d.iso)}: ${st ? st.label : 'não marcado'}`
-                          const cls = `${s.mark} ${st ? s[st.cls] : s.blank} ${st && start ? s.runStart : ''} ${st && end ? s.runEnd : ''}`
+                          const cls = `${s.mark} ${st ? s[st.cls] : s.blank}`
                           return (
                             <td key={d.iso} className={`${s.cell} ${d.weekend ? s.weekend : ''} ${d.iso === selectedDay ? s.selCol : ''}`}>
                               {editing ? (
