@@ -42,7 +42,14 @@ step('Conferindo produção')
 // o 1º script do index.html (o nome muda com a config do Vite: index-*, main-*...)
 const SCRIPT = /assets\/[\w-]+\.js/
 const local = fs.readFileSync(path.join(ROOT, 'client', 'dist', 'index.html'), 'utf8').match(SCRIPT)?.[0]
-const prod = (await (await fetch(`${PROD_URL}/?v=${Date.now()}`)).text()).match(SCRIPT)?.[0]
+// a Cloudflare leva alguns segundos para servir a versão nova em todo lugar:
+// tenta por até ~40 s antes de acusar (antes falhava à toa e levava a publicar de novo)
+let prod
+for (let i = 0; i < 8; i++) {
+  prod = (await (await fetch(`${PROD_URL}/?v=${Date.now()}`)).text()).match(SCRIPT)?.[0]
+  if (local && local === prod) break
+  await new Promise(r => setTimeout(r, 5000))
+}
 if (!local || local !== prod) fail(`produção ainda não serve a versão nova (local ${local}, produção ${prod}) — confira em alguns segundos`)
 console.log(`✔ no ar: ${PROD_URL} (${prod})`)
 console.log('\nLembrete: avise para fechar e reabrir a aba (o app guarda a versão antiga).')
