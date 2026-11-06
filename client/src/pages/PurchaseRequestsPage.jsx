@@ -17,6 +17,7 @@ import s from './PurchaseRequestsPage.module.css'
 import DepartmentSelect from '../components/common/DepartmentSelect'
 import { defaultDepartment } from '../store/departmentStore'
 import { safeHref } from '../utils/safeHref'
+import RowMenu from '../components/common/RowMenu'
 import LineIcon from '../components/common/LineIcon'
 
 const STATUSES = [
@@ -414,13 +415,15 @@ export default function PurchaseRequestsPage() {
     <div className={s.page}>
       <div className={s.header}>
         <div>
-          <h1 className={s.title}>Solicitação de Compra — {monthFilter ? monthLabel(monthFilter) : 'Todos os meses'}</h1>
-          <p className={s.sub}>Itens pedidos, aprovador, valores e status — do pedido até a entrega.</p>
+          <h1 className={s.title}>Solicitações de compra</h1>
+          <p className={s.sub}>{monthFilter ? monthLabel(monthFilter) : 'Todos os meses'}: o que foi pedido, quem precisa aprovar e em que pé está.</p>
         </div>
         <div className={s.headerRight}>
-          <ExportXlsxButton onExport={exportXlsx} />
-          <ExportXlsxButton onExport={exportApprovedXlsx} label="Excel só aprovados" />
-          {writable && <button className="btn btn-primary" onClick={() => setEditing({})}>+ Nova solicitação</button>}
+          <div className={s.excelGroup} role="group" aria-label="Baixar Excel">
+            <ExportXlsxButton onExport={exportXlsx} label="Excel" className={s.excelBtn} />
+            <ExportXlsxButton onExport={exportApprovedXlsx} label="Só aprovados" className={s.excelBtn} />
+          </div>
+          {writable && <button className="btn btn-primary" onClick={() => setEditing({})}><LineIcon name="plus" /> Nova solicitação</button>}
         </div>
       </div>
 
@@ -469,10 +472,11 @@ export default function PurchaseRequestsPage() {
             <table className={s.table}>
               <thead>
                 <tr>
-                  <th>Mês</th><th>Item</th><th>Chamado</th><th>Departamento / Unidade</th>
-                  <th>Qtd</th><th>Vlr. unit.</th><th>Vlr. total</th>
-                  <th>Link</th><th>Observação</th><th>Aprovador</th>
-                  <th className={s.stickyStatus}>Status</th><th className={s.stickyActions}>Ações</th>
+                  {!monthFilter && <th>Mês</th>}
+                  <th>Item</th><th>Departamento</th>
+                  <th className={s.num}>Qtd</th><th className={s.num}>Unitário</th><th className={s.num}>Total</th>
+                  <th>Aprovação</th>
+                  <th className={s.stickyStatus}>Situação</th><th className={s.stickyActions}><span className="sr-only">Ações</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -480,44 +484,52 @@ export default function PurchaseRequestsPage() {
                   const meta = STATUSES.find(st => st.key === r.status) || STATUSES[0]
                   const myPending = r.my_decision === 'pending' && !['enviada_ao_gestor', 'comprado', 'entregue'].includes(r.status)
                   const manualOptions = MANUAL_STEPS[r.status]
+                  const approved = r.approvers.filter(a => a.decision === 'approved').length
+                  const rejected = r.approvers.find(a => a.decision === 'rejected')
+                  const waiting = r.approvers.filter(a => !a.decision || a.decision === 'pending')
+                  const first = n => String(n || '').split(' ')[0]
+                  const approvalText = rejected ? `${first(rejected.user_name)} reprovou`
+                    : waiting.length === 0 ? (r.approvers.length ? 'Todos aprovaram' : '—')
+                    : `Esperando ${waiting.slice(0, 2).map(a => first(a.user_name)).join(' e ')}${waiting.length > 2 ? ` e mais ${waiting.length - 2}` : ''}`
                   return (
                     <tr key={r.id}>
-                      <td className={s.mono}>{monthLabel(r.reference_month)}</td>
+                      {!monthFilter && <td className={s.muted} data-label="Mês">{monthLabel(r.reference_month)}</td>}
                       <td className={s.itemCell}>
                         <span className={s.itemName} title={r.item_name}>{r.item_name}</span>
                         {r.description && <span className={s.itemDesc} title={r.description}>{r.description}</span>}
+                        {(r.ticket_number || r.link_url || r.notes) && (
+                          <span className={s.itemExtras}>
+                            {r.ticket_number && <a href={`${GLPI_BASE_URL}/front/ticket.form.php?id=${r.ticket_number}`} target="_blank" rel="noreferrer">Chamado #{r.ticket_number}</a>}
+                            {r.link_url && <a href={safeHref(r.link_url)} target="_blank" rel="noreferrer" title={r.link_url}><LineIcon name="link" size={12} /> Link</a>}
+                            {r.notes && <span title={r.notes}>Obs.: {r.notes}</span>}
+                          </span>
+                        )}
                       </td>
-                      <td className={s.mono}>
-                        {r.ticket_number
-                          ? <a href={`${GLPI_BASE_URL}/front/ticket.form.php?id=${r.ticket_number}`} target="_blank" rel="noreferrer">#{r.ticket_number}</a>
-                          : '—'}
-                      </td>
-                      <td className={s.itemCell}>
-                        <span className={s.itemName}>{r.department || '—'}</span>
+                      <td className={s.itemCell} data-label="Departamento">
+                        <span>{r.department || '—'}</span>
                         {r.location && <span className={s.itemDesc}>{r.location}</span>}
                       </td>
-                      <td className={s.mono}>{r.quantity}</td>
-                      <td className={s.mono}>{fmtMoney(r.unit_price)}</td>
-                      <td className={s.mono}>{fmtMoney(r.quantity * r.unit_price)}</td>
-                      <td className={s.linkCell}>
-                        {r.link_url
-                          ? <a className={s.cardLink} href={safeHref(r.link_url)} target="_blank" rel="noreferrer" title={r.link_url}><LineIcon name="link" /></a>
-                          : '—'}
-                      </td>
-                      <td className={s.descCell} title={r.notes}>{r.notes || '—'}</td>
-                      <td>
+                      <td className={s.num} data-label="Qtd">{r.quantity}</td>
+                      <td className={s.num} data-label="Unitário">{fmtMoney(r.unit_price)}</td>
+                      <td className={`${s.num} ${s.strong}`} data-label="Total">{fmtMoney(r.quantity * r.unit_price)}</td>
+                      <td data-label="Aprovação">
                         <button type="button" className={s.approverBtn} onClick={() => setApproversFor(r.id)} title="Ver aprovadores">
-                          {r.approvers.slice(0, 3).map((a, i) => (
-                            <Avatar key={a.id} id={a.user_id} name={a.user_name} photo={a.user_avatar} size={22} style={i > 0 ? { marginLeft: -6 } : undefined} />
-                          ))}
+                          <span className={s.approverFaces}>
+                            {r.approvers.slice(0, 3).map((a, i) => (
+                              <Avatar key={a.id} id={a.user_id} name={a.user_name} photo={a.user_avatar} size={22} style={i > 0 ? { marginLeft: -6 } : undefined} />
+                            ))}
+                          </span>
+                          <span className={`${s.approvalText} ${rejected ? s.approvalBad : waiting.length === 0 ? s.approvalOk : ''}`}>
+                            {approvalText}{r.approvers.length > 1 && !rejected && waiting.length > 0 ? ` (${approved} de ${r.approvers.length})` : ''}
+                          </span>
                           {myPending && <span className={s.pendingDot} title="Aguardando sua decisão" />}
                         </button>
                       </td>
-                      <td className={s.stickyStatus}>
+                      <td className={s.stickyStatus} data-label="Situação">
                         {manualOptions ? (
                           <select
                             className={s.statusSelect}
-                            aria-label={`Status de ${r.item_name}`}
+                            aria-label={`Situação de ${r.item_name}`}
                             data-status={r.status}
                             value={r.status}
                             onChange={e => setStatusChangeFor({ request: r, targetStatus: e.target.value })}
@@ -532,17 +544,17 @@ export default function PurchaseRequestsPage() {
                       </td>
                       <td className={s.stickyActions}>
                         {canEdit(r) && (
-                          <div className={s.rowActions}>
-                            <button className={s.iconBtn} title="Editar" onClick={() => setEditing(r)}><LineIcon name="edit" /></button>
-                            <button className={s.iconBtn} title="Excluir" onClick={() => deleteRequest(r)}><LineIcon name="trash" /></button>
-                          </div>
+                          <RowMenu name={r.item_name} items={[
+                            { label: 'Editar', icon: 'edit', onClick: () => setEditing(r) },
+                            { label: 'Excluir', icon: 'trash', danger: true, onClick: () => deleteRequest(r) },
+                          ]} />
                         )}
                       </td>
                     </tr>
                   )
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={12} className={s.chartEmpty}>Nenhuma solicitação bate com esse filtro.</td></tr>
+                  <tr><td colSpan={9} className={s.chartEmpty}>Nenhuma solicitação bate com esse filtro.</td></tr>
                 )}
               </tbody>
             </table>

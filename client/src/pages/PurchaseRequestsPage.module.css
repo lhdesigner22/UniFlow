@@ -192,3 +192,44 @@
 :global([data-theme="dark"]) .statusSelect[data-status="reprovado"] { color: #fca5a5; }
 :global([data-theme="dark"]) .statusSelect[data-status="comprado"] { color: #c4b5fd; }
 :global([data-theme="dark"]) .statusSelect[data-status="entregue"] { color: #86efac; }
+
+/* ── Tabela enxuta (nov/2026): números na fonte normal, link/obs/chamado junto do item ── */
+.table { min-width: 860px; font-size: 13px; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table th.num { text-align: right; }
+.strong { font-weight: 600; }
+.muted { color: var(--text-muted); white-space: nowrap; }
+.itemCell { max-width: 280px; }
+.itemExtras { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; font-size: 12px; color: var(--text-muted); }
+.itemExtras a { color: var(--brand); display: inline-flex; align-items: center; gap: 3px; }
+.itemExtras span { max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.approverBtn { display: inline-flex; align-items: center; gap: 8px; }
+.approverFaces { display: inline-flex; }
+.approvalText { font-size: 12.5px; color: var(--warning-text); white-space: nowrap; }
+.approvalOk { color: var(--success-text); }
+.approvalBad { color: var(--danger-text); }
+/* Excel: um botão só, com as duas opções lado a lado */
+.excelGroup { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.excelBtn { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 500; padding: 8px 14px; cursor: pointer; }
+.excelBtn + .excelBtn { border-left: 1px solid var(--border); color: var(--text-muted); }
+.excelBtn:hover { background: var(--surface-2); color: var(--text); }
+
+/* ── Celular: cada pedido vira uma ficha ── */
+@media (max-width: 768px) {
+  .header > div { min-width: 0; }
+  .title { font-size: 1.6rem; overflow-wrap: anywhere; }
+  .headerRight { flex-wrap: wrap; }
+  .tableWrap { overflow: visible; }
+  .table { min-width: 0; }
+  .table thead { display: none; }
+  .table, .table tbody, .table tr { display: block; width: 100%; }
+  .table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; padding: 14px 44px 14px 4px; border-bottom: 1px solid var(--border2); position: relative; }
+  .table td { display: block; padding: 0; border: 0; text-align: left; position: static; box-shadow: none; background: none !important; min-width: 0; }
+  .table td:has(.itemName) { grid-column: 1 / -1; max-width: none; order: -1; font-size: 14.5px; }
+  .table td[data-label="Mês"] { grid-column: 1 / -1; }
+  .table td[data-label]::before { content: attr(data-label); display: block; font-size: 11.5px; color: var(--text-muted); margin-bottom: 2px; }
+  .table td[data-label="Aprovação"], .table td[data-label="Situação"], .table td[data-label="Departamento"] { grid-column: 1 / -1; }
+  .table td.stickyActions { position: absolute; top: 10px; right: 0; }
+  .num { text-align: left; }
+  .itemName { white-space: normal; }
+}
