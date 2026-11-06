@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useId } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '../services/api'
 import Avatar from '../components/common/Avatar'
+import LineIcon from '../components/common/LineIcon'
 import s from './MetricsPage.module.css'
 
 // Métricas dos quadros: o período é lido numa frase (o que mais importa: quanto o
@@ -58,10 +59,13 @@ export default function MetricsPage() {
 
   const choosePreset = days => { setPreset(days); setFrom(isoDate(daysAgo(days))); setTo(isoDate(new Date())) }
   const setDate = (which, v) => { setPreset(null); which === 'from' ? setFrom(v) : setTo(v) }
+  const [customOpen, setCustomOpen] = useState(false)
+  const fmtShort = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 
   const t = summary?.totals
   const people = summary?.byUser || []
-  const topPerson = Math.max(1, ...people.map(p => p.completed))
+  const unassigned = summary?.unassignedCompleted || 0
+  const topPerson = Math.max(1, unassigned, ...people.map(p => p.completed))
   const overdueBy = new Map((summary?.overdueByBoard || []).map(b => [b.board_id, b.overdue]))
   const boardRows = (summary?.byBoard || []).map(b => ({ ...b, overdue: overdueBy.get(b.board_id) || 0 }))
   const days = useMemo(() => fillDays(from, to, summary?.completedOverTime || []), [from, to, summary])
@@ -87,6 +91,12 @@ export default function MetricsPage() {
             <button key={d} type="button" className={`${s.preset} ${preset === d ? s.presetOn : ''}`} aria-pressed={preset === d} onClick={() => choosePreset(d)}>{label}</button>
           ))}
         </div>
+        {!customOpen && (
+          <button type="button" className={`${s.preset} ${s.customBtn} ${preset === null ? s.presetOn : ''}`} aria-expanded={false} onClick={() => setCustomOpen(true)}>
+            <LineIcon name="calendar" size={14} /> {preset === null ? `${fmtShort(from)} a ${fmtShort(to)}` : 'Outro período'}
+          </button>
+        )}
+        {customOpen && (<>
         <div className={s.field}>
           <label className="label" htmlFor={`${uid}-f`}>De</label>
           <input id={`${uid}-f`} type="date" value={from} max={to} onChange={e => setDate('from', e.target.value)} />
@@ -95,6 +105,8 @@ export default function MetricsPage() {
           <label className="label" htmlFor={`${uid}-t`}>Até</label>
           <input id={`${uid}-t`} type="date" value={to} min={from} onChange={e => setDate('to', e.target.value)} />
         </div>
+        <button type="button" className={`btn btn-ghost btn-sm ${s.customDone}`} onClick={() => setCustomOpen(false)}>Pronto</button>
+        </>)}
       </div>
 
       {error && <p className={s.error} role="alert">{error}</p>}
@@ -108,8 +120,8 @@ export default function MetricsPage() {
               <p className={s.sentence}>{periodText(from, to, preset)}, nenhuma tarefa foi criada{boardName ? ` em ${boardName}` : ' nos quadros'}.</p>
             ) : (
               <p className={s.sentence}>
-                {periodText(from, to, preset)}, o time concluiu <strong>{t.completed}</strong> de <strong>{t.total}</strong> tarefas
-                {boardName ? ` em ${boardName}` : ''} <span className={s.rate}>({t.completionRate}%)</span>.
+                {periodText(from, to, preset)}, o time concluiu <strong>{t.completed}</strong> das <strong>{t.total}</strong> tarefas criadas
+                {boardName ? ` em ${boardName}` : ' no período'} <span className={s.rate}>({t.completionRate}%)</span>.
               </p>
             )}
             {t.total > 0 && (
@@ -133,7 +145,7 @@ export default function MetricsPage() {
             {/* ── Quem concluiu ── */}
             <section className={s.panel} aria-labelledby={`${uid}-people`}>
               <h2 id={`${uid}-people`} className={s.panelTitle}>Quem concluiu</h2>
-              {people.length === 0 ? (
+              {people.length === 0 && !unassigned ? (
                 <p className={s.empty}>Ninguém concluiu tarefas no período.</p>
               ) : (
                 <ol className={s.people}>
@@ -145,6 +157,14 @@ export default function MetricsPage() {
                       <span className={s.personNum}>{p.completed}</span>
                     </li>
                   ))}
+                  {unassigned > 0 && (
+                    <li className={`${s.person} ${s.personNone}`}>
+                      <span className={s.noneIcon} aria-hidden="true"><LineIcon name="user" size={14} /></span>
+                      <span className={s.personName}>Sem responsável<small>Tarefas concluídas sem ninguém marcado no cartão</small></span>
+                      <span className={s.personBar} aria-hidden="true"><span style={{ width: `${(unassigned / topPerson) * 100}%` }} /></span>
+                      <span className={s.personNum}>{unassigned}</span>
+                    </li>
+                  )}
                 </ol>
               )}
             </section>
@@ -163,10 +183,10 @@ export default function MetricsPage() {
                     {boardRows.map(b => (
                       <tr key={b.board_id}>
                         <th scope="row"><span className={s.boardDot} style={{ background: b.board_color || 'var(--brand)' }} aria-hidden="true" />{b.board_name}</th>
-                        <td>{b.total}</td>
-                        <td>{b.completed}</td>
-                        <td className={s.colBar}><span className={s.miniBar} aria-label={`${pct(b.completed, b.total)}% concluído`}><span style={{ width: `${pct(b.completed, b.total)}%` }} /></span><span className={s.miniPct}>{pct(b.completed, b.total)}%</span></td>
-                        <td className={b.overdue ? s.lateCell : s.mutedCell}>{b.overdue || '—'}</td>
+                        <td data-label="Criadas">{b.total}</td>
+                        <td data-label="Concluídas">{b.completed}</td>
+                        <td className={s.colBar} data-label="Progresso"><span className={s.miniBar} aria-label={`${pct(b.completed, b.total)}% concluído`}><span style={{ width: `${pct(b.completed, b.total)}%` }} /></span><span className={s.miniPct}>{pct(b.completed, b.total)}%</span></td>
+                        <td className={b.overdue ? s.lateCell : s.mutedCell} data-label="Atrasadas">{b.overdue || '—'}</td>
                       </tr>
                     ))}
                   </tbody>

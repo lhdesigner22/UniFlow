@@ -90,9 +90,9 @@ app.post('/', async c => {
 
   const id = uuid()
   await db.prepare(`
-    INSERT INTO cards (id, board_id, column_id, title, description, due_date, priority, progress, order_index, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, boardId, column_id, title, description || null, due_date || null, priority || null, progress || 'not_started', orderIndex, user.id)
+    INSERT INTO cards (id, board_id, column_id, title, description, due_date, priority, progress, order_index, created_by, completed_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'completed' THEN datetime('now') END)
+  `).run(id, boardId, column_id, title, description || null, due_date || null, priority || null, progress || 'not_started', orderIndex, user.id, progress || 'not_started')
 
   await logActivity(db, id, user.id, 'created', 'Cartão criado')
 

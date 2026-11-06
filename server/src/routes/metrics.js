@@ -112,8 +112,18 @@ app.get('/summary', async c => {
 
   totals.overdue = overdueByBoard.reduce((sum, b) => sum + (b.overdue || 0), 0)
 
+  // Concluídas no período SEM responsável no cartão — não entram no "Quem
+  // concluiu" (que conta por membro); a tela mostra numa linha à parte.
+  const unassignedRow = await db.prepare(`
+    SELECT COUNT(*) as n FROM cards cd
+    WHERE cd.board_id IN (${ph}) AND cd.archived = 0 AND cd.progress = 'completed'
+      AND cd.completed_at >= ? AND cd.completed_at < datetime(?, '+1 day')
+      AND NOT EXISTS (SELECT 1 FROM card_members cm WHERE cm.card_id = cd.id)
+  `).get(...visibleIds, from, to)
+
   return c.json({
     from, to, totals,
+    unassignedCompleted: unassignedRow?.n || 0,
     byUser: byUser.map(u => ({ ...u, completed: u.completed || 0 })),
     byBoard: byBoard.map(b => ({ ...b, total: b.total || 0, completed: b.completed || 0 })),
     completedOverTime,
