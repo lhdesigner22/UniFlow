@@ -49,7 +49,7 @@ npx wrangler deploy
 ```
 - Erro **7403** ("conta não autorizada") = wrangler logado na conta errada → `npx wrangler logout`, fechar a sessão
   do Cloudflare no navegador (ou aba anônima) e `npx wrangler login` com a conta certa. Às vezes é passageiro: tentar de novo.
-- Migrações em `migrations/NNNN_*.sql` (hoje até 0067). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
+- Migrações em `migrations/NNNN_*.sql` (hoje até 0068). Seeds com **dados sensíveis NÃO entram no repo** (ex: senhas de Wi-Fi das VLANs).
 - Secrets (nunca no código): `JWT_SECRET`, `GLPI_APP_TOKEN`, `GLPI_USER_TOKEN`, `GOOGLE_SA_*`, `VAULT_ENCRYPTION_KEY`, Gmail/Resend etc. Variáveis públicas em `wrangler.jsonc`.
 
 ## Teste local (sem login Google)
@@ -106,7 +106,7 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
 ## Permissões (cargos × departamentos) — decisões do Luiz
 - **Cargos configuráveis** (tabela `roles`, Admin → aba Cargos): por módulo `none|view|edit` + escopo `all|department`.
   Módulos em `server/src/lib/permissions.js` (`MODULES`): boards, agenda, metrics, team, tickets, kb, gestao, approvals,
-  purchases, printers, loans, companies, incidents. **Módulo novo = migração que dá o nível dele aos cargos existentes**
+  purchases, printers, loans, companies, incidents, teacher, inventory. **Módulo novo = migração que dá o nível dele aos cargos existentes**
   (`json_set` em `roles.permissions`, ver 0054) — sem isso ninguém além do Super Admin enxerga. Cargos iniciais: Super Admin, Gestor, Analista, Colaborador, Auditor.
   Quem já existia virou Analista (mesmo acesso de antes); **quem entra novo recebe o cargo padrão** (Admin → Cargos → 🚪
   "Tornar este o cargo padrão"; `app_settings.default_role_id`, nunca Super Admin/Auditor; gravado em `users.role_id` no 1º login
@@ -204,6 +204,10 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   com arrastar manda vários dias num `PUT /assignments {items}` (≤500, 1 `db.batch`); "Repetir mês anterior" = mesmo dia da semana da
   mesma semana, só dias vazios. Dados iniciais vieram da planilha "Escala Time TI.xlsx" (nov/dez, só fins de semana; "-" = Folga),
   carregados direto no D1 (nomes de funcionários fora do repo). Dias úteis de nov/dez preenchidos com o prédio fixo de cada um (lista do Luiz, 05/11; feriados 02/11, 20/11, 25/12 vazios). Teste: `shifts-e2e.mjs`.
+- **Inventário → Brain** (nov/2026, migração 0068; `routes/inventory.js`, `InventoryPage.jsx`, rota `/inventario/:kind`, módulo NOVO
+  `inventory` — Analista/Super Admin editam, Gestor/Auditor veem, Colaborador/Professor não; sem departamento): `inventory_items` com `kind`
+  (`brain` hoje; novos controles = entrada em `INVENTORY_KINDS` + `KINDS` da página + item no menu). Responsável, setor, patrimônio,
+  observação; patrimônio repetido só avisa (⚠). 46 kits da planilha "CONTROLE BRAIN.xlsx" carregados direto no D1 (fora do repo). Teste: `inventory-e2e.mjs`.
 - **Base de Conhecimento → Padronização de máquinas** (`routes/machineStandards.js`, `components/kb/MachineStandards.jsx`, aba própria
   dentro de `KnowledgeBasePage`, recurso `/api/machine-standards` no módulo `kb`, sem departamento): processador/RAM/extra mínimos por
   **cargo** e exceções por **setor** (o setor vale para qualquer cargo dele). Os 5 perfis da apresentação vieram na migração 0060.
