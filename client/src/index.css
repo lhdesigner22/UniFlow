@@ -31,6 +31,8 @@
      (estilo inter.co) — usada pelo <Reveal> (components/common/Reveal.jsx)
      e pela transição de página em AppLayout.module.css. */
   --ease-smooth: cubic-bezier(.16, 1, .3, 1);
+  /* movimento: entrar desacelerando (ease-smooth), sair mais rápido que entrar */
+  --dur-fast: .14s; --dur: .22s; --dur-slow: .34s;
   color-scheme: light;
 }
 /* Escuro "premium" (out/2026, referências: Gcore + Linear da skill awesome-design-md):
@@ -173,7 +175,7 @@ textarea { resize: vertical; }
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 16px; border-radius: 999px; font-weight: 500;
-  font-size: 13px; border: none; transition: all .15s var(--ease);
+  font-size: 13px; border: none; transition: .15s var(--ease); transition-property: background-color, color, border-color, box-shadow, opacity, transform;
   white-space: nowrap; line-height: 1.4; letter-spacing: .01em;
 }
 .btn-sm { padding: 5px 12px; font-size: 12px; }
@@ -381,4 +383,12 @@ main:focus { outline: none; }
   input, textarea, select { font-size: 16px; }
   /* Slightly larger touch targets */
   .btn-sm { padding: 7px 12px; }
+}
+
+/* ── Movimento reduzido: quem pede no sistema não vê deslizes nem saltos ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important; scroll-behavior: auto !important;
+  }
 }

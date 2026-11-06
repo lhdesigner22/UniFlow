@@ -22,6 +22,10 @@
   min-height: 100%;
   animation: pageIn .5s var(--ease-smooth) both;
 }
+/* quando a página troca o "Carregando…" pelo conteúdo, o elemento novo nasce
+   transparente e aparece (@starting-style) — antes surgia de estalo */
+.pageTransition > * { transition: opacity var(--dur-slow) var(--ease-smooth), translate var(--dur-slow) var(--ease-smooth); }
+@starting-style { .pageTransition > * { opacity: 0; translate: 0 6px; } }
 
 /* Mobile sidebar backdrop */
 .backdrop {

@@ -43,6 +43,9 @@
   display: flex; align-items: center; justify-content: center; transition: background .12s;
 }
 .menuBtn:hover { background: var(--border2); color: var(--text); }
+/* abre crescendo a partir do botão, em vez de aparecer de estalo */
+.menu { transform-origin: top right; transition: opacity var(--dur-fast) var(--ease-smooth), scale var(--dur) var(--ease-smooth), translate var(--dur) var(--ease-smooth); }
+@starting-style { .menu { opacity: 0; scale: .97; translate: 0 -4px; } }
 .menu {
   position: absolute; top: calc(100% + 4px); right: 0; z-index: 5; min-width: 160px;
   background: var(--surface); border: 1px solid var(--border2); border-radius: 8px;

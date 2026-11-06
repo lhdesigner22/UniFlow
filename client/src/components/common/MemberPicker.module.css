@@ -1,5 +1,8 @@
 .wrap { position: relative; display: inline-block; }
 
+/* abre crescendo a partir do botão, em vez de aparecer de estalo */
+.panel { transform-origin: top left; transition: opacity var(--dur-fast) var(--ease-smooth), scale var(--dur) var(--ease-smooth), translate var(--dur) var(--ease-smooth); }
+@starting-style { .panel { opacity: 0; scale: .97; translate: 0 -4px; } }
 .panel {
   position: absolute; top: calc(100% + 8px); left: 0; z-index: 220;
   width: 260px; background: var(--surface); border: 1px solid var(--border2);
