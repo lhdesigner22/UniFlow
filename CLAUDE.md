@@ -243,7 +243,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   **Fila da crítica das 5 telas concluída** (Admin, KB, Impressoras, Agenda, Aprovações).
   **Quadros** refeitos (nov/2026): sem a faixa de cor (vira ponto ao lado do nome) + resumo "N cartões abertos, N atrasados";
   Lixeira/Arquivar/Excluir no "⋯"; etiquetas = ponto + nome em fundo suave (`--lc`); prazo em palavras (`dueMeta`: Venceu ontem/Hoje/Amanhã);
-  andamento em anel (meio cheio = em andamento); alça da coluna só no hover. Cartão aberto (CardModal) ainda no visual antigo.
+  andamento em anel (meio cheio = em andamento); alça da coluna só no hover. Cartão aberto (CardModal) refeito: conteúdo à esquerda (descrição, checklist,
+  comentários, histórico recolhido) + painel de propriedades à direita (andamento em 3 anéis, coluna, prazo, prioridade, responsáveis,
+  etiquetas, tempo, excluir); no celular o painel vem logo após o título.
   **Incidentes Laboratórios** refeita (out/2026): KPIs num painel, situação em abas (Pendentes = não resolvidos, Abertos, Em andamento,
   Resolvidos, Todos), lista em linhas com foto/ícone do tipo (`INCIDENT_CATEGORIES[].icon` = nome do `LineIcon`), "hoje, 08:40" e a
   gravidade como escala de 4 barras (`Severity`); detalhe com o andamento em passo a passo + "Começar atendimento", "Marcar como
