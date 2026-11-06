@@ -1,40 +1,43 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
-import BoardPage from './pages/BoardPage'
-import TeamTimePage from './pages/TeamTimePage'
-import MetricsPage from './pages/MetricsPage'
-import AgendaPage from './pages/AgendaPage'
-import AdminPage from './pages/AdminPage'
-import BacklogPage from './pages/BacklogPage'
-import TotalChamadosPage from './pages/TotalChamadosPage'
-import KnowledgeBasePage from './pages/KnowledgeBasePage'
-import GestaoPage from './pages/GestaoPage'
-import DevelopmentsPage from './pages/DevelopmentsPage'
-import LabIncidentsPage from './pages/LabIncidentsPage'
-import SuccessCasesPage from './pages/SuccessCasesPage'
-import PrinterSuppliesPage from './pages/PrinterSuppliesPage'
-import VaultPage from './pages/VaultPage'
-import VlansPage from './pages/VlansPage'
-import ApprovalsPage from './pages/ApprovalsPage'
-import PurchaseRequestsPage from './pages/PurchaseRequestsPage'
-import EquipmentLoansPage from './pages/EquipmentLoansPage'
-import PrintersPage from './pages/PrintersPage'
-import CompaniesPage from './pages/CompaniesPage'
-import PartnersPage from './pages/PartnersPage'
-import InternetLinksPage from './pages/InternetLinksPage'
-import TeamPerformancePage from './pages/TeamPerformancePage'
-import OrgChartPage from './pages/OrgChartPage'
-import JourneyPage from './pages/JourneyPage'
-import ShiftSchedulePage from './pages/ShiftSchedulePage'
 import GoogleCallback from './pages/GoogleCallback'
 import RequireModule from './components/common/RequireModule'
-import TeacherPortalPage from './pages/TeacherPortalPage'
-import ChromebookRequestsPage from './pages/ChromebookRequestsPage'
 import { isTeacherOnly } from './utils/permissions'
+import { lazyPage } from './utils/lazyPage'
+
+// Cada tela é baixada só quando abre (Login e Início vêm no pacote inicial)
+const BoardPage = lazyPage(() => import('./pages/BoardPage'))
+const TeamTimePage = lazyPage(() => import('./pages/TeamTimePage'))
+const MetricsPage = lazyPage(() => import('./pages/MetricsPage'))
+const AgendaPage = lazyPage(() => import('./pages/AgendaPage'))
+const AdminPage = lazyPage(() => import('./pages/AdminPage'))
+const BacklogPage = lazyPage(() => import('./pages/BacklogPage'))
+const TotalChamadosPage = lazyPage(() => import('./pages/TotalChamadosPage'))
+const KnowledgeBasePage = lazyPage(() => import('./pages/KnowledgeBasePage'))
+const GestaoPage = lazyPage(() => import('./pages/GestaoPage'))
+const DevelopmentsPage = lazyPage(() => import('./pages/DevelopmentsPage'))
+const LabIncidentsPage = lazyPage(() => import('./pages/LabIncidentsPage'))
+const SuccessCasesPage = lazyPage(() => import('./pages/SuccessCasesPage'))
+const PrinterSuppliesPage = lazyPage(() => import('./pages/PrinterSuppliesPage'))
+const VaultPage = lazyPage(() => import('./pages/VaultPage'))
+const VlansPage = lazyPage(() => import('./pages/VlansPage'))
+const ApprovalsPage = lazyPage(() => import('./pages/ApprovalsPage'))
+const PurchaseRequestsPage = lazyPage(() => import('./pages/PurchaseRequestsPage'))
+const EquipmentLoansPage = lazyPage(() => import('./pages/EquipmentLoansPage'))
+const PrintersPage = lazyPage(() => import('./pages/PrintersPage'))
+const CompaniesPage = lazyPage(() => import('./pages/CompaniesPage'))
+const PartnersPage = lazyPage(() => import('./pages/PartnersPage'))
+const InternetLinksPage = lazyPage(() => import('./pages/InternetLinksPage'))
+const TeamPerformancePage = lazyPage(() => import('./pages/TeamPerformancePage'))
+const OrgChartPage = lazyPage(() => import('./pages/OrgChartPage'))
+const JourneyPage = lazyPage(() => import('./pages/JourneyPage'))
+const ShiftSchedulePage = lazyPage(() => import('./pages/ShiftSchedulePage'))
+const TeacherPortalPage = lazyPage(() => import('./pages/TeacherPortalPage'))
+const ChromebookRequestsPage = lazyPage(() => import('./pages/ChromebookRequestsPage'))
 
 function PrivateRoute({ children }) {
   const { user, token, loading } = useAuthStore()
@@ -81,6 +84,7 @@ export default function App() {
           <button type="button" className="btn btn-primary btn-sm" onClick={() => window.location.reload()}>Recarregar</button>
         </div>
       )}
+      <Suspense fallback={null}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<Navigate to="/login" replace />} />
@@ -127,6 +131,7 @@ export default function App() {
           <Route path="admin" element={<AdminPage />} />
         </Route>
       </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

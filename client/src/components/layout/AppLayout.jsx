@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { startLive, stopLive } from '../../services/live'
 import api from '../../services/api'
+import { Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
@@ -53,7 +54,8 @@ export default function AppLayout() {
               reinicia a animação de entrada — dá vida a toda troca de
               página sem precisar mexer em cada page.jsx individualmente. */}
           <div key={location.pathname} className={styles.pageTransition}>
-            <Outlet />
+            {/* tela ainda baixando: fica o fundo, sem piscar o menu */}
+            <Suspense fallback={null}><Outlet /></Suspense>
           </div>
         </main>
       </div>

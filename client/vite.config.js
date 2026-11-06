@@ -51,6 +51,9 @@ export default defineConfig({
       input: { main: 'index.html', parisfe: 'parisfe.html' },
       output: {
         manualChunks(id) {
+          // ajudantes do Rollup usados por todo lado: sem isto caíam dentro do pdf-lib e
+          // toda página baixava os 424 KB do PDF (via modulepreload)
+          if (id.includes('commonjsHelpers')) return 'cjs-helpers'
           if (/node_modules[\\/](pdf-lib|@pdf-lib|pako)[\\/]/.test(id)) return 'pdf-lib'
           if (/node_modules[\\/]three[\\/]/.test(id)) return 'three'
         },
