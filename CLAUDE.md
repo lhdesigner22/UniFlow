@@ -252,6 +252,9 @@ No navegador do app: `localStorage.setItem('token', ...)` em `127.0.0.1`. **Rein
   **Movimento** (nov/2026): sem corte seco — o que troca o "Carregando…", submenus da lateral, menus ⋯/coluna e o seletor de pessoas
   entram com `@starting-style` (CSS puro, sem lib); tokens `--dur-fast/--dur/--dur-slow`; `transition: all` proibido (lista as
   propriedades); `prefers-reduced-motion` global no `index.css`.
+  **Desempenho** (nov/2026): telas em `React.lazy` via `utils/lazyPage.js` (recarrega 1× se a aba antiga pedir arquivo que sumiu);
+  Login/Início no pacote inicial. App inicial 1,9 MB → 350 KB. `manualChunks` dá pedaço próprio aos `commonjsHelpers` — senão caem no
+  pdf-lib e TODA página pré-carrega o PDF (conferir `index.html` do build: não pode ter modulepreload de pdf-lib/exceljs/three).
   **Incidentes Laboratórios** refeita (out/2026): KPIs num painel, situação em abas (Pendentes = não resolvidos, Abertos, Em andamento,
   Resolvidos, Todos), lista em linhas com foto/ícone do tipo (`INCIDENT_CATEGORIES[].icon` = nome do `LineIcon`), "hoje, 08:40" e a
   gravidade como escala de 4 barras (`Severity`); detalhe com o andamento em passo a passo + "Começar atendimento", "Marcar como
