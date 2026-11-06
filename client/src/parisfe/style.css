@@ -15,6 +15,18 @@
   --gutter: max(clamp(18px, 4vw, 72px), env(safe-area-inset-left, 0px));
   color-scheme: dark;
 }
+:root[data-theme="light"] {
+  /* Início do app no modo claro: as mesmas cores, invertidas (névoa no fundo, noite no texto) */
+  --night: #e9f1f6;
+  --ink: #061826;
+  --mist: #4f667a;
+  --bubble: color-mix(in srgb, var(--green) 14%, #ffffff);
+  color-scheme: light;
+}
+:root[data-theme="light"] .tools button:hover { background: rgba(6, 24, 38, .07); }
+:root[data-theme="light"] .rail { background: rgba(6, 24, 38, .12); }
+:root[data-theme="light"] .ghost { color: color-mix(in srgb, var(--navy) 10%, transparent); }
+:root[data-theme="light"] .letters a::after, :root[data-theme="light"] .rail span { background: #127a44; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { scroll-snap-type: y proximity; background: var(--night); }

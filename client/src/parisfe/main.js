@@ -18,6 +18,12 @@ const IDLE_MS = 15000        // modo TV volta a rolar depois de tanto tempo sem 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
 // ?embed=1: aberto dentro do UniFlow (aba Início, iframe) — não segura a tela acesa
 const embedded = new URLSearchParams(location.search).has('embed')
+// Dentro do UniFlow o telão segue o tema do app (claro/escuro); sozinho na TV fica sempre escuro.
+const readTheme = () => { try { return localStorage.getItem('uniflow-theme') || 'dark' } catch { return 'dark' } }
+const light = embedded && readTheme() === 'light'
+if (light) document.documentElement.dataset.theme = 'light'
+// trocou o tema no app (o localStorage avisa os outros documentos da mesma origem): recarrega com as cores novas
+if (embedded) addEventListener('storage', e => { if (e.key === 'uniflow-theme' && (readTheme() === 'light') !== light) location.reload() })
 const $ = id => document.getElementById(id)
 const slug = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '')
 
@@ -69,7 +75,7 @@ sections.forEach(s => s.classList.contains('value') && io.observe(s))
 
 // ── cena 3D (com plano B em SVG se o aparelho não tiver WebGL) ──
 let scene = null
-try { scene = createLogoScene($('scene')) } catch (e) {
+try { scene = createLogoScene($('scene'), { light }) } catch (e) {
   console.warn('WebGL indisponível, usando a logo plana:', e)
   $('scene').hidden = true
   $('fallback').hidden = false

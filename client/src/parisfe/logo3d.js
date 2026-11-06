@@ -58,18 +58,21 @@ function dotTexture() {
   return t
 }
 
-export function createLogoScene(canvas) {
+export function createLogoScene(canvas, { light = false } = {}) {
+  // tema claro (Início do app no modo claro): fundo névoa, anel azul da logo, sem brilho de bloom
+  const BG = light ? 0xe9f1f6 : 0x01070d
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
-  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  // no claro, sem tone mapping: o ACES acinzenta o fundo claro
+  renderer.toneMapping = light ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 0.85
-  renderer.setClearColor(0x01070d, 1) // azul fundo da marca, um tom abaixo do --night: o tone mapping clareia
+  renderer.setClearColor(BG, 1) // azul fundo da marca, um tom abaixo do --night: o tone mapping clareia
 
   const scene = new THREE.Scene()
-  scene.fog = new THREE.FogExp2(0x01070d, 0.045)
+  scene.fog = new THREE.FogExp2(BG, light ? 0.02 : 0.045)
   const pmrem = new THREE.PMREMGenerator(renderer)
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-  scene.environmentIntensity = 0.09 // só reflexo discreto; mais que isso estoura no bloom
+  scene.environmentIntensity = light ? 0.22 : 0.09 // só reflexo discreto; mais que isso estoura no bloom
 
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100)
   camera.position.set(0, 0, 11)
@@ -83,7 +86,7 @@ export function createLogoScene(canvas) {
   const logo = new THREE.Group()
   scene.add(logo)
   const bevel = { bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 5, curveSegments: 18 }
-  const navyMat = new THREE.MeshPhysicalMaterial({ color: NAVY, metalness: 0.35, roughness: 0.36, clearcoat: 0.5, clearcoatRoughness: 0.22, dithering: true })
+  const navyMat = new THREE.MeshPhysicalMaterial({ color: light ? 0x0f6aa8 : NAVY, metalness: 0.35, roughness: 0.36, clearcoat: 0.5, clearcoatRoughness: 0.22, dithering: true })
   const lGeo = new THREE.ExtrudeGeometry(lShape(), { depth: 0.42, ...bevel })
   lGeo.translate(0, 0, -0.21)
   const l1 = new THREE.Mesh(lGeo, navyMat)
@@ -99,11 +102,11 @@ export function createLogoScene(canvas) {
   // anel de luz (o brilho vem do bloom: material sem tone mapping, branco puro)
   const ring = new THREE.Mesh(
     new THREE.TorusGeometry(2.55, 0.016, 12, 360),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }),
+    new THREE.MeshBasicMaterial({ color: light ? 0x0f6aa8 : 0xffffff, toneMapped: false }),
   )
   const ringTrack = new THREE.Mesh(
     new THREE.TorusGeometry(2.55, 0.009, 8, 360),
-    new THREE.MeshBasicMaterial({ color: 0x6c8cab, transparent: true, opacity: 0.28 }),
+    new THREE.MeshBasicMaterial({ color: light ? 0x8fa7bb : 0x6c8cab, transparent: true, opacity: light ? 0.45 : 0.28 }),
   )
   const ringGroup = new THREE.Group()
   ringGroup.add(ringTrack, ring)
@@ -119,7 +122,7 @@ export function createLogoScene(canvas) {
   }
   const dustGeo = new THREE.BufferGeometry()
   dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3))
-  const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0x9cc4ea, map: dotTexture(), size: 0.06, transparent: true, opacity: 0.5, depthWrite: false }))
+  const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: light ? 0x0f6aa8 : 0x9cc4ea, map: dotTexture(), size: 0.06, transparent: true, opacity: light ? 0.35 : 0.5, depthWrite: false }))
   scene.add(dust)
 
   // O EffectComposer desenha num alvo próprio, sem o antialias do canvas: era
@@ -128,7 +131,7 @@ export function createLogoScene(canvas) {
   const composer = new EffectComposer(renderer, target)
   composer.addPass(new RenderPass(scene, camera))
   const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.55, 0.35, 0.96)
-  composer.addPass(bloom)
+  if (!light) composer.addPass(bloom) // bloom no fundo claro só estoura o branco
   composer.addPass(new OutputPass())
   composer.addPass(new ShaderPass(DitherShader))
 
